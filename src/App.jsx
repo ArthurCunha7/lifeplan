@@ -1081,7 +1081,18 @@ function useGoogleCalendar(){
 }
 
 // Meta de água personalizável (reseta o consumo do dia automaticamente à meia-noite)
-function useWaterTracker(){
+// Helper genérico: busca o plan_data existente, faz merge só das chaves
+// passadas em partialUpdate (preservando tudo o mais) e salva de volta.
+// Usado por água, agenda manual e quadro de horários para sincronizar na
+// nuvem sem nunca apagar os outros dados já salvos no mesmo registro.
+async function mergeAndSavePlanData(userId,partialUpdate){
+  if(!userId) return;
+  const {data:existing}=await supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle();
+  const plan_data={...(existing?.plan_data||{}),...partialUpdate};
+  return supabase.from('user_plans').upsert({user_id:userId,plan_data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+}
+
+function useWaterTracker(userId){
   // Usa data local (não UTC) para o reset acontecer exatamente à meia-noite
   // no fuso horário do usuário, e não em outro horário por acaso do UTC.
   const todayKey=()=>{
@@ -1096,6 +1107,24 @@ function useWaterTracker(){
     return {date:todayKey(),goal:2000,current:0};
   });
   useEffect(()=>{localStorage.setItem('water_v1',JSON.stringify(data));},[data]);
+
+  // Carrega a meta/consumo salvos na nuvem (permite trocar de dispositivo)
+  useEffect(()=>{
+    if(!userId) return;
+    supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle().then(({data:row})=>{
+      const cloud=row?.plan_data?.water;
+      if(cloud&&cloud.date===todayKey()) setData(cloud);
+      else if(cloud) setData(d=>({...d,goal:cloud.goal||d.goal})); // dia diferente: mantém só a meta
+    });
+  },[userId]);
+
+  // Salva na nuvem (com atraso pra não disparar uma chamada a cada clique)
+  useEffect(()=>{
+    if(!userId) return;
+    const t=setTimeout(()=>{mergeAndSavePlanData(userId,{water:data});},800);
+    return()=>clearTimeout(t);
+  },[data,userId]);
+
   // Confere a cada minuto se o dia virou, mesmo com o app aberto continuamente
   useEffect(()=>{
     const t=setInterval(()=>{
@@ -1109,15 +1138,30 @@ function useWaterTracker(){
   return {data,add,setGoal};
 }
 
-function useManualAgenda(){
+function useManualAgenda(userId){
   const [items,setItems]=useState(()=>{
     try{return JSON.parse(localStorage.getItem('agenda_manual'))||[];}catch{return [];}
   });
   useEffect(()=>{localStorage.setItem('agenda_manual',JSON.stringify(items));},[items]);
+
+  useEffect(()=>{
+    if(!userId) return;
+    supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle().then(({data:row})=>{
+      if(Array.isArray(row?.plan_data?.agendaManual)) setItems(row.plan_data.agendaManual);
+    });
+  },[userId]);
+
+  useEffect(()=>{
+    if(!userId) return;
+    const t=setTimeout(()=>{mergeAndSavePlanData(userId,{agendaManual:items});},800);
+    return()=>clearTimeout(t);
+  },[items,userId]);
+
   function add(title,time){setItems(p=>[...p,{id:'m'+Date.now(),title,time}].sort((a,b)=>String(a.time).localeCompare(String(b.time))));}
   function remove(id){setItems(p=>p.filter(i=>i.id!==id));}
   return {items,add,remove};
 }
+
 
 function useClock(){
   const [now,setNow]=useState(new Date());
@@ -1262,7 +1306,7 @@ function uvInfo(uv){
 
 // Quadro de horários totalmente personalizável: linhas livres (rótulo editável,
 // ex. "08:00 - 09:40") x colunas dos 7 dias, com cada célula editável.
-function useTimetable(){
+function useTimetable(userId){
   const [data,setData]=useState(()=>{
     try{
       const raw=JSON.parse(localStorage.getItem('timetable_v2'));
@@ -1271,6 +1315,22 @@ function useTimetable(){
     return {rows:[],cells:{}};
   });
   useEffect(()=>{localStorage.setItem('timetable_v2',JSON.stringify(data));},[data]);
+
+  // Carrega a grade salva na nuvem (permite editar em qualquer dispositivo)
+  useEffect(()=>{
+    if(!userId) return;
+    supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle().then(({data:row})=>{
+      const cloud=row?.plan_data?.timetable;
+      if(cloud&&Array.isArray(cloud.rows)) setData(cloud);
+    });
+  },[userId]);
+
+  // Salva na nuvem a cada mudança (com atraso pra agrupar digitação rápida)
+  useEffect(()=>{
+    if(!userId) return;
+    const t=setTimeout(()=>{mergeAndSavePlanData(userId,{timetable:data});},800);
+    return()=>clearTimeout(t);
+  },[data,userId]);
 
   function addRow(label){
     setData(d=>({...d,rows:[...d.rows,{id:'r'+Date.now()+Math.random().toString(36).slice(2,6),label:label||'Novo horário'}]}));
@@ -1481,7 +1541,7 @@ function StudyTab({onHome,onOpenProfile,onLogout}){
       <div style={{paddingBottom:100}}>
         <div style={{padding:'16px 16px 0'}}>
           <div style={{borderRadius:16,overflow:'hidden',border:'1px solid #e4ddd0',height:'65vh',minHeight:460,background:'#ffffff'}}>
-            <iframe title="Estudos" src="/estudos.html" style={{width:'100%',height:'100%',border:'none'}}/>
+            <iframe title="Estudos" src={`/estudos.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}`} style={{width:'100%',height:'100%',border:'none'}}/>
           </div>
         </div>
         <FocusTimer/>
@@ -1503,7 +1563,7 @@ function FinanceTab({onHome,onOpenProfile,onLogout}){
       </div>
       <div style={{padding:16,paddingBottom:100}}>
         <div style={{borderRadius:16,overflow:'hidden',border:'1px solid #e4ddd0',height:'80vh',minHeight:560,background:'#ffffff'}}>
-          <iframe title="Finanças" src="/controle-financeiro.html" style={{width:'100%',height:'100%',border:'none'}}/>
+          <iframe title="Finanças" src={`/controle-financeiro.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}`} style={{width:'100%',height:'100%',border:'none'}}/>
         </div>
       </div>
       <nav style={{...S.nav,justifyContent:'center',gap:70}}>
@@ -1535,8 +1595,8 @@ function HabitsTab({onHome,onOpenProfile,onLogout}){
 }
 
 // ── QUADRO DE HORÁRIOS (faculdade) ──────────────────────────────────────────────
-function TimetableScreen({onHome}){
-  const {data,addRow,removeRow,renameRow,moveRow,setCell}=useTimetable();
+function TimetableScreen({onHome,userId}){
+  const {data,addRow,removeRow,renameRow,moveRow,setCell}=useTimetable(userId);
   const T=HOME_THEME;
 
   return(
@@ -1752,8 +1812,8 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   const now=useClock();
   const weather=useWeatherLocation();
   const gcal=useGoogleCalendar();
-  const manual=useManualAgenda();
-  const {data:timetableData}=useTimetable();
+  const manual=useManualAgenda(userId);
+  const {data:timetableData}=useTimetable(userId);
   const [newTitle,setNewTitle]=useState('');
   const [newTime,setNewTime]=useState('');
   const [planPreview,setPlanPreview]=useState(null);
@@ -1805,7 +1865,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   const balloonWrap={background:T.card,border:`1px solid ${T.line}`,borderRadius:18,overflow:'hidden',cursor:'pointer',textAlign:'left',display:'flex',flexDirection:'column',width:'100%',height:'100%',padding:0,margin:0,font:'inherit',boxSizing:'border-box'};
 
   // ── meta de água personalizável
-  const water=useWaterTracker();
+  const water=useWaterTracker(userId);
   const [editingGoal,setEditingGoal]=useState(false);
   const [goalInput,setGoalInput]=useState('');
 
@@ -1850,9 +1910,9 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
                 <WeatherIcon code={weather.code} isDay={weather.isDay} size={68}/>
                 <div style={{flex:'1 1 120px'}}>
                   <div style={{fontSize:36,fontWeight:900,color:'#ffffff',lineHeight:1,textShadow:'0 2px 6px rgba(0,0,0,0.15)'}}>{weather.temp}°</div>
-                  <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.9)',display:'flex',alignItems:'center',gap:4}}>📍 {weather.city}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:'rgba(255,255,255,0.95)',display:'flex',alignItems:'center',gap:4,marginTop:2}}>📍 {weather.city}</div>
                 </div>
-                <div style={{display:'flex',gap:10,fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.9)'}}>
+                <div style={{display:'flex',flexDirection:'column',gap:4,fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.9)'}}>
                   {weather.sunrise&&<span>🌅 {weather.sunrise}</span>}
                   {weather.sunset&&<span>🌇 {weather.sunset}</span>}
                 </div>
@@ -1910,9 +1970,9 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
           </div>
 
           {/* Horário */}
-          <div style={{flex:'0 0 auto',background:'linear-gradient(160deg,#eef2e7 0%,#dfe8d4 100%)',border:'1px solid #cddabd',borderRadius:18,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'14px 24px',boxShadow:'0 3px 10px rgba(127,151,112,0.15)'}}>
-            <div style={{fontSize:16,marginBottom:2}}>🕐</div>
-            <div style={{fontSize:44,fontWeight:900,color:T.ink,letterSpacing:.5,lineHeight:1}}>{timeStr}</div>
+          <div style={{flex:'0 0 auto',minWidth:110,background:'linear-gradient(160deg,#eef2e7 0%,#dfe8d4 100%)',border:'1px solid #cddabd',borderRadius:18,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'16px 20px',boxShadow:'0 3px 10px rgba(127,151,112,0.15)'}}>
+            <div style={{fontSize:16,marginBottom:4}}>🕐</div>
+            <div style={{fontSize:44,fontWeight:900,color:T.ink,letterSpacing:.5,lineHeight:1,textAlign:'center'}}>{timeStr}</div>
           </div>
 
           {/* Compromissos da agenda */}
@@ -2043,30 +2103,6 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   );
 }
 
-// ── LANDING PAGE PÚBLICA ──────────────────────────────────────────────────────
-function PublicLanding({ onEnter }) {
-  return (
-    <div style={{minHeight:'100vh',background:'#efe8dd',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'32px 20px',textAlign:'center'}}>
-      <div style={{fontSize:56,marginBottom:16}}>💪</div>
-      <h1 style={{fontSize:28,fontWeight:800,color:'#2c2a24',marginBottom:8}}>LifePlan</h1>
-      <p style={{fontSize:15,color:'#6b6a63',maxWidth:380,lineHeight:1.6,marginBottom:32}}>
-        O LifePlan é seu app pessoal de organização: planeje treinos, dietas,
-        estudos, finanças e hábitos em um só lugar, tudo sincronizado com sua conta.
-      </p>
-      <button
-        onClick={onEnter}
-        style={{background:'#22c55e',color:'#fff',border:'none',borderRadius:12,padding:'14px 32px',fontSize:16,fontWeight:700,cursor:'pointer',boxShadow:'0 4px 12px rgba(34,197,94,0.3)'}}
-      >
-        Entrar
-      </button>
-      <div style={{marginTop:28,fontSize:12,color:'#9a988f'}}>
-        <a href="/privacy.html" style={{color:'#9a988f',marginRight:16}}>Política de Privacidade</a>
-        <a href="/terms.html" style={{color:'#9a988f'}}>Termos de Serviço</a>
-      </div>
-    </div>
-  );
-}
-
 // ── ROOT ──────────────────────────────────────────────────────────────────────
 export default function App(){
   const [screen,setScreen]=useState('loading');
@@ -2077,7 +2113,7 @@ export default function App(){
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{
       if(session?.user){userIdRef.current=session.user.id;setUserId(session.user.id);setScreen('home');}
-      else setScreen('landing');
+      else setScreen('login');
     });
     // Importante: este listener dispara em qualquer evento do Supabase
     // (ex: renovação automática de token), inclusive os que vêm do
@@ -2094,7 +2130,7 @@ export default function App(){
       }else{
         userIdRef.current=null;
         setUserId(null);
-        setScreen('landing');
+        setScreen('login');
       }
     });
     return()=>subscription.unsubscribe();
@@ -2117,7 +2153,7 @@ export default function App(){
   if(screen==='home') return(
     <HomeDashboard userId={userId} onNavigate={setScreen} onOpenProfile={onOpenProfile} onLogout={onLogout} onOpenTimetable={()=>setScreen('timetable')}/>
   );
-  if(screen==='timetable') return <TimetableScreen onHome={()=>setScreen('home')}/>;
+  if(screen==='timetable') return <TimetableScreen onHome={()=>setScreen('home')} userId={userId}/>;
   if(screen==='nutrition') return(
     <MealPlanApp userId={userId} initialTab="plan" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
   );
@@ -2130,7 +2166,6 @@ export default function App(){
   if(screen==='estudos') return <StudyTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
   if(screen==='financas') return <FinanceTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
   if(screen==='habitos') return <HabitsTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
-  if(screen==='landing') return <PublicLanding onEnter={()=>setScreen('login')}/>;
   if(screen==='register') return <RegisterPage onSwitch={()=>setScreen('login')} onLogin={()=>setScreen('home')}/>;
   return <LoginPage onSwitch={()=>setScreen('register')} onLogin={()=>setScreen('home')}/>;
 }
