@@ -2043,6 +2043,30 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   );
 }
 
+// ── LANDING PAGE PÚBLICA ──────────────────────────────────────────────────────
+function PublicLanding({ onEnter }) {
+  return (
+    <div style={{minHeight:'100vh',background:'#efe8dd',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'32px 20px',textAlign:'center'}}>
+      <div style={{fontSize:56,marginBottom:16}}>💪</div>
+      <h1 style={{fontSize:28,fontWeight:800,color:'#2c2a24',marginBottom:8}}>LifePlan</h1>
+      <p style={{fontSize:15,color:'#6b6a63',maxWidth:380,lineHeight:1.6,marginBottom:32}}>
+        O LifePlan é seu app pessoal de organização: planeje treinos, dietas,
+        estudos, finanças e hábitos em um só lugar, tudo sincronizado com sua conta.
+      </p>
+      <button
+        onClick={onEnter}
+        style={{background:'#22c55e',color:'#fff',border:'none',borderRadius:12,padding:'14px 32px',fontSize:16,fontWeight:700,cursor:'pointer',boxShadow:'0 4px 12px rgba(34,197,94,0.3)'}}
+      >
+        Entrar
+      </button>
+      <div style={{marginTop:28,fontSize:12,color:'#9a988f'}}>
+        <a href="/privacy.html" style={{color:'#9a988f',marginRight:16}}>Política de Privacidade</a>
+        <a href="/terms.html" style={{color:'#9a988f'}}>Termos de Serviço</a>
+      </div>
+    </div>
+  );
+}
+
 // ── ROOT ──────────────────────────────────────────────────────────────────────
 export default function App(){
   const [screen,setScreen]=useState('loading');
@@ -2053,7 +2077,7 @@ export default function App(){
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{
       if(session?.user){userIdRef.current=session.user.id;setUserId(session.user.id);setScreen('home');}
-      else setScreen('login');
+      else setScreen('landing');
     });
     // Importante: este listener dispara em qualquer evento do Supabase
     // (ex: renovação automática de token), inclusive os que vêm do
@@ -2070,7 +2094,7 @@ export default function App(){
       }else{
         userIdRef.current=null;
         setUserId(null);
-        setScreen('login');
+        setScreen('landing');
       }
     });
     return()=>subscription.unsubscribe();
@@ -2106,6 +2130,7 @@ export default function App(){
   if(screen==='estudos') return <StudyTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
   if(screen==='financas') return <FinanceTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
   if(screen==='habitos') return <HabitsTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
+  if(screen==='landing') return <PublicLanding onEnter={()=>setScreen('login')}/>;
   if(screen==='register') return <RegisterPage onSwitch={()=>setScreen('login')} onLogin={()=>setScreen('home')}/>;
   return <LoginPage onSwitch={()=>setScreen('register')} onLogin={()=>setScreen('home')}/>;
 }
