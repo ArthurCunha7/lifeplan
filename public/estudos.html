@@ -1,0 +1,466 @@
+<html lang="pt-BR"><head>
+<meta charset="UTF-8">
+<title>Meu Controle de Estudos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+  body { background:#efe8dd; min-height:100vh; color:#1c1c1a; }
+  header { background:#7f9770; padding:1rem 2rem; color:#fff; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:1.5rem; }
+  nav button { background:transparent; color:#fff; border:2px solid transparent; padding:0.5rem 1rem; margin:0 0.2rem; border-radius:8px; cursor:pointer; font-weight:600; transition:0.3s; }
+  nav button:hover, nav button.active { background:#fff; color:#3f6b2f; }
+  main { padding:2rem; max-width:1200px; margin:0 auto; }
+  .tab { display:none; background:#fff; padding:2rem; border-radius:15px; box-shadow:0 4px 16px rgba(0,0,0,0.08); border:1px solid #e4ddd0; animation:fadeIn 0.3s; }
+  .tab.active { display:block; }
+  @keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+  h2 { color:#3f6b2f; margin-bottom:1rem; border-bottom:3px solid #7f9770; padding-bottom:0.5rem; }
+  h3 { color:#7f9770; margin:1rem 0 0.5rem; }
+  .form-row { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem; }
+  input, select, textarea, button { padding:0.6rem; border:1px solid #ccc; border-radius:6px; font-size:0.95rem; }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:#7f9770; }
+  .btn { background:#7f9770; color:#fff; border:none; cursor:pointer; font-weight:600; transition:0.3s; }
+  .btn:hover { background:#3f6b2f; }
+  .btn-danger { background:#e74c3c; }
+  .btn-danger:hover { background:#c0392b; }
+  .btn-success { background:#27ae60; }
+  .btn-success:hover { background:#1e8449; }
+  .card { background:#faf7f0; padding:1rem; border-radius:10px; margin-bottom:1rem; border-left:5px solid #7f9770; }
+  .card.aprovado { border-left-color:#27ae60; }
+  .card.reprovado { border-left-color:#e74c3c; }
+  .card-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; margin:1rem 0; }
+  .stat { background:linear-gradient(135deg,#8faf7a,#7f9770); color:#fff; padding:1.5rem; border-radius:12px; text-align:center; }
+  .stat h4 { font-size:0.9rem; opacity:0.9; }
+  .stat p { font-size:2rem; font-weight:bold; margin-top:0.3rem; }
+  table { width:100%; border-collapse:collapse; margin-top:1rem; }
+  th, td { padding:0.7rem; text-align:left; border-bottom:1px solid #eee; }
+  th { background:#7f9770; color:#fff; }
+  tr:hover { background:#f0f0f0; }
+  .progress { background:#e0e0e0; height:20px; border-radius:10px; overflow:hidden; margin-top:0.3rem; }
+  .progress-bar { height:100%; background:linear-gradient(90deg,#27ae60,#2ecc71); display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.8rem; font-weight:bold; transition:width 0.5s; }
+  .calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:1rem; }
+  .day-name { background:#7f9770; color:#fff; padding:0.5rem; text-align:center; font-weight:bold; border-radius:6px; }
+  .day { background:#f8f9fa; padding:0.5rem; min-height:80px; border-radius:6px; cursor:pointer; transition:0.3s; border:2px solid transparent; }
+  .day:hover { background:#eef2e7; border-color:#7f9770; }
+  .day.has-event { background:#fff3cd; border-color:#ffc107; }
+  .day.today { background:#d4edda; border-color:#27ae60; font-weight:bold; }
+  .day .num { font-weight:bold; }
+  .event-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#e74c3c; margin:2px; }
+  .calendar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+  .badge { padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; font-weight:bold; color:#fff; }
+  .badge.prova { background:#e74c3c; }
+  .badge.trabalho { background:#f39c12; }
+  .badge.outro { background:#3498db; }
+  .empty { text-align:center; color:#999; padding:2rem; font-style:italic; }
+  small { color:#666; }
+</style>
+</head>
+<body>
+<header>
+  <nav>
+    <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
+    <button class="tab-btn" data-tab="materias">📖 Matérias</button>
+    <button class="tab-btn" data-tab="estudos">⏱️ Estudos</button>
+    <button class="tab-btn" data-tab="notas">📝 Notas</button>
+    <button class="tab-btn" data-tab="calendario">📅 Calendário</button>
+  </nav>
+</header>
+
+<main>
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="tab active">
+    <div class="grid" id="stats-grid"></div>
+    <h3>📈 Horas estudadas por matéria</h3>
+    <div id="hours-by-subject"></div>
+    <h3>🎯 Situação nas matérias</h3>
+    <div id="situation-list"></div>
+    <h3>📅 Próximos eventos</h3>
+    <div id="upcoming-events"></div>
+  </section>
+
+  <!-- MATÉRIAS -->
+  <section id="materias" class="tab">
+    <h2>📖 Minhas Matérias</h2>
+    <div class="form-row">
+      <input type="text" id="subj-name" placeholder="Nome da matéria (ex: Matemática)">
+      <input type="number" id="subj-pass" placeholder="Nota mínima p/ passar (ex: 7)" step="0.1" min="0">
+      <input type="number" id="subj-max" placeholder="Nota máxima (ex: 10)" step="0.1" min="0" value="10">
+      <button class="btn" onclick="addSubject()">+ Adicionar Matéria</button>
+    </div>
+    <div id="subjects-list"></div>
+  </section>
+
+  <!-- ESTUDOS -->
+  <section id="estudos" class="tab">
+    <h2>⏱️ Registro de Estudos</h2>
+    <div class="form-row">
+      <select id="study-subject"></select>
+      <input type="date" id="study-date">
+      <input type="number" id="study-hours" placeholder="Horas estudadas" step="0.25" min="0">
+      <input type="text" id="study-topic" placeholder="O que estudou?">
+      <button class="btn" onclick="addStudy()">+ Registrar</button>
+    </div>
+    <div id="studies-list"></div>
+  </section>
+
+  <!-- NOTAS -->
+  <section id="notas" class="tab">
+    <h2>📝 Notas e Aprovação</h2>
+    <div class="form-row">
+      <select id="grade-subject"></select>
+      <input type="text" id="grade-name" placeholder="Nome da avaliação (ex: Prova 1)">
+      <input type="number" id="grade-value" placeholder="Nota obtida" step="0.1" min="0">
+      <input type="number" id="grade-weight" placeholder="Peso" step="0.1" min="0" value="1">
+      <button class="btn" onclick="addGrade()">+ Adicionar Nota</button>
+    </div>
+    <div id="grades-list"></div>
+  </section>
+
+  <!-- CALENDÁRIO -->
+  <section id="calendario" class="tab">
+    <h2>📅 Calendário de Provas e Trabalhos</h2>
+    <div class="form-row">
+      <input type="text" id="ev-title" placeholder="Título do evento">
+      <select id="ev-type">
+        <option value="prova">Prova</option>
+        <option value="trabalho">Trabalho</option>
+        <option value="outro">Outro</option>
+      </select>
+      <select id="ev-subject"></select>
+      <input type="date" id="ev-date">
+      <input type="text" id="ev-desc" placeholder="Descrição (opcional)">
+      <button class="btn" onclick="addEvent()">+ Adicionar Evento</button>
+    </div>
+    <div class="calendar-header">
+      <button class="btn" onclick="changeMonth(-1)">← Anterior</button>
+      <h3 id="cal-title"></h3>
+      <button class="btn" onclick="changeMonth(1)">Próximo →</button>
+    </div>
+    <div class="calendar" id="calendar"></div>
+    <h3>📋 Lista de eventos</h3>
+    <div id="events-list"></div>
+  </section>
+</main>
+
+<script>
+// ===== Estado =====
+let data = JSON.parse(localStorage.getItem('studyApp')) || {
+  subjects: [], studies: [], grades: [], events: []
+};
+let currentDate = new Date();
+
+const save = () => localStorage.setItem('studyApp', JSON.stringify(data));
+const uid = () => Date.now() + Math.random().toString(36).slice(2,7);
+
+// ===== Navegação =====
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    renderAll();
+  };
+});
+
+// ===== Matérias =====
+function addSubject() {
+  const name = document.getElementById('subj-name').value.trim();
+  const pass = parseFloat(document.getElementById('subj-pass').value);
+  const max = parseFloat(document.getElementById('subj-max').value) || 10;
+  if (!name || isNaN(pass)) { alert('Preencha nome e nota mínima!'); return; }
+  data.subjects.push({ id:uid(), name, pass, max });
+  save(); 
+  document.getElementById('subj-name').value='';
+  document.getElementById('subj-pass').value='';
+  renderAll();
+}
+
+function deleteSubject(id) {
+  if (!confirm('Excluir matéria e todos os dados relacionados?')) return;
+  data.subjects = data.subjects.filter(s=>s.id!==id);
+  data.studies = data.studies.filter(s=>s.subjectId!==id);
+  data.grades = data.grades.filter(g=>g.subjectId!==id);
+  data.events = data.events.filter(e=>e.subjectId!==id);
+  save(); renderAll();
+}
+
+function renderSubjects() {
+  const el = document.getElementById('subjects-list');
+  if (!data.subjects.length) { el.innerHTML='<p class="empty">Nenhuma matéria cadastrada.</p>'; return; }
+  el.innerHTML = data.subjects.map(s => {
+    const status = getSubjectStatus(s.id);
+    return `<div class="card ${status.cssClass}">
+      <div class="card-header">
+        <div>
+          <strong>${s.name}</strong><br>
+          <small>Nota mínima: ${s.pass} | Máxima: ${s.max}</small><br>
+          <small>${status.text}</small>
+        </div>
+        <button class="btn btn-danger" onclick="deleteSubject('${s.id}')">Excluir</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== Estudos =====
+function addStudy() {
+  const subjectId = document.getElementById('study-subject').value;
+  const date = document.getElementById('study-date').value;
+  const hours = parseFloat(document.getElementById('study-hours').value);
+  const topic = document.getElementById('study-topic').value.trim();
+  if (!subjectId||!date||isNaN(hours)) { alert('Preencha matéria, data e horas!'); return; }
+  data.studies.push({ id:uid(), subjectId, date, hours, topic });
+  save();
+  document.getElementById('study-hours').value='';
+  document.getElementById('study-topic').value='';
+  renderAll();
+}
+
+function deleteStudy(id) {
+  data.studies = data.studies.filter(s=>s.id!==id); save(); renderAll();
+}
+
+function renderStudies() {
+  const el = document.getElementById('studies-list');
+  if (!data.studies.length) { el.innerHTML='<p class="empty">Nenhum estudo registrado.</p>'; return; }
+  const sorted = [...data.studies].sort((a,b)=>b.date.localeCompare(a.date));
+  el.innerHTML = `<table>
+    <tr><th>Data</th><th>Matéria</th><th>Horas</th><th>Tópico</th><th></th></tr>
+    ${sorted.map(s=>{
+      const subj = data.subjects.find(x=>x.id===s.subjectId);
+      return `<tr>
+        <td>${formatDate(s.date)}</td>
+        <td>${subj?subj.name:'?'}</td>
+        <td>${s.hours}h</td>
+        <td>${s.topic||'-'}</td>
+        <td><button class="btn btn-danger" onclick="deleteStudy('${s.id}')">X</button></td>
+      </tr>`;
+    }).join('')}
+  </table>`;
+}
+
+// ===== Notas =====
+function addGrade() {
+  const subjectId = document.getElementById('grade-subject').value;
+  const name = document.getElementById('grade-name').value.trim();
+  const value = parseFloat(document.getElementById('grade-value').value);
+  const weight = parseFloat(document.getElementById('grade-weight').value)||1;
+  if (!subjectId||!name||isNaN(value)) { alert('Preencha todos os campos!'); return; }
+  data.grades.push({ id:uid(), subjectId, name, value, weight });
+  save();
+  document.getElementById('grade-name').value='';
+  document.getElementById('grade-value').value='';
+  renderAll();
+}
+
+function deleteGrade(id) {
+  data.grades = data.grades.filter(g=>g.id!==id); save(); renderAll();
+}
+
+function getSubjectStatus(subjectId) {
+  const subj = data.subjects.find(s=>s.id===subjectId);
+  if (!subj) return { text:'', cssClass:'' };
+  const grades = data.grades.filter(g=>g.subjectId===subjectId);
+  if (!grades.length) return { text:`Sem notas. Precisa de ${subj.pass} para passar.`, cssClass:'', avg:0, needed:subj.pass };
+  const totalWeight = grades.reduce((a,g)=>a+g.weight,0);
+  const sum = grades.reduce((a,g)=>a+g.value*g.weight,0);
+  const avg = sum/totalWeight;
+  
+  if (avg >= subj.pass) {
+    return { text:`✅ APROVADO! Média atual: ${avg.toFixed(2)}`, cssClass:'aprovado', avg, needed:0 };
+  }
+  // Estimativa: assume mais uma avaliação de peso 1
+  const needed = (subj.pass*(totalWeight+1) - sum);
+  if (needed > subj.max) {
+    return { text:`❌ REPROVADO. Média atual: ${avg.toFixed(2)} (impossível recuperar com 1 avaliação peso 1)`, cssClass:'reprovado', avg, needed };
+  }
+  return { text:`⚠️ Média atual: ${avg.toFixed(2)}. Precisa tirar ${needed.toFixed(2)} na próxima (peso 1) para passar.`, cssClass:'', avg, needed };
+}
+
+function renderGrades() {
+  const el = document.getElementById('grades-list');
+  if (!data.subjects.length) { el.innerHTML='<p class="empty">Cadastre uma matéria primeiro.</p>'; return; }
+  el.innerHTML = data.subjects.map(subj => {
+    const grades = data.grades.filter(g=>g.subjectId===subj.id);
+    const status = getSubjectStatus(subj.id);
+    const progress = Math.min(100, (status.avg/subj.pass)*100);
+    return `<div class="card ${status.cssClass}">
+      <h3>${subj.name}</h3>
+      <p>${status.text}</p>
+      <div class="progress"><div class="progress-bar" style="width:${progress}%">${status.avg?status.avg.toFixed(2):'0'}</div></div>
+      ${grades.length ? `<table>
+        <tr><th>Avaliação</th><th>Nota</th><th>Peso</th><th></th></tr>
+        ${grades.map(g=>`<tr>
+          <td>${g.name}</td><td>${g.value}</td><td>${g.weight}</td>
+          <td><button class="btn btn-danger" onclick="deleteGrade('${g.id}')">X</button></td>
+        </tr>`).join('')}
+      </table>` : '<small>Nenhuma nota lançada.</small>'}
+    </div>`;
+  }).join('');
+}
+
+// ===== Eventos / Calendário =====
+// Se o usuário já conectou a Google Agenda no app principal (LifePlan), o
+// token de acesso fica salvo no localStorage (mesma origem) e este arquivo
+// pode reaproveitá-lo para também criar o evento lá, automaticamente.
+async function syncEventToGoogleCalendar(ev) {
+  try {
+    const token = localStorage.getItem('gcal_token');
+    if (!token) return; // Google Agenda não conectada — segue só localmente
+    const body = {
+      summary: `${ev.type === 'prova' ? '📝 Prova: ' : ''}${ev.title}`,
+      description: ev.desc || '',
+      start: { date: ev.date },
+      end: { date: ev.date },
+    };
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) console.warn('Não foi possível sincronizar este evento com a Google Agenda.');
+  } catch (e) {
+    console.warn('Falha ao sincronizar com a Google Agenda:', e);
+  }
+}
+
+function addEvent() {
+  const title = document.getElementById('ev-title').value.trim();
+  const type = document.getElementById('ev-type').value;
+  const subjectId = document.getElementById('ev-subject').value;
+  const date = document.getElementById('ev-date').value;
+  const desc = document.getElementById('ev-desc').value.trim();
+  if (!title||!date) { alert('Preencha título e data!'); return; }
+  const newEvent = { id:uid(), title, type, subjectId, date, desc };
+  data.events.push(newEvent);
+  save();
+  syncEventToGoogleCalendar(newEvent);
+  document.getElementById('ev-title').value='';
+  document.getElementById('ev-desc').value='';
+  renderAll();
+}
+
+function deleteEvent(id) {
+  data.events = data.events.filter(e=>e.id!==id); save(); renderAll();
+}
+
+function changeMonth(d) { currentDate.setMonth(currentDate.getMonth()+d); renderCalendar(); }
+
+function renderCalendar() {
+  const y = currentDate.getFullYear(), m = currentDate.getMonth();
+  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  document.getElementById('cal-title').textContent = `${months[m]} ${y}`;
+  const firstDay = new Date(y,m,1).getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const today = new Date();
+  let html = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d=>`<div class="day-name">${d}</div>`).join('');
+  for (let i=0;i<firstDay;i++) html += '<div></div>';
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const events = data.events.filter(e=>e.date===dateStr);
+    const isToday = today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d;
+    html += `<div class="day ${events.length?'has-event':''} ${isToday?'today':''}" title="${events.map(e=>e.title).join(', ')}">
+      <span class="num">${d}</span>
+      ${events.map(e=>`<div><span class="badge ${e.type}">${e.title.slice(0,15)}</span></div>`).join('')}
+    </div>`;
+  }
+  document.getElementById('calendar').innerHTML = html;
+  
+  // lista
+  const el = document.getElementById('events-list');
+  if (!data.events.length) { el.innerHTML='<p class="empty">Nenhum evento.</p>'; return; }
+  const sorted = [...data.events].sort((a,b)=>a.date.localeCompare(b.date));
+  el.innerHTML = `<table>
+    <tr><th>Data</th><th>Tipo</th><th>Título</th><th>Matéria</th><th>Descrição</th><th></th></tr>
+    ${sorted.map(e=>{
+      const subj = data.subjects.find(x=>x.id===e.subjectId);
+      return `<tr>
+        <td>${formatDate(e.date)}</td>
+        <td><span class="badge ${e.type}">${e.type}</span></td>
+        <td>${e.title}</td>
+        <td>${subj?subj.name:'-'}</td>
+        <td>${e.desc||'-'}</td>
+        <td><button class="btn btn-danger" onclick="deleteEvent('${e.id}')">X</button></td>
+      </tr>`;
+    }).join('')}
+  </table>`;
+}
+
+// ===== Dashboard =====
+function renderDashboard() {
+  const totalHours = data.studies.reduce((a,s)=>a+s.hours,0);
+  const weekHours = data.studies.filter(s=>{
+    const d = new Date(s.date); const now=new Date(); 
+    const diff = (now-d)/(1000*60*60*24);
+    return diff>=0 && diff<=7;
+  }).reduce((a,s)=>a+s.hours,0);
+  const approved = data.subjects.filter(s=>getSubjectStatus(s.id).cssClass==='aprovado').length;
+  
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat"><h4>📚 Matérias</h4><p>${data.subjects.length}</p></div>
+    <div class="stat"><h4>⏱️ Total de horas</h4><p>${totalHours.toFixed(1)}h</p></div>
+    <div class="stat"><h4>📅 Horas esta semana</h4><p>${weekHours.toFixed(1)}h</p></div>
+    <div class="stat"><h4>✅ Já aprovado em</h4><p>${approved}/${data.subjects.length}</p></div>
+    <div class="stat"><h4>📝 Avaliações</h4><p>${data.grades.length}</p></div>
+    <div class="stat"><h4>📆 Eventos futuros</h4><p>${data.events.filter(e=>e.date>=todayStr()).length}</p></div>
+  `;
+  
+  // Horas por matéria
+  const hbs = document.getElementById('hours-by-subject');
+  if (!data.subjects.length) hbs.innerHTML='<p class="empty">Sem dados.</p>';
+  else {
+    const max = Math.max(...data.subjects.map(s=>data.studies.filter(st=>st.subjectId===s.id).reduce((a,b)=>a+b.hours,0)),1);
+    hbs.innerHTML = data.subjects.map(s=>{
+      const h = data.studies.filter(st=>st.subjectId===s.id).reduce((a,b)=>a+b.hours,0);
+      return `<div style="margin:0.5rem 0"><strong>${s.name}</strong> - ${h.toFixed(1)}h
+        <div class="progress"><div class="progress-bar" style="width:${(h/max)*100}%">${h.toFixed(1)}h</div></div></div>`;
+    }).join('');
+  }
+  
+  // Situação
+  const sl = document.getElementById('situation-list');
+  if (!data.subjects.length) sl.innerHTML='<p class="empty">Sem matérias.</p>';
+  else sl.innerHTML = data.subjects.map(s=>{
+    const st = getSubjectStatus(s.id);
+    return `<div class="card ${st.cssClass}"><strong>${s.name}</strong><br><small>${st.text}</small></div>`;
+  }).join('');
+  
+  // Eventos próximos
+  const ue = document.getElementById('upcoming-events');
+  const upcoming = data.events.filter(e=>e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
+  if (!upcoming.length) ue.innerHTML='<p class="empty">Nenhum evento futuro.</p>';
+  else ue.innerHTML = upcoming.map(e=>{
+    const subj = data.subjects.find(x=>x.id===e.subjectId);
+    return `<div class="card"><span class="badge ${e.type}">${e.type}</span> <strong>${e.title}</strong> - ${formatDate(e.date)} ${subj?'('+subj.name+')':''}</div>`;
+  }).join('');
+}
+
+// ===== Helpers =====
+function formatDate(s) { const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
+function todayStr() { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+function fillSubjectSelects() {
+  const opts = data.subjects.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  ['study-subject','grade-subject','ev-subject'].forEach(id=>{
+    const el = document.getElementById(id);
+    const placeholder = id==='ev-subject' ? '<option value="">-- Sem matéria --</option>' : '<option value="">-- Selecione --</option>';
+    el.innerHTML = placeholder + opts;
+  });
+}
+
+function renderAll() {
+  fillSubjectSelects();
+  renderSubjects();
+  renderStudies();
+  renderGrades();
+  renderCalendar();
+  renderDashboard();
+}
+
+document.getElementById('study-date').value = todayStr();
+document.getElementById('ev-date').value = todayStr();
+renderAll();
+</script>
+
+</body></html>

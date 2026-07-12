@@ -1,0 +1,2821 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle Financeiro</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #f5f0ea;
+    --surface: #ffffff;
+    --surface2: #f0ebe3;
+    --border: #ddd5c8;
+    --accent: #8b6f47;
+    --accent2: #5a7a5c;
+    --danger: #b85450;
+    --warn: #c9954a;
+    --text: #2e2520;
+    --muted: #8a7d72;
+    --card-radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.5px;
+    padding: 16px 0;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .logo span { color: var(--text); }
+
+  nav { display: flex; gap: 4px; flex: 1; overflow-x: auto; }
+
+  nav button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all .15s;
+  }
+
+  nav button:hover { color: var(--text); background: var(--surface2); }
+  nav button.active { color: var(--accent); background: rgba(139,111,71,.12); }
+
+  .tab { display: none; padding: 24px; }
+  .tab.active { display: block; }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(139,111,71,.15);
+    color: var(--accent);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .card-title {
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-total {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--accent2);
+  }
+
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    background: var(--surface2);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--muted);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(42,48,69,.5);
+    vertical-align: middle;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(255,255,255,.02); }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 10px;
+    width: 100%;
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="date"]:focus,
+  select:focus { border-color: var(--accent); }
+
+  input[type="date"] { min-width: 130px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+  }
+
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #a08060; }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid transparent; padding: 4px 8px; }
+  .btn-danger:hover { background: rgba(255,107,107,.1); border-color: var(--danger); }
+
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  .profile-select {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    min-width: 160px;
+  }
+
+  .chip {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all .15s;
+    opacity: .45;
+    white-space: nowrap;
+  }
+
+  .chip.selected { opacity: 1; }
+
+  .chip[data-p="0"] { color: #8b6f47; border-color: #8b6f47; }
+  .chip[data-p="0"].selected { background: rgba(139,111,71,.2); }
+  .chip[data-p="1"] { color: #5a7a5c; border-color: #5a7a5c; }
+  .chip[data-p="1"].selected { background: rgba(90,122,92,.2); }
+  .chip[data-p="2"] { color: #b85450; border-color: #b85450; }
+  .chip[data-p="2"].selected { background: rgba(184,84,80,.2); }
+  .chip[data-p="3"] { color: #c9954a; border-color: #c9954a; }
+  .chip[data-p="3"].selected { background: rgba(201,149,74,.2); }
+  .chip[data-p="4"] { color: #7a6b8a; border-color: #7a6b8a; }
+  .chip[data-p="4"].selected { background: rgba(122,107,138,.2); }
+  .chip[data-p="5"] { color: #f97316; border-color: #f97316; }
+  .chip[data-p="5"].selected { background: rgba(249,115,22,.2); }
+  .chip[data-p="6"] { color: #06b6d4; border-color: #06b6d4; }
+  .chip[data-p="6"].selected { background: rgba(6,182,212,.2); }
+
+  .profile-card[data-p="5"]::before { background: #f97316; }
+  .profile-card[data-p="6"]::before { background: #4a8a8a; }
+  .profile-card[data-p="5"] .profile-card-name { color: #c07040; }
+  .profile-card[data-p="6"] .profile-card-name { color: #4a8a8a; }
+  .chip[data-p="5"] { color: #c07040; border-color: #c07040; }
+  .chip[data-p="5"].selected { background: rgba(192,112,64,.2); }
+  .chip[data-p="6"] { color: #4a8a8a; border-color: #4a8a8a; }
+  .chip[data-p="6"].selected { background: rgba(74,138,138,.2); }
+  .chip[data-p="7"] { color: #7a9a40; border-color: #7a9a40; }
+  .chip[data-p="7"].selected { background: rgba(122,154,64,.2); }
+  .chip[data-p="8"] { color: #9a6090; border-color: #9a6090; }
+  .chip[data-p="8"].selected { background: rgba(154,96,144,.2); }
+  .chip[data-p="9"] { color: #b06070; border-color: #b06070; }
+  .chip[data-p="9"].selected { background: rgba(176,96,112,.2); }
+
+  .profile-card[data-p="5"]::before { background: #c07040; }
+  .profile-card[data-p="6"]::before { background: #4a8a8a; }
+  .profile-card[data-p="7"]::before { background: #7a9a40; }
+  .profile-card[data-p="8"]::before { background: #9a6090; }
+  .profile-card[data-p="9"]::before { background: #b06070; }
+  .profile-card[data-p="5"] .profile-card-name { color: #c07040; }
+  .profile-card[data-p="6"] .profile-card-name { color: #4a8a8a; }
+  .profile-card[data-p="7"] .profile-card-name { color: #7a9a40; }
+  .profile-card[data-p="8"] .profile-card-name { color: #9a6090; }
+  .profile-card[data-p="9"] .profile-card-name { color: #b06070; }
+
+  .val-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .negative { color: var(--danger) !important; }
+  .positive { color: var(--accent2) !important; }
+
+  tfoot td {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    font-weight: 600;
+    background: var(--surface2);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .profile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .profile-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .profile-card[data-p="0"]::before { background: #8b6f47; }
+  .profile-card[data-p="1"]::before { background: #5a7a5c; }
+  .profile-card[data-p="2"]::before { background: #b85450; }
+  .profile-card[data-p="3"]::before { background: #c9954a; }
+  .profile-card[data-p="4"]::before { background: #7a6b8a; }
+  .profile-card[data-p="5"]::before { background: #c07040; }
+  .profile-card[data-p="6"]::before { background: #4a8a8a; }
+  .profile-card[data-p="7"]::before { background: #7a9a40; }
+  .profile-card[data-p="8"]::before { background: #9a6090; }
+  .profile-card[data-p="9"]::before { background: #b06070; }
+
+  .profile-card-name {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .profile-card[data-p="0"] .profile-card-name { color: #8b6f47; }
+  .profile-card[data-p="1"] .profile-card-name { color: #5a7a5c; }
+  .profile-card[data-p="2"] .profile-card-name { color: #b85450; }
+  .profile-card[data-p="3"] .profile-card-name { color: #c9954a; }
+  .profile-card[data-p="4"] .profile-card-name { color: #7a6b8a; }
+  .profile-card[data-p="5"] .profile-card-name { color: #c07040; }
+  .profile-card[data-p="6"] .profile-card-name { color: #4a8a8a; }
+  .profile-card[data-p="7"] .profile-card-name { color: #7a9a40; }
+  .profile-card[data-p="8"] .profile-card-name { color: #9a6090; }
+  .profile-card[data-p="9"] .profile-card-name { color: #b06070; }
+
+  .profile-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .profile-card-row:last-child { border-bottom: none; }
+  .profile-card-row .label { color: var(--muted); }
+
+  .profile-card-final {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    padding-top: 4px;
+  }
+
+  .dyn-table thead th:first-child,
+  .dyn-table tbody td:first-child { color: var(--muted); font-size: 11px; }
+
+  .payment-add-row {
+    display: flex;
+    gap: 8px;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .payment-add-row input,
+  .payment-add-row select {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 32px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .profile-name-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    border-radius: 0;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    width: auto;
+    padding: 2px 4px;
+  }
+
+  .profile-name-input:focus { border-bottom-color: var(--accent); outline: none; }
+
+  .add-row-bar {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  select option { background: #f0ebe3; }
+
+  .category-select {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    min-width: 220px;
+  }
+
+  .cat-chip {
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid #7a6b8a;
+    color: #7a6b8a;
+    transition: all .15s;
+    opacity: .4;
+    white-space: nowrap;
+  }
+
+  .cat-chip.selected {
+    opacity: 1;
+    background: rgba(122,107,138,.2);
+  }
+
+  .balanco-section {
+    margin-bottom: 20px;
+  }
+
+  .balanco-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Compact "balões" inside Balanço Mensal tab */
+  #tab-balanco .card {
+    margin-bottom: 14px;
+    border-radius: 8px;
+  }
+  #tab-balanco .card-header {
+    padding: 8px 12px;
+  }
+  #tab-balanco .card-title {
+    font-size: 12px;
+    gap: 6px;
+  }
+  #tab-balanco .card-total {
+    font-size: 13px;
+  }
+  #tab-balanco table th,
+  #tab-balanco table td {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  #tab-balanco .profile-manager-card {
+    padding: 8px !important;
+    margin-bottom: 6px !important;
+  }
+  #tab-balanco .balanco-add-btn {
+    padding: 6px 10px;
+  }
+  .balanco-add-btn {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+  }
+  #saldo-builder-body > div:last-child {
+    border-bottom: none;
+  }
+  #saldo-builder-body button:disabled {
+    opacity: 0.2;
+  }
+
+  .saldo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--surface2);
+    border-top: 2px solid var(--accent);
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .saldo-row .saldo-label { color: var(--text); }
+
+  .balanco-editable-row td input[type="number"] {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    border-radius: 0;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 2px 4px;
+    width: 120px;
+    outline: none;
+  }
+
+  .balanco-editable-row td input[type="number"]:focus {
+    border-bottom-color: var(--accent);
+  }
+
+  .balanco-editable-row td input[type="text"] {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    border-radius: 0;
+    color: var(--text);
+    font-size: 13px;
+    padding: 2px 4px;
+    outline: none;
+  }
+
+  .balanco-editable-row td input[type="text"]:focus {
+    border-bottom-color: var(--accent);
+  }
+
+  .balanco-add-btn {
+    padding: 8px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .cat-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(42,48,69,.4);
+    font-size: 13px;
+  }
+
+  .cat-total-row:last-child { border-bottom: none; }
+  .cat-total-label { color: var(--muted); }
+
+  .cat-summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  /* Profile management styles */
+  .profiles-manager {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .profile-manager-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid rgba(42,48,69,.5);
+  }
+
+  .profile-manager-row:last-child { border-bottom: none; }
+
+  .profile-color-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .profile-manager-name {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    border-radius: 0;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 4px 6px;
+    outline: none;
+  }
+
+  .profile-manager-name:focus { border-bottom-color: var(--accent); }
+
+  /* Referencia table */
+  .referencia-value-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent2);
+  }
+
+  .referencia-remaining {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .lancamento-diff-positive { color: var(--accent2); }
+  .lancamento-diff-negative { color: var(--danger); }
+  .lancamento-diff-neutral { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">💳 <span>Controle</span>Financeiro</div>
+  <nav id="nav">
+    <button class="active" onclick="showTab('faturas')">Faturas & Pix</button>
+    <button onclick="showTab('resumo')">Resumo</button>
+    <button onclick="showTab('pagamentos')">Pagamentos</button>
+    <button onclick="showTab('perfis')">Perfis</button>
+    <button onclick="showTab('balanco')">Balanço Mensal</button>
+  </nav>
+</header>
+
+<!-- TAB 1 — FATURAS & PIX -->
+<div id="tab-faturas" class="tab active">
+  <div id="faturas-container"></div>
+  <div style="padding:0 0 24px">
+    <button class="btn btn-ghost" onclick="addFatura()">＋ Nova Fatura</button>
+  </div>
+
+  <!-- PIX SECTION -->
+  <div class="section-head" style="margin-top:8px">
+    <div class="section-title">🔵 Gastos com Pix</div>
+  </div>
+  <div class="card" id="pix-card">
+    <div class="card-header">
+      <div class="card-title">🔵 Pix</div>
+      <div class="card-total negative" id="pix-total">R$ 0,00</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th>Valor (R$)</th>
+            <th>Perfil responsável</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="pix-tbody"></tbody>
+      </table>
+    </div>
+    <div class="payment-add-row" id="pix-add-bar">
+      <input type="date" id="pix-date" />
+      <input type="text" id="pix-desc" placeholder="Descrição" style="flex:2;min-width:140px" />
+      <input type="number" id="pix-val" placeholder="Valor" step="0.01" style="flex:1;min-width:100px" />
+      <div id="pix-profile-chips" style="display:flex;gap:4px;flex-wrap:wrap;min-width:160px"></div>
+      <button class="btn btn-primary btn-sm" onclick="addPix()">＋ Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2 — RESUMO (Saldo Final + Resumo por Perfil) -->
+<div id="tab-resumo" class="tab">
+  <div class="section-head">
+    <div class="section-title">⚖️ Saldo Final por Perfil</div>
+  </div>
+  <div id="saldo-container"></div>
+
+  <div class="section-head" style="margin-top:16px">
+    <div class="section-title">📊 Gastos por Perfil</div>
+  </div>
+  <div id="perfis-summary"></div>
+</div>
+
+<!-- TAB 3 — PAGAMENTOS -->
+<div id="tab-pagamentos" class="tab">
+  <div class="section-head">
+    <div class="section-title">💸 Registro de Pagamentos</div>
+  </div>
+  <div id="pagamentos-container"></div>
+</div>
+
+<!-- TAB 4 — PERFIS -->
+<div id="tab-perfis-manager" class="tab">
+  <div class="section-head">
+    <div class="section-title">👤 Gerenciar Perfis</div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Perfis ativos</div>
+      <button class="btn btn-ghost btn-sm" id="btn-add-profile" onclick="addProfile()">＋ Adicionar perfil</button>
+    </div>
+    <div id="profiles-manager-body"></div>
+  </div>
+</div>
+
+<!-- TAB 5 — BALANÇO MENSAL -->
+<div id="tab-balanco" class="tab">
+  <div class="section-head">
+    <div class="section-title">📅 Balanço Mensal</div>
+  </div>
+
+  <div id="balanco-tables-container"></div>
+
+  <div style="padding:4px 0 24px">
+    <button class="btn btn-ghost btn-sm" onclick="addBalancoTable()">＋ Nova tabela</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════════
+const PROFILE_COLORS = ['#8b6f47','#5a7a5c','#b85450','#c9954a','#7a6b8a','#c07040','#4a8a8a','#7a9a40','#9a6090','#b06070'];
+function getProfileColor(idx) {
+  return PROFILE_COLORS[idx % PROFILE_COLORS.length];
+}
+
+// Default categories per profile index (used only for brand-new profiles / fresh state)
+const DEFAULT_PROFILE_CATEGORIES = {
+  3: ['Pedágio','Combustível','Manutenção','Seguro'],
+  4: ['Academia','Restaurantes','Salão','Uber','Dieta','Lista de desejos','Parcelado','Outros'],
+  5: ['Academia','Restaurantes','Salão','Uber','Dieta','Lista de desejos','Parcelado','Outros']
+};
+const CATEGORIES = ['Academia','Restaurantes','Salão','Uber','Dieta','Lista de desejos','Parcelado','Outros'];
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let state = loadState() || getDefaultState();
+
+function getDefaultState() {
+  return {
+    profiles: ['Perfil 1','Perfil 2','Perfil 3','Perfil 4','Perfil 5','Perfil 6'],
+    activeProfiles: 1,  // how many profiles are active (starts with 1 = only last profile)
+    // profileCategories[idx] = array of category name strings for that profile.
+    // Empty array / missing = profile has no categories (shows "—").
+    profileCategories: {
+      3: [...DEFAULT_PROFILE_CATEGORIES[3]],
+      4: [...DEFAULT_PROFILE_CATEGORIES[4]],
+      5: [...DEFAULT_PROFILE_CATEGORIES[5]]
+    },
+    // Which profiles appear in the ENTRADAS table (idx -> boolean). Default: all true.
+    entradasProfiles: {},
+    faturas: [
+      { id: genId(), name: 'Fatura 1', rows: [] }
+    ],
+    payments: [],
+    pixRows: [], // [{id, date, desc, value}]
+    saldoSectionIndex: 999, // position among balancoTables (999 = bottom)
+    // ── BALANÇO MENSAL: unified customizable table system ──
+    balancoTables: [
+      {
+        id: 'banco', name: 'Saldo em Conta', icon: '🏦', type: 'custom',
+        columns: [
+          { id: 'nome', name: 'Banco / Conta', type: 'text' },
+          { id: 'val', name: 'Valor (R$)', type: 'number' }
+        ],
+        rows: [],
+        sign: 1, includeInSaldo: true
+      },
+      {
+        id: 'faturas', name: 'Faturas', icon: '🗂️', type: 'custom',
+        columns: [
+          { id: 'nome', name: 'Nome da Fatura', type: 'text' },
+          { id: 'val', name: 'Valor (R$)', type: 'number' },
+          { id: 'fechamento', name: 'Fechamento', type: 'text' },
+          { id: 'vencimento', name: 'Vencimento', type: 'text' }
+        ],
+        rows: [],
+        sign: -1, includeInSaldo: true
+      },
+      {
+        id: 'pix_balanco', name: 'Pix', icon: '🔵', type: 'custom',
+        columns: [
+          { id: 'desc', name: 'Descrição', type: 'text' },
+          { id: 'val', name: 'Valor (R$)', type: 'number' },
+          { id: 'data', name: 'Data', type: 'text' }
+        ],
+        rows: [],
+        sign: -1, includeInSaldo: true
+      },
+      {
+        id: 'entradas', name: 'Entradas', icon: '💰', type: 'entradas',
+        columns: [], rows: [],
+        sign: 1, includeInSaldo: true
+      },
+      {
+        id: 'saidas', name: 'Saídas Futuras', icon: '💸', type: 'custom',
+        columns: [
+          { id: 'nome', name: 'Nome', type: 'text' },
+          { id: 'val', name: 'Valor (R$)', type: 'number' },
+          { id: 'obs', name: 'Obs', type: 'text' }
+        ],
+        rows: [],
+        sign: -1, includeInSaldo: true
+      },
+      {
+        id: 'referencia', name: 'Referência', icon: '📌', type: 'custom',
+        columns: [
+          { id: 'cat', name: 'Categoria', type: 'text' },
+          { id: 'val', name: 'Valor de Referência (R$)', type: 'number' }
+        ],
+        rows: [
+          { id: genId(), values: { cat: 'Academia', val: 0 } },
+          { id: genId(), values: { cat: 'Restaurantes', val: 0 } },
+          { id: genId(), values: { cat: 'Salão', val: 0 } },
+          { id: genId(), values: { cat: 'Uber', val: 0 } },
+          { id: genId(), values: { cat: 'Dieta', val: 0 } },
+          { id: genId(), values: { cat: 'Lista de desejos', val: 0 } },
+          { id: genId(), values: { cat: 'Parcelado', val: 0 } },
+          { id: genId(), values: { cat: 'Outros', val: 0 } },
+        ],
+        sign: 0, includeInSaldo: false
+      },
+      {
+        id: 'lancamentos', name: 'Lançamentos', icon: '🔮', type: 'lancamentos',
+        columns: [], rows: [],
+        refTableId: 'referencia',
+        sign: 0, includeInSaldo: false
+      }
+    ]
+  };
+}
+
+// Migrate old state into new balancoTables format
+if (!state.balancoTables) {
+  state.balancoTables = [];
+
+  // Migrate Referência
+  const oldRef = (state.balanco && state.balanco.referencia) || [];
+  const refRows = oldRef.length > 0
+    ? oldRef.map(r => ({ id: r.id || genId(), values: { cat: r.name, val: parseFloat(r.value) || 0 } }))
+    : CATEGORIES.map(cat => ({ id: genId(), values: { cat, val: 0 } }));
+  // Ensure "Parcelado" exists
+  if (!refRows.find(r => r.values.cat === 'Parcelado')) {
+    const outrosIdx = refRows.findIndex(r => r.values.cat === 'Outros');
+    const parceladoRow = { id: genId(), values: { cat: 'Parcelado', val: 0 } };
+    if (outrosIdx >= 0) refRows.splice(outrosIdx, 0, parceladoRow);
+    else refRows.push(parceladoRow);
+  }
+  state.balancoTables.push({
+    id: 'referencia', name: 'Referência', icon: '📌', type: 'custom',
+    columns: [
+      { id: 'cat', name: 'Categoria', type: 'text' },
+      { id: 'val', name: 'Valor de Referência (R$)', type: 'number' }
+    ],
+    rows: refRows,
+    sign: -1, includeInSaldo: true
+  });
+
+  // Migrate Faturas (balanço)
+  const oldFaturas = (state.balanco && state.balanco.faturas) || [];
+  state.balancoTables.push({
+    id: 'faturas', name: 'Faturas', icon: '🗂️', type: 'custom',
+    columns: [
+      { id: 'nome', name: 'Nome da Fatura', type: 'text' },
+      { id: 'val', name: 'Valor (R$)', type: 'number' },
+      { id: 'fechamento', name: 'Fechamento', type: 'text' },
+      { id: 'vencimento', name: 'Vencimento', type: 'text' }
+    ],
+    rows: oldFaturas.map(f => ({
+      id: f.id || genId(),
+      values: { nome: f.name, val: parseFloat(f.value) || 0, fechamento: f.fechamento || '', vencimento: f.vencimento || '' }
+    })),
+    sign: -1, includeInSaldo: true
+  });
+
+  // Entradas (computed, built-in)
+  state.balancoTables.push({
+    id: 'entradas', name: 'Entradas', icon: '💰', type: 'entradas',
+    columns: [], rows: [],
+    sign: 1, includeInSaldo: true
+  });
+
+  // Migrate Saídas
+  const oldSaidas = state.saidas || [];
+  state.balancoTables.push({
+    id: 'saidas', name: 'Saídas', icon: '💸', type: 'custom',
+    columns: [
+      { id: 'nome', name: 'Nome', type: 'text' },
+      { id: 'val', name: 'Valor (R$)', type: 'number' },
+      { id: 'obs', name: 'Obs', type: 'text' }
+    ],
+    rows: oldSaidas.map(s => ({
+      id: s.id || genId(),
+      values: { nome: s.name, val: parseFloat(s.value) || 0, obs: s.obs || '' }
+    })),
+    sign: -1, includeInSaldo: true
+  });
+
+  // Lançamentos (computed, built-in, informational by default)
+  state.balancoTables.push({
+    id: 'lancamentos', name: 'Lançamentos', icon: '🔮', type: 'lancamentos',
+    columns: [], rows: [],
+    refTableId: 'referencia',
+    sign: 0, includeInSaldo: false
+  });
+}
+
+if (state.activeProfiles === undefined) {
+  // old state had 5 profiles; keep them all active
+  state.activeProfiles = state.profiles.length;
+}
+
+// Ensure profiles array has 6 slots (new Perfil 4 at index 3, old profiles shift)
+// Migration: if old state had exactly 5 profiles, insert new Perfil 4 at index 3
+if (state.profiles.length === 5) {
+  // Insert new Perfil 4 between old index 2 and 3
+  state.profiles.splice(3, 0, 'Perfil 4');
+  // Shift all row profileIdx: old 3 → 4, old 4 → 5 (and payments too)
+  state.faturas.forEach(f => {
+    f.rows.forEach(r => {
+      if (r.profileIdx === 4) r.profileIdx = 5;
+      else if (r.profileIdx === 3) r.profileIdx = 4;
+    });
+  });
+  state.payments.forEach(p => {
+    if (p.profileIdx === 4) p.profileIdx = 5;
+    else if (p.profileIdx === 3) p.profileIdx = 4;
+  });
+}
+while (state.profiles.length < 6) {
+  state.profiles.push('Perfil ' + (state.profiles.length + 1));
+}
+// activeProfiles is now just an alias for profiles.length (kept for compatibility)
+state.activeProfiles = state.profiles.length;
+
+// Migrate / ensure profileCategories exists for every profile index
+if (!state.profileCategories) state.profileCategories = {};
+state.profiles.forEach((name, idx) => {
+  if (!state.profileCategories[idx]) {
+    // Use defaults if this is one of the originally-special profiles, else empty list
+    state.profileCategories[idx] = DEFAULT_PROFILE_CATEGORIES[idx]
+      ? [...DEFAULT_PROFILE_CATEGORIES[idx]]
+      : [];
+  }
+});
+
+// Migrate entradasProfiles (default: all profiles included)
+if (!state.entradasProfiles) state.entradasProfiles = {};
+state.profiles.forEach((name, idx) => {
+  if (state.entradasProfiles[idx] === undefined) {
+    state.entradasProfiles[idx] = true;
+  }
+});
+
+// Migrate saidas
+if (!state.saidas) state.saidas = [];
+
+// Migrate pixRows
+if (!state.pixRows) state.pixRows = [];
+if (state.saldoSectionIndex === undefined) state.saldoSectionIndex = 999;
+
+// Ensure banco table exists
+if (state.balancoTables && !state.balancoTables.find(t => t.id === 'banco')) {
+  state.balancoTables.unshift({
+    id: 'banco', name: 'Saldo em Conta', icon: '🏦', type: 'custom',
+    columns: [
+      { id: 'nome', name: 'Banco / Conta', type: 'text' },
+      { id: 'val', name: 'Valor (R$)', type: 'number' }
+    ],
+    rows: [],
+    sign: 1, includeInSaldo: true
+  });
+}
+
+// Ensure PIX balanço table exists
+if (state.balancoTables && !state.balancoTables.find(t => t.id === 'pix_balanco')) {
+  const faturasIdx = state.balancoTables.findIndex(t => t.id === 'faturas');
+  const pixTable = {
+    id: 'pix_balanco', name: 'Pix', icon: '🔵', type: 'custom',
+    columns: [
+      { id: 'desc', name: 'Descrição', type: 'text' },
+      { id: 'val', name: 'Valor (R$)', type: 'number' },
+      { id: 'data', name: 'Data', type: 'text' }
+    ],
+    rows: [],
+    sign: -1, includeInSaldo: true
+  };
+  if (faturasIdx >= 0) {
+    state.balancoTables.splice(faturasIdx + 1, 0, pixTable);
+  } else {
+    state.balancoTables.push(pixTable);
+  }
+}
+
+function genId() { return Math.random().toString(36).slice(2,9); }
+
+function saveState() {
+  try { localStorage.setItem('cf_state', JSON.stringify(state)); } catch(e){}
+}
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('cf_state');
+    return s ? JSON.parse(s) : null;
+  } catch(e){ return null; }
+}
+
+// ══════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  const tabId = name === 'perfis' ? 'tab-perfis-manager' : 'tab-'+name;
+  document.getElementById(tabId).classList.add('active');
+  const btns = document.querySelectorAll('nav button');
+  const map = ['faturas','resumo','pagamentos','perfis','balanco'];
+  btns[map.indexOf(name)].classList.add('active');
+  renderActive(name);
+}
+
+function renderActive(name) {
+  if (name === 'faturas') { renderFaturas(); renderPix(); }
+  else if (name === 'resumo') { renderSaldo(); renderPerfis(); }
+  else if (name === 'pagamentos') renderPagamentos();
+  else if (name === 'perfis') renderProfilesManager();
+  else if (name === 'balanco') renderBalanco();
+}
+
+// ══════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════
+function fmt(v) {
+  const n = parseFloat(v) || 0;
+  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function getActiveProfiles() {
+  // All profiles in state.profiles are active. Order preserved.
+  return state.profiles.map((name, idx) => ({ name, idx }));
+}
+
+function profileChips(selectedIdx, onChange) {
+  const wrap = document.createElement('div');
+  wrap.className = 'profile-select';
+  getActiveProfiles().forEach(({ name, idx }) => {
+    const chip = document.createElement('span');
+    chip.className = 'chip' + (selectedIdx === idx ? ' selected' : '');
+    chip.dataset.p = idx;
+    chip.textContent = name;
+    chip.onclick = () => {
+      const newIdx = selectedIdx === idx ? null : idx;
+      onChange(newIdx);
+    };
+    wrap.appendChild(chip);
+  });
+  return wrap;
+}
+
+// ══════════════════════════════════════════════════════
+//  CATEGORY CELL (Perfil 4 idx=3 and last profile idx=5)
+// ══════════════════════════════════════════════════════
+function getProfileCategories(pIdx) {
+  const cats = state.profileCategories && state.profileCategories[pIdx];
+  return (cats && cats.length > 0) ? cats : null;
+}
+
+function buildCategoryCell(r, fId) {
+  const cats = getProfileCategories(r.profileIdx);
+  if (!cats) {
+    const span = document.createElement('span');
+    span.style.color = 'var(--muted)';
+    span.style.fontSize = '12px';
+    span.textContent = '—';
+    return span;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'category-select';
+  const currentCat = r.category || cats[0];
+
+  // Deduplicate categories for display
+  const uniqueCats = [...new Set(cats)];
+
+  uniqueCats.forEach(cat => {
+    const chip = document.createElement('span');
+    chip.className = 'cat-chip' + (currentCat === cat ? ' selected' : '');
+    chip.textContent = cat;
+    chip.onclick = () => {
+      r.category = cat;
+      saveState();
+      wrap.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      if (document.getElementById('tab-balanco').classList.contains('active')) renderBalanco();
+    };
+    wrap.appendChild(chip);
+  });
+  return wrap;
+}
+
+// ══════════════════════════════════════════════════════
+//  PROFILE MANAGEMENT
+// ══════════════════════════════════════════════════════
+function shiftIndexedObjectInsert(obj, insertAt, defaultValue) {
+  const result = {};
+  Object.keys(obj || {}).forEach(k => {
+    const ki = parseInt(k, 10);
+    result[ki >= insertAt ? ki + 1 : ki] = obj[k];
+  });
+  result[insertAt] = defaultValue;
+  return result;
+}
+
+function shiftIndexedObjectRemove(obj, idx) {
+  const result = {};
+  Object.keys(obj || {}).forEach(k => {
+    const ki = parseInt(k, 10);
+    if (ki === idx) return; // drop
+    result[ki > idx ? ki - 1 : ki] = obj[k];
+  });
+  return result;
+}
+
+function addProfile() {
+  // Insert new profile right before the last one (last profile stays last,
+  // keeping its special categories)
+  const insertAt = state.profiles.length - 1;
+  state.profiles.splice(insertAt, 0, 'Perfil ' + state.profiles.length);
+  // Shift profileIdx for any row/payment pointing at the old last profile
+  const oldLastIdx = insertAt; // old last index before insertion
+  state.faturas.forEach(f => {
+    f.rows.forEach(r => {
+      if (r.profileIdx === oldLastIdx) r.profileIdx = oldLastIdx + 1;
+    });
+  });
+  state.payments.forEach(p => {
+    if (p.profileIdx === oldLastIdx) p.profileIdx = oldLastIdx + 1;
+  });
+  // Shift profileCategories keys >= insertAt up by 1, new profile starts empty
+  state.profileCategories = shiftIndexedObjectInsert(state.profileCategories, insertAt, []);
+  // Shift entradasProfiles keys too, new profile defaults to included (true)
+  state.entradasProfiles = shiftIndexedObjectInsert(state.entradasProfiles, insertAt, true);
+
+  state.activeProfiles = state.profiles.length;
+  saveState();
+  renderBalanco();
+  renderFaturas(); // refresh chips
+}
+
+function removeProfile(idx) {
+  if (state.profiles.length <= 1) return;
+  const lastIdx = state.profiles.length - 1;
+  if (idx === lastIdx) return; // never remove the last profile (keeps special categories)
+
+  // Remove rows/payments belonging to this profile (unassign them)
+  state.faturas.forEach(f => {
+    f.rows.forEach(r => {
+      if (r.profileIdx === idx) r.profileIdx = null;
+      else if (r.profileIdx > idx) r.profileIdx--;
+    });
+  });
+  state.payments.forEach(p => {
+    if (p.profileIdx === idx) p.profileIdx = null;
+    else if (p.profileIdx > idx) p.profileIdx--;
+  });
+
+  // Shift profileCategories and entradasProfiles keys down, dropping the removed one
+  state.profileCategories = shiftIndexedObjectRemove(state.profileCategories, idx);
+  state.entradasProfiles = shiftIndexedObjectRemove(state.entradasProfiles, idx);
+
+  state.profiles.splice(idx, 1);
+  state.activeProfiles = state.profiles.length;
+  saveState();
+  renderBalanco();
+  renderFaturas();
+}
+
+function addCategoryToProfile(pIdx) {
+  if (!state.profileCategories[pIdx]) state.profileCategories[pIdx] = [];
+  state.profileCategories[pIdx].push('Nova categoria');
+  saveState();
+  renderProfilesManager();
+  renderBalanco();
+  renderFaturas();
+}
+
+function removeCategoryFromProfile(pIdx, catIdx) {
+  state.profileCategories[pIdx].splice(catIdx, 1);
+  saveState();
+  renderProfilesManager();
+  renderBalanco();
+  renderFaturas();
+}
+
+function renderProfilesManager() {
+  const body = document.getElementById('profiles-manager-body');
+  body.innerHTML = '';
+
+  getActiveProfiles().forEach(({ name, idx }) => {
+    const card = document.createElement('div');
+    card.className = 'profile-manager-card';
+    card.style.border = '1px solid var(--border)';
+    card.style.borderRadius = '10px';
+    card.style.padding = '12px';
+    card.style.marginBottom = '10px';
+
+    const row = document.createElement('div');
+    row.className = 'profile-manager-row';
+
+    const dot = document.createElement('div');
+    dot.className = 'profile-color-dot';
+    dot.style.background = getProfileColor(idx);
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'profile-manager-name';
+    nameInput.value = state.profiles[idx];
+    nameInput.placeholder = 'Nome do perfil';
+    nameInput.oninput = e => {
+      state.profiles[idx] = e.target.value;
+      saveState();
+    };
+
+    const label = document.createElement('span');
+    label.style.color = 'var(--muted)';
+    label.style.fontSize = '11px';
+    label.style.marginLeft = '4px';
+    const lastIdx = state.profiles.length - 1;
+    if (idx === lastIdx) {
+      label.textContent = '(perfil personalizável)';
+    }
+
+    row.appendChild(dot);
+    row.appendChild(nameInput);
+    row.appendChild(label);
+
+    // ── "Incluir nas Entradas" checkbox ──
+    const entradasLabel = document.createElement('label');
+    entradasLabel.style.display = 'inline-flex';
+    entradasLabel.style.alignItems = 'center';
+    entradasLabel.style.gap = '4px';
+    entradasLabel.style.fontSize = '11px';
+    entradasLabel.style.color = 'var(--muted)';
+    entradasLabel.style.marginLeft = '8px';
+    entradasLabel.style.cursor = 'pointer';
+
+    const entradasCheckbox = document.createElement('input');
+    entradasCheckbox.type = 'checkbox';
+    entradasCheckbox.checked = state.entradasProfiles[idx] !== false;
+    entradasCheckbox.onchange = e => {
+      state.entradasProfiles[idx] = e.target.checked;
+      saveState();
+      renderBalanco();
+    };
+
+    entradasLabel.appendChild(entradasCheckbox);
+    entradasLabel.appendChild(document.createTextNode('Aparece em Entradas'));
+    row.appendChild(entradasLabel);
+
+    // Allow removing any non-last profile
+    if (idx !== lastIdx) {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-danger btn-sm';
+      delBtn.innerHTML = '🗑';
+      delBtn.title = 'Remover perfil';
+      delBtn.onclick = () => removeProfile(idx);
+      row.appendChild(delBtn);
+    }
+
+    card.appendChild(row);
+
+    // ── Categories editor ──
+    const catSection = document.createElement('div');
+    catSection.style.marginTop = '10px';
+    catSection.style.paddingTop = '10px';
+    catSection.style.borderTop = '1px dashed var(--border)';
+
+    const catLabel = document.createElement('div');
+    catLabel.style.fontSize = '11px';
+    catLabel.style.fontWeight = '700';
+    catLabel.style.textTransform = 'uppercase';
+    catLabel.style.letterSpacing = '.6px';
+    catLabel.style.color = 'var(--muted)';
+    catLabel.style.marginBottom = '8px';
+    catLabel.textContent = 'Categorias deste perfil';
+    catSection.appendChild(catLabel);
+
+    const catList = document.createElement('div');
+    catList.style.display = 'flex';
+    catList.style.flexWrap = 'wrap';
+    catList.style.gap = '6px';
+    catList.style.marginBottom = '8px';
+
+    const cats = state.profileCategories[idx] || [];
+    cats.forEach((cat, catIdx) => {
+      const chip = document.createElement('div');
+      chip.style.display = 'flex';
+      chip.style.alignItems = 'center';
+      chip.style.gap = '4px';
+      chip.style.background = 'var(--surface2)';
+      chip.style.border = '1px solid var(--border)';
+      chip.style.borderRadius = '6px';
+      chip.style.padding = '2px 6px';
+
+      const catInput = document.createElement('input');
+      catInput.type = 'text';
+      catInput.value = cat;
+      catInput.style.background = 'transparent';
+      catInput.style.border = 'none';
+      catInput.style.color = 'var(--text)';
+      catInput.style.fontSize = '12px';
+      catInput.style.width = Math.max(60, cat.length * 7) + 'px';
+      catInput.oninput = e => {
+        state.profileCategories[idx][catIdx] = e.target.value;
+        saveState();
+      };
+      catInput.onblur = () => {
+        renderBalanco();
+        renderFaturas();
+      };
+
+      const rmBtn = document.createElement('button');
+      rmBtn.textContent = '✕';
+      rmBtn.style.background = 'none';
+      rmBtn.style.border = 'none';
+      rmBtn.style.color = 'var(--danger)';
+      rmBtn.style.cursor = 'pointer';
+      rmBtn.style.fontSize = '11px';
+      rmBtn.title = 'Remover categoria';
+      rmBtn.onclick = () => removeCategoryFromProfile(idx, catIdx);
+
+      chip.appendChild(catInput);
+      chip.appendChild(rmBtn);
+      catList.appendChild(chip);
+    });
+
+    if (cats.length === 0) {
+      const empty = document.createElement('span');
+      empty.style.color = 'var(--muted)';
+      empty.style.fontSize = '12px';
+      empty.textContent = 'Nenhuma categoria — adicione abaixo.';
+      catList.appendChild(empty);
+    }
+
+    catSection.appendChild(catList);
+
+    const addCatBtn = document.createElement('button');
+    addCatBtn.className = 'btn btn-sm';
+    addCatBtn.textContent = '+ Categoria';
+    addCatBtn.onclick = () => addCategoryToProfile(idx);
+    catSection.appendChild(addCatBtn);
+
+    card.appendChild(catSection);
+    body.appendChild(card);
+  });
+
+  // Update add button
+  const addBtn = document.getElementById('btn-add-profile');
+  if (addBtn) addBtn.style.display = '';
+}
+
+// ══════════════════════════════════════════════════════
+//  BALANÇO MENSAL — SISTEMA DINÂMICO DE TABELAS
+// ══════════════════════════════════════════════════════
+
+// ── Helpers ──
+function getBTById(id) {
+  return state.balancoTables.find(t => t.id === id);
+}
+
+function getTableTotal(t) {
+  // Returns computed numeric total for a table (for SALDO use)
+  if (t.type === 'entradas') return computeEntradas().total;
+  if (t.type === 'lancamentos') return 0; // informational, not summed unless sign != 0
+  // custom: sum all columns of type 'number'
+  const numCols = t.columns.filter(c => c.type === 'number');
+  if (numCols.length === 0) return 0;
+  // use first number column as "value"
+  const valCol = numCols[0];
+  return t.rows.reduce((s, r) => s + (parseFloat(r.values[valCol.id]) || 0), 0);
+}
+
+function computeEntradas() {
+  let total = 0;
+  const rows = [];
+  getActiveProfiles()
+    .filter(({ idx }) => state.entradasProfiles[idx] !== false)
+    .forEach(({ name, idx }) => {
+      const rws = getAllRowsByProfile(idx);
+      const tg = rws.reduce((s, r) => s + (parseFloat(r.value) || 0), 0);
+      const pays = state.payments.filter(p => p.profileIdx === idx);
+      const tp = pays.reduce((s, p) => s + p.value, 0);
+      const saldo = (tp - tg) * -1;
+      total += saldo;
+      rows.push({ name, idx, saldo });
+    });
+  return { total, rows };
+}
+
+// ── Table CRUD ──
+function addBalancoTable() {
+  const t = {
+    id: genId(),
+    name: 'Nova Tabela',
+    icon: '📋',
+    type: 'custom',
+    columns: [
+      { id: genId(), name: 'Nome', type: 'text' },
+      { id: genId(), name: 'Valor (R$)', type: 'number' }
+    ],
+    rows: [],
+    sign: -1,
+    includeInSaldo: true
+  };
+  state.balancoTables.push(t);
+  saveState();
+  renderBalanco();
+}
+
+function removeBalancoTable(id) {
+  state.balancoTables = state.balancoTables.filter(t => t.id !== id);
+  saveState();
+  renderBalanco();
+}
+
+function moveBalancoTable(id, dir) {
+  const idx = state.balancoTables.findIndex(t => t.id === id);
+  const target = idx + dir;
+  if (target < 0 || target >= state.balancoTables.length) return;
+  const tmp = state.balancoTables[idx];
+  state.balancoTables[idx] = state.balancoTables[target];
+  state.balancoTables[target] = tmp;
+  saveState();
+  renderBalanco();
+}
+
+function addTableRow(tableId) {
+  const t = getBTById(tableId);
+  if (!t) return;
+  const row = { id: genId(), values: {} };
+  t.columns.forEach(c => { row.values[c.id] = c.type === 'number' ? 0 : ''; });
+  t.rows.push(row);
+  saveState();
+  renderBalanco();
+}
+
+function removeTableRow(tableId, rowId) {
+  const t = getBTById(tableId);
+  if (!t) return;
+  t.rows = t.rows.filter(r => r.id !== rowId);
+  saveState();
+  renderBalanco();
+}
+
+function addTableColumn(tableId) {
+  const t = getBTById(tableId);
+  if (!t) return;
+  const col = { id: genId(), name: 'Coluna', type: 'text' };
+  t.columns.push(col);
+  t.rows.forEach(r => { r.values[col.id] = ''; });
+  saveState();
+  renderBalanco();
+}
+
+function removeTableColumn(tableId, colId) {
+  const t = getBTById(tableId);
+  if (!t) return;
+  t.columns = t.columns.filter(c => c.id !== colId);
+  t.rows.forEach(r => { delete r.values[colId]; });
+  saveState();
+  renderBalanco();
+}
+
+// ── Main Render ──
+function renderBalanco() {
+  renderBalancoTables();
+  renderSaldoBuilder();
+}
+
+function renderBalancoTables() {
+  const container = document.getElementById('balanco-tables-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const totalTables = state.balancoTables.length;
+  const saldoIdx = Math.min(state.saldoSectionIndex ?? 999, totalTables);
+
+  state.balancoTables.forEach((t, tIdx) => {
+    // Inject saldo card BEFORE this table if saldoIdx === tIdx
+    if (tIdx === saldoIdx) {
+      container.appendChild(buildSaldoSection(tIdx, totalTables));
+    }
+    container.appendChild(buildBalancoTableCard(t, tIdx, totalTables));
+  });
+
+  // If saldo is at the bottom (index >= totalTables)
+  if (saldoIdx >= totalTables) {
+    container.appendChild(buildSaldoSection(totalTables, totalTables));
+  }
+}
+
+function buildSaldoSection(posIdx, totalTables) {
+  const wrap = document.createElement('div');
+  wrap.className = 'balanco-section';
+
+  const titleRow = document.createElement('div');
+  titleRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
+
+  const label = document.createElement('div');
+  label.className = 'balanco-section-title';
+  label.textContent = '💡 Saldo do Mês';
+  label.style.margin = '0';
+
+  const moveUp = document.createElement('button');
+  moveUp.className = 'btn btn-ghost btn-sm';
+  moveUp.innerHTML = '↑'; moveUp.style.cssText = 'padding:2px 7px;font-size:12px';
+  moveUp.disabled = posIdx === 0;
+  moveUp.title = 'Mover para cima';
+  moveUp.onclick = () => { state.saldoSectionIndex = Math.max(0, posIdx - 1); saveState(); renderBalanco(); };
+
+  const moveDown = document.createElement('button');
+  moveDown.className = 'btn btn-ghost btn-sm';
+  moveDown.innerHTML = '↓'; moveDown.style.cssText = 'padding:2px 7px;font-size:12px';
+  moveDown.disabled = posIdx >= totalTables;
+  moveDown.title = 'Mover para baixo';
+  moveDown.onclick = () => { state.saldoSectionIndex = Math.min(totalTables, posIdx + 1); saveState(); renderBalanco(); };
+
+  titleRow.append(moveUp, moveDown, label);
+
+  const card = document.createElement('div');
+  card.id = 'balanco-saldo-row';
+  card.className = 'card';
+  card.style.overflow = 'hidden';
+
+  wrap.append(titleRow, card);
+  return wrap;
+}
+
+function buildBalancoTableCard(t, tIdx, totalTables) {
+    const section = document.createElement('div');
+    section.className = 'balanco-section';
+
+    // ── Section header ──
+    const titleRow = document.createElement('div');
+    titleRow.style.display = 'flex';
+    titleRow.style.alignItems = 'center';
+    titleRow.style.gap = '6px';
+    titleRow.style.marginBottom = '8px';
+
+    const iconInput = document.createElement('input');
+    iconInput.type = 'text'; iconInput.value = t.icon || '📋';
+    iconInput.style.cssText = 'width:32px;background:transparent;border:none;font-size:16px;color:var(--text);text-align:center;cursor:pointer';
+    iconInput.oninput = e => { t.icon = e.target.value; saveState(); };
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text'; nameInput.value = t.name;
+    nameInput.className = 'balanco-section-title';
+    nameInput.style.cssText = 'background:transparent;border:none;flex:1;cursor:text;outline:none;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)';
+    nameInput.oninput = e => { t.name = e.target.value; saveState(); renderSaldoBuilder(); };
+
+    const moveUp = document.createElement('button');
+    moveUp.className = 'btn btn-ghost btn-sm'; moveUp.textContent = '↑'; moveUp.title = 'Mover para cima';
+    moveUp.style.padding = '2px 6px';
+    moveUp.onclick = () => moveBalancoTable(t.id, -1);
+    moveUp.disabled = tIdx === 0;
+
+    const moveDown = document.createElement('button');
+    moveDown.className = 'btn btn-ghost btn-sm'; moveDown.textContent = '↓'; moveDown.title = 'Mover para baixo';
+    moveDown.style.padding = '2px 6px';
+    moveDown.onclick = () => moveBalancoTable(t.id, 1);
+    moveDown.disabled = tIdx === totalTables - 1;
+
+    titleRow.append(iconInput, nameInput, moveUp, moveDown);
+
+    // ── Sign toggle (include in saldo / exclude) ──
+    const signBtn = document.createElement('button');
+    signBtn.className = 'btn btn-ghost btn-sm';
+    const signColors = { 1: 'var(--accent2)', '-1': 'var(--danger)', 0: 'var(--muted)' };
+    const signLabels = { 1: '＋ Saldo', '-1': '− Saldo', 0: 'off' };
+    signBtn.textContent = signLabels[t.sign] ?? 'off';
+    signBtn.style.cssText = `font-size:10px;padding:2px 7px;color:${signColors[t.sign] ?? 'var(--muted)'};border-color:currentColor`;
+    signBtn.title = 'Altera como esta tabela entra no Saldo';
+    signBtn.onclick = () => {
+      t.sign = t.sign === 1 ? -1 : t.sign === -1 ? 0 : 1;
+      t.includeInSaldo = t.sign !== 0;
+      saveState(); renderBalanco();
+    };
+    titleRow.appendChild(signBtn);
+
+    // ── Delete button (only for custom tables, not built-ins) ──
+    const builtIn = ['referencia','faturas','entradas','saidas','lancamentos','banco','pix_balanco'];
+    if (!builtIn.includes(t.id)) {
+      const delTableBtn = document.createElement('button');
+      delTableBtn.className = 'btn btn-danger btn-sm'; delTableBtn.innerHTML = '🗑';
+      delTableBtn.style.padding = '2px 6px';
+      delTableBtn.onclick = () => removeBalancoTable(t.id);
+      titleRow.appendChild(delTableBtn);
+    }
+
+    section.appendChild(titleRow);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    // ── Table content by type ──
+    if (t.type === 'entradas') {
+      renderEntradasCard(card, t);
+    } else if (t.type === 'lancamentos') {
+      renderLancamentosCard(card, t);
+    } else if (t.id === 'banco') {
+      renderBancoCard(card, t);
+    } else {
+      renderCustomCard(card, t);
+    }
+
+    section.appendChild(card);
+    return section;
+}
+
+function renderBancoCard(card, t) {
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:12px;padding:16px 18px';
+
+  t.rows.forEach(row => {
+    const box = document.createElement('div');
+    box.style.cssText = `
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      min-width: 160px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+    `;
+
+    const nameInp = document.createElement('input');
+    nameInp.type = 'text';
+    nameInp.value = row.values['nome'] || '';
+    nameInp.placeholder = 'Nome da conta';
+    nameInp.style.cssText = 'background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;width:100%;outline:none;padding-bottom:4px;font-family:inherit';
+    nameInp.oninput = e => { row.values['nome'] = e.target.value; saveState(); };
+
+    const valInp = document.createElement('input');
+    valInp.type = 'number';
+    valInp.value = row.values['val'] || 0;
+    valInp.placeholder = '0,00';
+    valInp.step = '0.01';
+    valInp.style.cssText = 'background:transparent;border:none;color:var(--accent2);font-size:22px;font-weight:700;width:100%;outline:none;font-family:"JetBrains Mono",monospace;padding:4px 0';
+    valInp.onblur = e => { row.values['val'] = parseFloat(e.target.value) || 0; saveState(); renderBalanco(); };
+
+    const prefix = document.createElement('span');
+    prefix.textContent = 'R$';
+    prefix.style.cssText = 'font-size:11px;color:var(--muted);font-weight:600';
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-danger btn-sm';
+    delBtn.innerHTML = '✕';
+    delBtn.style.cssText = 'position:absolute;top:8px;right:8px;padding:2px 6px;font-size:10px;opacity:.5';
+    delBtn.onmouseenter = () => delBtn.style.opacity = '1';
+    delBtn.onmouseleave = () => delBtn.style.opacity = '.5';
+    delBtn.onclick = () => removeTableRow(t.id, row.id);
+
+    box.append(nameInp, prefix, valInp, delBtn);
+    grid.appendChild(box);
+  });
+
+  // "＋ Conta" add box
+  const addBox = document.createElement('div');
+  addBox.style.cssText = `
+    background: transparent;
+    border: 1.5px dashed var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    min-width: 140px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    gap: 6px;
+    transition: all .15s;
+  `;
+  addBox.innerHTML = '＋ Nova conta';
+  addBox.onmouseenter = () => { addBox.style.borderColor = 'var(--accent)'; addBox.style.color = 'var(--accent)'; };
+  addBox.onmouseleave = () => { addBox.style.borderColor = 'var(--border)'; addBox.style.color = 'var(--muted)'; };
+  addBox.onclick = () => {
+    t.rows.push({ id: genId(), values: { nome: '', val: 0 } });
+    saveState();
+    renderBalanco();
+  };
+  grid.appendChild(addBox);
+
+  if (t.rows.length === 0) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:12px;color:var(--muted);padding:0 0 12px 2px';
+    hint.textContent = 'Clique em "＋ Nova conta" para adicionar.';
+    grid.insertBefore(hint, addBox);
+  }
+
+  card.appendChild(grid);
+
+  // Total footer
+  const numCol = t.columns.find(c => c.type === 'number');
+  if (numCol && t.rows.length > 0) {
+    const total = t.rows.reduce((s, r) => s + (parseFloat(r.values[numCol.id]) || 0), 0);
+    const footer = document.createElement('div');
+    footer.style.cssText = 'padding:10px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:13px;font-weight:600;background:var(--surface2)';
+    footer.innerHTML = `<span style="color:var(--muted)">Total em conta</span><span class="val-cell positive">${fmt(total)}</span>`;
+    card.appendChild(footer);
+  }
+}
+
+function renderEntradasCard(card, t) {
+  // Header hint
+  const hint = document.createElement('div');
+  hint.style.cssText = 'padding:6px 14px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2)';
+  hint.textContent = 'Clique no perfil para incluir ou excluir do total de Entradas.';
+  card.appendChild(hint);
+
+  const wrap = document.createElement('div'); wrap.className = 'table-wrap';
+  const table = document.createElement('table');
+  table.innerHTML = `<thead><tr><th>Perfil</th><th>Saldo Final</th><th style="width:60px;text-align:center">Incluir</th></tr></thead>`;
+  const tbody = document.createElement('tbody');
+
+  let total = 0;
+
+  getActiveProfiles().forEach(({ name, idx }) => {
+    const included = state.entradasProfiles[idx] !== false;
+
+    // Compute saldo for this profile
+    const rws = getAllRowsByProfile(idx);
+    const tg = rws.reduce((s, r) => s + (parseFloat(r.value) || 0), 0);
+    const pays = state.payments.filter(p => p.profileIdx === idx);
+    const tp = pays.reduce((s, p) => s + p.value, 0);
+    const saldo = (tp - tg) * -1;
+
+    if (included) total += saldo;
+
+    const dot = `<span style="width:8px;height:8px;border-radius:50%;background:${getProfileColor(idx)};display:inline-block;margin-right:8px;vertical-align:middle;"></span>`;
+    const cls = saldo >= 0 ? 'positive' : 'negative';
+    const sign = saldo >= 0 ? '+' : '';
+
+    const tr = document.createElement('tr');
+    tr.style.opacity = included ? '1' : '0.4';
+    tr.style.transition = 'opacity .15s';
+
+    const tdName = document.createElement('td');
+    tdName.innerHTML = `${dot}${name}`;
+    tdName.style.cursor = 'pointer';
+    tdName.title = included ? 'Clique para excluir' : 'Clique para incluir';
+
+    const tdVal = document.createElement('td');
+    tdVal.className = `val-cell ${cls}`;
+    tdVal.textContent = `${sign}${fmt(saldo)}`;
+
+    const tdToggle = document.createElement('td');
+    tdToggle.style.textAlign = 'center';
+    const toggle = document.createElement('button');
+    toggle.className = 'btn btn-sm';
+    toggle.style.cssText = `padding:2px 8px;font-size:11px;font-weight:600;${included
+      ? 'color:var(--accent2);border:1px solid var(--accent2);background:rgba(90,122,92,.12)'
+      : 'color:var(--muted);border:1px solid var(--border)'}`;
+    toggle.textContent = included ? '✓' : '○';
+    toggle.title = included ? 'Excluir das Entradas' : 'Incluir nas Entradas';
+
+    const toggleFn = () => {
+      state.entradasProfiles[idx] = !included;
+      saveState();
+      renderBalanco();
+    };
+
+    toggle.onclick = toggleFn;
+    tdName.onclick = toggleFn;
+
+    tdToggle.appendChild(toggle);
+    tr.append(tdName, tdVal, tdToggle);
+    tbody.appendChild(tr);
+  });
+
+  if (getActiveProfiles().length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3"><div class="empty">Nenhum perfil cadastrado.</div></td></tr>`;
+  }
+
+  const tfoot = document.createElement('tfoot');
+  const cls = total >= 0 ? 'positive' : 'negative';
+  tfoot.innerHTML = `<tr><td colspan="2">Total incluído</td><td class="val-cell ${cls}" style="text-align:right">${total >= 0 ? '+' : ''}${fmt(total)}</td></tr>`;
+  table.append(tbody, tfoot);
+  wrap.appendChild(table);
+  card.appendChild(wrap);
+}
+
+function renderLancamentosCard(card, t) {
+  // Find referencia table
+  const refTable = state.balancoTables.find(tb => tb.id === (t.refTableId || 'referencia'));
+  const refRows = refTable ? refTable.rows : [];
+  const valColId = refTable ? (refTable.columns.find(c => c.type === 'number') || {}).id : null;
+  const nameColId = refTable ? (refTable.columns.find(c => c.type === 'text') || {}).id : null;
+
+  const lastProfileIdx = state.profiles.length - 1;
+  const profRows = getAllRowsByProfile(lastProfileIdx);
+  const spentByCategory = {};
+  profRows.forEach(r => {
+    const cat = r.category || 'Outros';
+    spentByCategory[cat] = (spentByCategory[cat] || 0) + (parseFloat(r.value) || 0);
+  });
+
+  const wrap = document.createElement('div'); wrap.className = 'table-wrap';
+  const table = document.createElement('table');
+  table.innerHTML = `<thead><tr><th>Categoria</th><th>Referência</th><th>Gasto (Último Perfil)</th><th>Restante</th></tr></thead>`;
+  const tbody = document.createElement('tbody');
+  let totalRef = 0, totalSpent = 0, totalRestante = 0;
+
+  refRows.forEach(row => {
+    const catName = nameColId ? (row.values[nameColId] || '') : '';
+    const refVal = valColId ? (parseFloat(row.values[valColId]) || 0) : 0;
+    const spent = spentByCategory[catName] || 0;
+    const restante = refVal - spent;
+    totalRef += refVal; totalSpent += spent; totalRestante += restante;
+    const restCls = restante > 0 ? 'lancamento-diff-positive' : restante < 0 ? 'lancamento-diff-negative' : 'lancamento-diff-neutral';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${catName}</td>
+      <td class="val-cell">${fmt(refVal)}</td>
+      <td class="val-cell negative">${spent > 0 ? '− ' + fmt(spent) : '—'}</td>
+      <td class="val-cell ${restCls}">${restante !== 0 ? (restante > 0 ? '+' : '') + fmt(restante) : fmt(0)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const tfoot = document.createElement('tfoot');
+  const restCls = totalRestante > 0 ? 'positive' : totalRestante < 0 ? 'negative' : '';
+  tfoot.innerHTML = `<tr>
+    <td>Totais</td>
+    <td class="val-cell">${fmt(totalRef)}</td>
+    <td class="val-cell negative">− ${fmt(totalSpent)}</td>
+    <td class="val-cell ${restCls}">${totalRestante > 0 ? '+' : ''}${fmt(totalRestante)}</td>
+  </tr>`;
+  table.append(tbody, tfoot);
+  wrap.appendChild(table);
+  card.appendChild(wrap);
+}
+
+function renderCustomCard(card, t) {
+  // Column header editor
+  const colEditor = document.createElement('div');
+  colEditor.style.cssText = 'display:flex;gap:6px;padding:8px 12px 4px;align-items:center;border-bottom:1px solid var(--border);flex-wrap:wrap';
+  t.columns.forEach((col, ci) => {
+    const colWrap = document.createElement('div');
+    colWrap.style.cssText = 'display:flex;align-items:center;gap:3px;flex:1;min-width:80px;max-width:220px';
+
+    const colNameInput = document.createElement('input');
+    colNameInput.type = 'text'; colNameInput.value = col.name;
+    colNameInput.style.cssText = 'background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;width:100%;outline:none';
+    colNameInput.oninput = e => { col.name = e.target.value; saveState(); };
+
+    const typeToggle = document.createElement('button');
+    typeToggle.className = 'btn btn-ghost btn-sm';
+    typeToggle.style.cssText = 'padding:1px 4px;font-size:10px;opacity:.6';
+    typeToggle.textContent = col.type === 'number' ? '#' : 'A';
+    typeToggle.title = 'Alternar tipo (texto/número)';
+    typeToggle.onclick = () => {
+      col.type = col.type === 'number' ? 'text' : 'number';
+      saveState(); renderBalanco();
+    };
+
+    const delColBtn = document.createElement('button');
+    delColBtn.className = 'btn btn-danger btn-sm';
+    delColBtn.style.cssText = 'padding:1px 5px;font-size:10px';
+    delColBtn.textContent = '✕';
+    delColBtn.onclick = () => removeTableColumn(t.id, col.id);
+
+    colWrap.append(colNameInput, typeToggle, delColBtn);
+    colEditor.appendChild(colWrap);
+  });
+
+  const addColBtn = document.createElement('button');
+  addColBtn.className = 'btn btn-ghost btn-sm';
+  addColBtn.style.cssText = 'padding:2px 8px;font-size:11px;opacity:.7';
+  addColBtn.textContent = '+ Coluna';
+  addColBtn.onclick = () => addTableColumn(t.id);
+  colEditor.appendChild(addColBtn);
+  card.appendChild(colEditor);
+
+  // Data table
+  const wrap = document.createElement('div'); wrap.className = 'table-wrap';
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  thead.innerHTML = `<tr>${t.columns.map(c => `<th>${c.name}</th>`).join('')}<th></th></tr>`;
+  const tbody = document.createElement('tbody');
+
+  // Find first number column for total
+  const numCol = t.columns.find(c => c.type === 'number');
+  let total = 0;
+
+  if (t.rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${t.columns.length + 1}"><div class="empty">Sem linhas. Adicione abaixo.</div></td></tr>`;
+  } else {
+    t.rows.forEach(row => {
+      if (numCol) total += parseFloat(row.values[numCol.id]) || 0;
+      const tr = document.createElement('tr');
+      tr.className = 'balanco-editable-row';
+
+      t.columns.forEach(col => {
+        const td = document.createElement('td');
+        const inp = document.createElement('input');
+        inp.type = col.type === 'number' ? 'number' : 'text';
+        inp.value = row.values[col.id] ?? '';
+        inp.placeholder = col.type === 'number' ? '0,00' : col.name;
+        inp.step = '0.01';
+        inp.style.width = '100%';
+        if (col.type === 'number') {
+          inp.onblur = e => { row.values[col.id] = parseFloat(e.target.value) || 0; saveState(); renderBalanco(); };
+        } else {
+          inp.oninput = e => { row.values[col.id] = e.target.value; saveState(); };
+        }
+        td.appendChild(inp);
+        tr.appendChild(td);
+      });
+
+      const tdDel = document.createElement('td');
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-danger btn-sm'; delBtn.innerHTML = '🗑';
+      delBtn.onclick = () => removeTableRow(t.id, row.id);
+      tdDel.appendChild(delBtn); tr.appendChild(tdDel);
+      tbody.appendChild(tr);
+    });
+  }
+
+  const tfoot = document.createElement('tfoot');
+  if (numCol) {
+    tfoot.innerHTML = `<tr>
+      <td colspan="${t.columns.indexOf(numCol)}" style="color:var(--muted);font-size:12px">Total</td>
+      <td class="val-cell positive">${fmt(total)}</td>
+      <td colspan="${t.columns.length - t.columns.indexOf(numCol)}"></td>
+    </tr>`;
+  }
+
+  table.append(thead, tbody, tfoot);
+  wrap.appendChild(table);
+  card.appendChild(wrap);
+
+  const addRowBtn = document.createElement('div');
+  addRowBtn.className = 'balanco-add-btn';
+  addRowBtn.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="addTableRow('${t.id}')">＋ Adicionar linha</button>`;
+  card.appendChild(addRowBtn);
+}
+
+// ── SALDO BUILDER ──
+// Track which tables are expanded in the saldo panel
+const _saldoExpanded = {};
+
+function renderSaldoBuilder() {
+  const saldoEl = document.getElementById('balanco-saldo-row');
+  if (!saldoEl) return;
+
+  let saldoFinal = 0;
+  saldoEl.innerHTML = '';
+
+  state.balancoTables.forEach(t => {
+    if (!t.includeInSaldo || t.sign === 0) return;
+    const tableTotal = getTableTotal(t);
+    saldoFinal += tableTotal * t.sign;
+    const signLabel = t.sign === 1 ? '＋' : '−';
+    const cls = t.sign === 1 ? 'positive' : 'negative';
+    const isOpen = !!_saldoExpanded[t.id];
+
+    // ── Header row (clickable to expand/collapse) ──
+    const includedTables = state.balancoTables.filter(t => t.includeInSaldo && t.sign !== 0);
+    const tIdx = includedTables.indexOf(t);
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;transition:background .12s';
+    header.onmouseenter = () => header.style.background = 'var(--surface2)';
+    header.onmouseleave = () => header.style.background = '';
+
+    const leftSide = document.createElement('span');
+    leftSide.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)';
+
+    // Move buttons (stop propagation so they don't toggle expand)
+    const moveUp = document.createElement('button');
+    moveUp.className = 'btn btn-ghost btn-sm';
+    moveUp.innerHTML = '↑'; moveUp.style.cssText = 'padding:1px 5px;font-size:11px;opacity:.6';
+    moveUp.disabled = tIdx === 0;
+    moveUp.title = 'Mover para cima';
+    moveUp.onclick = e => { e.stopPropagation(); moveBalancoTable(t.id, -1); };
+
+    const moveDown = document.createElement('button');
+    moveDown.className = 'btn btn-ghost btn-sm';
+    moveDown.innerHTML = '↓'; moveDown.style.cssText = 'padding:1px 5px;font-size:11px;opacity:.6';
+    moveDown.disabled = tIdx === includedTables.length - 1;
+    moveDown.title = 'Mover para baixo';
+    moveDown.onclick = e => { e.stopPropagation(); moveBalancoTable(t.id, 1); };
+
+    leftSide.append(moveUp, moveDown);
+    leftSide.innerHTML += `<span style="font-size:11px;opacity:.6">${isOpen ? '▾' : '▸'}</span>${signLabel} ${t.icon || ''} ${t.name}`;
+
+    const rightSide = document.createElement('span');
+    rightSide.className = `val-cell ${cls}`;
+    rightSide.style.fontSize = '13px';
+    rightSide.textContent = `${t.sign === 1 ? '+' : '− '}${fmt(tableTotal)}`;
+
+    header.append(leftSide, rightSide);
+    header.onclick = () => {
+      _saldoExpanded[t.id] = !_saldoExpanded[t.id];
+      renderSaldoBuilder();
+    };
+    saldoEl.appendChild(header);
+
+    // ── Expandable body ──
+    if (isOpen) {
+      const body = document.createElement('div');
+      body.style.cssText = 'border-bottom:1px solid var(--border);background:var(--surface2)';
+
+      if (t.id === 'banco') {
+        // Show banco account cards inline
+        t.rows.forEach(row => {
+          const rowEl = document.createElement('div');
+          rowEl.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 22px;border-bottom:1px solid rgba(0,0,0,.06)';
+          const nameInp = document.createElement('input');
+          nameInp.type = 'text'; nameInp.value = row.values['nome'] || ''; nameInp.placeholder = 'Nome da conta';
+          nameInp.style.cssText = 'flex:2;min-width:80px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:12px;color:var(--text);font-family:inherit';
+          nameInp.oninput = e => { row.values['nome'] = e.target.value; saveState(); };
+          const valInp = document.createElement('input');
+          valInp.type = 'number'; valInp.value = row.values['val'] || 0; valInp.placeholder = '0,00'; valInp.step = '0.01';
+          valInp.style.cssText = 'flex:1;min-width:80px;max-width:130px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:13px;font-weight:700;color:var(--accent2);font-family:"JetBrains Mono",monospace';
+          valInp.onblur = e => { row.values['val'] = parseFloat(e.target.value) || 0; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
+          const del = document.createElement('button');
+          del.className = 'btn btn-danger btn-sm'; del.innerHTML = '🗑'; del.style.padding = '3px 7px';
+          del.onclick = () => removeTableRow(t.id, row.id);
+          rowEl.append(nameInp, valInp, del);
+          body.appendChild(rowEl);
+        });
+        const addBar = document.createElement('div');
+        addBar.style.cssText = 'padding:8px 22px';
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn btn-ghost btn-sm'; addBtn.textContent = '＋ Nova conta';
+        addBtn.onclick = () => { t.rows.push({ id: genId(), values: { nome: '', val: 0 } }); saveState(); renderSaldoBuilder(); renderBalancoTables(); };
+        addBar.appendChild(addBtn);
+        body.appendChild(addBar);
+
+      } else if (t.type === 'entradas') {
+        // Show profiles with toggles
+        getActiveProfiles().forEach(({ name, idx }) => {
+          const included = state.entradasProfiles[idx] !== false;
+          const rws = getAllRowsByProfile(idx);
+          const tg = rws.reduce((s, r) => s + (parseFloat(r.value) || 0), 0);
+          const pays = state.payments.filter(p => p.profileIdx === idx);
+          const tp = pays.reduce((s, p) => s + p.value, 0);
+          const saldo = (tp - tg) * -1;
+          const dot = `<span style="width:8px;height:8px;border-radius:50%;background:${getProfileColor(idx)};display:inline-block;margin-right:8px;vertical-align:middle;flex-shrink:0"></span>`;
+          const saldoCls = saldo >= 0 ? 'positive' : 'negative';
+
+          const row = document.createElement('div');
+          row.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:7px 22px;border-bottom:1px solid rgba(0,0,0,.04);opacity:${included ? 1 : .4};cursor:pointer;transition:opacity .15s`;
+          row.innerHTML = `<span style="font-size:13px">${dot}${name}</span><span class="val-cell ${saldoCls}" style="font-size:12px">${saldo >= 0 ? '+' : ''}${fmt(saldo)}</span>`;
+          row.title = included ? 'Clique para excluir das Entradas' : 'Clique para incluir nas Entradas';
+          row.onclick = () => { state.entradasProfiles[idx] = !included; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
+          body.appendChild(row);
+        });
+
+      } else if (t.type === 'custom') {
+        // Editable table inline
+        const numCol = t.columns.find(c => c.type === 'number');
+        const textCols = t.columns.filter(c => c.type === 'text');
+
+        if (t.rows.length === 0) {
+          const empty = document.createElement('div');
+          empty.style.cssText = 'padding:12px 22px;font-size:12px;color:var(--muted)';
+          empty.textContent = 'Sem itens. Adicione abaixo.';
+          body.appendChild(empty);
+        } else {
+          t.rows.forEach(row => {
+            const rowEl = document.createElement('div');
+            rowEl.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 18px;border-bottom:1px solid rgba(0,0,0,.04);flex-wrap:wrap';
+
+            textCols.forEach(col => {
+              const inp = document.createElement('input');
+              inp.type = 'text'; inp.value = row.values[col.id] ?? ''; inp.placeholder = col.name;
+              inp.style.cssText = 'flex:2;min-width:80px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:12px;color:var(--text);font-family:inherit';
+              inp.oninput = e => { row.values[col.id] = e.target.value; saveState(); };
+              rowEl.appendChild(inp);
+            });
+
+            if (numCol) {
+              const inp = document.createElement('input');
+              inp.type = 'number'; inp.value = row.values[numCol.id] ?? 0; inp.placeholder = '0,00'; inp.step = '0.01';
+              inp.style.cssText = 'flex:1;min-width:80px;max-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:12px;color:var(--text);font-family:inherit';
+              inp.onblur = e => { row.values[numCol.id] = parseFloat(e.target.value) || 0; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
+              rowEl.appendChild(inp);
+            }
+
+            const del = document.createElement('button');
+            del.className = 'btn btn-danger btn-sm'; del.innerHTML = '🗑'; del.style.padding = '3px 7px';
+            del.onclick = () => removeTableRow(t.id, row.id);
+            rowEl.appendChild(del);
+            body.appendChild(rowEl);
+          });
+        }
+
+        // Add row bar
+        const addBar = document.createElement('div');
+        addBar.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 18px;flex-wrap:wrap';
+
+        const newVals = {};
+        const inputs = [];
+
+        textCols.forEach(col => {
+          const inp = document.createElement('input');
+          inp.type = 'text'; inp.placeholder = col.name;
+          inp.style.cssText = 'flex:2;min-width:80px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:12px;color:var(--text);font-family:inherit';
+          inp.oninput = e => { newVals[col.id] = e.target.value; };
+          inputs.push(inp);
+          addBar.appendChild(inp);
+        });
+
+        let numInp = null;
+        if (numCol) {
+          numInp = document.createElement('input');
+          numInp.type = 'number'; numInp.placeholder = '0,00'; numInp.step = '0.01';
+          numInp.style.cssText = 'flex:1;min-width:80px;max-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:12px;color:var(--text);font-family:inherit';
+          numInp.oninput = e => { newVals[numCol.id] = parseFloat(e.target.value) || 0; };
+          inputs.push(numInp);
+          addBar.appendChild(numInp);
+        }
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn btn-primary btn-sm'; addBtn.textContent = '＋ Adicionar';
+        addBtn.onclick = () => {
+          const row = { id: genId(), values: {} };
+          t.columns.forEach(c => { row.values[c.id] = newVals[c.id] ?? (c.type === 'number' ? 0 : ''); });
+          t.rows.push(row);
+          saveState();
+          renderSaldoBuilder();
+          renderBalancoTables();
+        };
+        addBar.appendChild(addBtn);
+        body.appendChild(addBar);
+      }
+
+      saldoEl.appendChild(body);
+    }
+  });
+
+  const saldoCls = saldoFinal >= 0 ? 'positive' : 'negative';
+  const saldoSign = saldoFinal >= 0 ? '+' : '';
+  const saldoRow = document.createElement('div');
+  saldoRow.className = 'saldo-row';
+  saldoRow.innerHTML = `
+    <span class="saldo-label">💡 SALDO DO MÊS</span>
+    <span class="val-cell ${saldoCls}" style="font-size:20px;font-weight:700">${saldoSign}${fmt(saldoFinal)}</span>`;
+  saldoEl.appendChild(saldoRow);
+}
+
+
+
+// ══════════════════════════════════════════════════════
+//  PIX
+// ══════════════════════════════════════════════════════
+let _pixAddProfileIdx = null;
+
+function addPix() {
+  const dateEl = document.getElementById('pix-date');
+  const descEl = document.getElementById('pix-desc');
+  const valEl  = document.getElementById('pix-val');
+
+  const date = dateEl.value;
+  const desc = descEl.value.trim() || 'Pix';
+  const value = parseFloat(valEl.value) || 0;
+
+  if (value <= 0) { alert('Informe um valor válido.'); return; }
+
+  state.pixRows.push({ id: genId(), date, desc, value, profileIdx: _pixAddProfileIdx });
+  saveState();
+  dateEl.value = '';
+  descEl.value = '';
+  valEl.value = '';
+  renderPix();
+}
+
+function removePix(id) {
+  state.pixRows = state.pixRows.filter(p => p.id !== id);
+  saveState();
+  renderPix();
+}
+
+function renderPix() {
+  const tbody = document.getElementById('pix-tbody');
+  const totalEl = document.getElementById('pix-total');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  const total = state.pixRows.reduce((s, p) => s + p.value, 0);
+  if (totalEl) totalEl.textContent = '− ' + fmt(total);
+
+  // Render add-bar profile chips
+  const chipsWrap = document.getElementById('pix-profile-chips');
+  if (chipsWrap) {
+    chipsWrap.innerHTML = '';
+    const addChips = profileChips(_pixAddProfileIdx, newIdx => {
+      _pixAddProfileIdx = _pixAddProfileIdx === newIdx ? null : newIdx;
+      renderPix();
+    });
+    chipsWrap.appendChild(addChips);
+  }
+
+  if (state.pixRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhum Pix registrado.</div></td></tr>`;
+    return;
+  }
+
+  state.pixRows.forEach(p => {
+    const tr = document.createElement('tr');
+
+    // Profile chips cell (inline, compact)
+    const tdProfile = document.createElement('td');
+    const rowChips = profileChips(p.profileIdx, newIdx => {
+      p.profileIdx = p.profileIdx === newIdx ? null : newIdx;
+      saveState();
+      renderPix();
+    });
+    tdProfile.appendChild(rowChips);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-danger btn-sm';
+    delBtn.innerHTML = '🗑';
+    delBtn.onclick = () => removePix(p.id);
+    const tdDel = document.createElement('td');
+    tdDel.appendChild(delBtn);
+
+    // Profile color dot for display
+    const dotColor = p.profileIdx !== null ? getProfileColor(p.profileIdx) : '#ccc';
+    const profileName = p.profileIdx !== null ? (state.profiles[p.profileIdx] || '—') : '—';
+    const dot = `<span style="width:8px;height:8px;border-radius:50%;background:${dotColor};display:inline-block;margin-right:6px;vertical-align:middle;flex-shrink:0"></span>`;
+
+    const tdDate = document.createElement('td');
+    tdDate.textContent = p.date || '—';
+
+    const tdDesc = document.createElement('td');
+    tdDesc.textContent = p.desc;
+
+    const tdVal = document.createElement('td');
+    tdVal.className = 'val-cell negative';
+    tdVal.textContent = `− ${fmt(p.value)}`;
+
+    tr.append(tdDate, tdDesc, tdVal, tdProfile, tdDel);
+    tbody.appendChild(tr);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  FATURAS
+// ══════════════════════════════════════════════════════
+function addFatura() {
+  state.faturas.push({ id: genId(), name: 'Fatura ' + (state.faturas.length+1), rows: [] });
+  saveState();
+  renderFaturas();
+}
+
+function removeFatura(fId) {
+  if (!confirm('Remover esta fatura?')) return;
+  state.faturas = state.faturas.filter(f => f.id !== fId);
+  saveState();
+  renderFaturas();
+}
+
+function addRow(fId) {
+  const f = state.faturas.find(f => f.id === fId);
+  f.rows.push({ id: genId(), date:'', name:'', parcelas:'', value:'', profileIdx: null, category: null });
+  saveState();
+  renderFaturas();
+}
+
+function removeRow(fId, rId) {
+  const f = state.faturas.find(f => f.id === fId);
+  f.rows = f.rows.filter(r => r.id !== rId);
+  saveState();
+  renderFaturas();
+}
+
+function updateRow(fId, rId, field, value) {
+  const f = state.faturas.find(f => f.id === fId);
+  const r = f.rows.find(r => r.id === rId);
+  r[field] = value;
+  saveState();
+  updateFaturaTotal(fId);
+}
+
+function updateFaturaTotal(fId) {
+  const f = state.faturas.find(f => f.id === fId);
+  const total = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+  const el = document.getElementById('total-'+fId);
+  if (el) el.textContent = fmt(total);
+}
+
+function renderFaturas() {
+  const container = document.getElementById('faturas-container');
+  container.innerHTML = '';
+
+  state.faturas.forEach(f => {
+    const total = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const header = document.createElement('div');
+    header.className = 'card-header';
+
+    const titleWrap = document.createElement('div');
+    titleWrap.style.display = 'flex'; titleWrap.style.alignItems = 'center'; titleWrap.style.gap = '8px';
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'profile-name-input card-title';
+    nameInput.style.fontSize = '14px';
+    nameInput.style.fontWeight = '600';
+    nameInput.value = f.name;
+    nameInput.oninput = e => { f.name = e.target.value; saveState(); };
+
+    const totalEl = document.createElement('div');
+    totalEl.className = 'card-total';
+    totalEl.id = 'total-' + f.id;
+    totalEl.textContent = fmt(total);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn-danger btn-sm';
+    removeBtn.textContent = '✕ Remover';
+    removeBtn.onclick = () => removeFatura(f.id);
+
+    titleWrap.appendChild(nameInput);
+    header.appendChild(titleWrap);
+    const rightHeader = document.createElement('div');
+    rightHeader.style.display = 'flex'; rightHeader.style.gap = '12px'; rightHeader.style.alignItems = 'center';
+    rightHeader.appendChild(totalEl);
+    rightHeader.appendChild(removeBtn);
+    header.appendChild(rightHeader);
+    card.appendChild(header);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+
+    const table = document.createElement('table');
+    table.innerHTML = `<thead><tr>
+      <th>Data</th>
+      <th>Descrição</th>
+      <th>Parcelas</th>
+      <th>Valor</th>
+      <th>Perfil responsável</th>
+      <th>Categoria</th>
+      <th></th>
+    </tr></thead>`;
+
+    const tbody = document.createElement('tbody');
+
+    if (f.rows.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="7"><div class="empty">Nenhum gasto ainda. Clique em "Adicionar linha".</div></td>`;
+      tbody.appendChild(tr);
+    } else {
+      f.rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.dataset.rid = r.id;
+
+        const tdDate = document.createElement('td');
+        const inDate = document.createElement('input');
+        inDate.type = 'date'; inDate.value = r.date;
+        inDate.onchange = e => updateRow(f.id, r.id, 'date', e.target.value);
+        tdDate.appendChild(inDate);
+
+        const tdName = document.createElement('td');
+        tdName.style.minWidth = '160px';
+        const inName = document.createElement('input');
+        inName.type = 'text'; inName.value = r.name; inName.placeholder = 'Descrição';
+        inName.oninput = e => updateRow(f.id, r.id, 'name', e.target.value);
+        tdName.appendChild(inName);
+
+        const tdParc = document.createElement('td');
+        tdParc.style.maxWidth = '80px';
+        const inParc = document.createElement('input');
+        inParc.type = 'text'; inParc.value = r.parcelas; inParc.placeholder = '1/1';
+        inParc.oninput = e => updateRow(f.id, r.id, 'parcelas', e.target.value);
+        tdParc.appendChild(inParc);
+
+        const tdVal = document.createElement('td');
+        tdVal.style.maxWidth = '110px';
+        const inVal = document.createElement('input');
+        inVal.type = 'number'; inVal.value = r.value; inVal.placeholder = '0,00'; inVal.step = '0.01';
+        // FIX: use oninput but do NOT re-render; just update state and totals
+        inVal.oninput = e => {
+          updateRow(f.id, r.id, 'value', e.target.value);
+          if (document.getElementById('tab-resumo').classList.contains('active')) renderPerfis();
+          if (document.getElementById('tab-resumo').classList.contains('active')) renderSaldo();
+        };
+        tdVal.appendChild(inVal);
+
+        const tdProfile = document.createElement('td');
+        const chips = profileChips(r.profileIdx, newIdx => {
+          r.profileIdx = newIdx;
+          if (newIdx !== 4) r.category = null;
+          saveState();
+          const newChips = profileChips(newIdx, arguments.callee);
+          tdProfile.replaceChild(newChips, tdProfile.firstChild);
+          const newCatCell = buildCategoryCell(r, f.id);
+          tdCat.innerHTML = '';
+          tdCat.appendChild(newCatCell);
+          if (document.getElementById('tab-resumo').classList.contains('active')) renderPerfis();
+          if (document.getElementById('tab-resumo').classList.contains('active')) renderSaldo();
+        });
+        tdProfile.appendChild(chips);
+
+        const tdCat = document.createElement('td');
+        tdCat.appendChild(buildCategoryCell(r, f.id));
+
+        const tdDel = document.createElement('td');
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-danger btn-sm';
+        delBtn.innerHTML = '🗑';
+        delBtn.title = 'Remover linha';
+        delBtn.onclick = () => removeRow(f.id, r.id);
+        tdDel.appendChild(delBtn);
+
+        tr.append(tdDate, tdName, tdParc, tdVal, tdProfile, tdCat, tdDel);
+        tbody.appendChild(tr);
+      });
+    }
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    card.appendChild(wrap);
+
+    const addBar = document.createElement('div');
+    addBar.className = 'add-row-bar';
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn btn-ghost btn-sm';
+    addBtn.textContent = '＋ Adicionar linha';
+    addBtn.onclick = () => addRow(f.id);
+    addBar.appendChild(addBtn);
+    card.appendChild(addBar);
+
+    container.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  PERFIS
+// ══════════════════════════════════════════════════════
+function getAllRowsByProfile(pIdx) {
+  const rows = [];
+  state.faturas.forEach(f => {
+    f.rows.forEach(r => {
+      if (r.profileIdx === pIdx && (parseFloat(r.value)||0) !== 0) {
+        rows.push({ ...r, faturaName: f.name });
+      }
+    });
+  });
+  // Include PIX transactions assigned to this profile
+  (state.pixRows || []).forEach(p => {
+    if (p.profileIdx === pIdx && (parseFloat(p.value)||0) !== 0) {
+      rows.push({ id: p.id, date: p.date, name: p.desc, parcelas: '', value: p.value, profileIdx: pIdx, category: null, faturaName: 'Pix' });
+    }
+  });
+  return rows;
+}
+
+function renderPerfis() {
+  const container = document.getElementById('perfis-summary');
+  container.innerHTML = '';
+
+  const totalProfiles = state.profiles.length; // 6
+
+  getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
+    const rows = getAllRowsByProfile(pIdx);
+    const total = rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+    const hasCat = !!getProfileCategories(pIdx);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const header = document.createElement('div');
+    header.className = 'card-header';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'card-title';
+    const dot = document.createElement('span');
+    dot.style.width = '10px'; dot.style.height = '10px';
+    dot.style.borderRadius = '50%';
+    dot.style.background = getProfileColor(pIdx);
+    dot.style.display = 'inline-block';
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'profile-name-input';
+    nameInput.style.fontSize = '14px';
+    nameInput.style.fontWeight = '600';
+    nameInput.value = pName;
+    nameInput.oninput = e => {
+      state.profiles[pIdx] = e.target.value;
+      saveState();
+    };
+
+    nameEl.appendChild(dot);
+    nameEl.appendChild(nameInput);
+
+    const totalEl = document.createElement('div');
+    totalEl.className = 'card-total';
+    // Multiply entradas (total) by -1 to flip sign display
+    const displayTotal = -total;
+    totalEl.textContent = fmt(Math.abs(displayTotal));
+    totalEl.style.color = displayTotal >= 0 ? 'var(--accent2)' : 'var(--danger)';
+
+    header.appendChild(nameEl);
+    header.appendChild(totalEl);
+    card.appendChild(header);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+
+    const table = document.createElement('table');
+    table.className = 'dyn-table';
+    table.innerHTML = `<thead><tr>
+      <th>Fatura</th><th>Data</th><th>Descrição</th><th>Parcelas</th><th>Valor</th>${hasCat ? '<th>Categoria</th>' : ''}
+    </tr></thead>`;
+
+    const tbody = document.createElement('tbody');
+    if (rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="${hasCat ? 6 : 5}"><div class="empty">Nenhum gasto atribuído a este perfil.</div></td></tr>`;
+    } else {
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        const cat = hasCat ? (r.category || '—') : '';
+        const catCell = hasCat ? `<td><span class="cat-chip selected" style="pointer-events:none">${cat}</span></td>` : '';
+        // Multiply value by -1
+        const dispVal = -(parseFloat(r.value)||0);
+        tr.innerHTML = `
+          <td>${r.faturaName}</td>
+          <td>${r.date || '—'}</td>
+          <td>${r.name || '—'}</td>
+          <td>${r.parcelas || '—'}</td>
+          <td class="val-cell ${dispVal >= 0 ? 'positive' : 'negative'}">${dispVal >= 0 ? '+' : ''}${fmt(Math.abs(dispVal))}</td>
+          ${catCell}
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    const tfoot = document.createElement('tfoot');
+    const totalDisplay = -total;
+    tfoot.innerHTML = `<tr>
+      <td colspan="${hasCat ? 5 : 4}" style="color:var(--muted);font-size:12px">Total</td>
+      <td class="val-cell" style="color:${totalDisplay >= 0 ? 'var(--accent2)' : 'var(--danger)'}">${totalDisplay >= 0 ? '+' : ''}${fmt(Math.abs(totalDisplay))}</td>
+    </tr>`;
+
+    table.appendChild(tbody);
+    table.appendChild(tfoot);
+    wrap.appendChild(table);
+    card.appendChild(wrap);
+
+    if (hasCat && rows.length > 0) {
+      const catTotals = {};
+      rows.forEach(r => {
+        const cat = r.category || '—';
+        catTotals[cat] = (catTotals[cat] || 0) + (parseFloat(r.value)||0);
+      });
+
+      const catDiv = document.createElement('div');
+      catDiv.style.borderTop = '1px solid var(--border)';
+      catDiv.style.padding = '12px 14px 4px';
+      catDiv.innerHTML = `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px">Gastos por Categoria</div>`;
+
+      Object.entries(catTotals).forEach(([cat, val]) => {
+        if (val !== 0) {
+          const row = document.createElement('div');
+          row.className = 'cat-total-row';
+          // Multiply by -1
+          const dispVal = -val;
+          row.innerHTML = `<span class="cat-total-label">${cat}</span><span class="val-cell ${dispVal >= 0 ? 'positive' : 'negative'}">${dispVal >= 0 ? '+' : '− '}${fmt(Math.abs(dispVal))}</span>`;
+          catDiv.appendChild(row);
+        }
+      });
+      card.appendChild(catDiv);
+    }
+
+    container.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  PAGAMENTOS
+// ══════════════════════════════════════════════════════
+function addPayment(pIdx) {
+  const dateEl = document.getElementById('pay-date-'+pIdx);
+  const descEl = document.getElementById('pay-desc-'+pIdx);
+  const valEl  = document.getElementById('pay-val-'+pIdx);
+
+  const date = dateEl.value;
+  const desc = descEl.value.trim() || 'Pagamento';
+  const value = parseFloat(valEl.value) || 0;
+
+  if (value <= 0) { alert('Informe um valor válido.'); return; }
+
+  state.payments.push({ id: genId(), profileIdx: pIdx, desc, value, date });
+  saveState();
+  dateEl.value = '';
+  descEl.value = '';
+  valEl.value = '';
+  renderPagamentos();
+  if (document.getElementById('tab-resumo').classList.contains('active')) renderSaldo();
+}
+
+function removePayment(id) {
+  state.payments = state.payments.filter(p => p.id !== id);
+  saveState();
+  renderPagamentos();
+  if (document.getElementById('tab-resumo').classList.contains('active')) renderSaldo();
+}
+
+function renderPagamentos() {
+  const container = document.getElementById('pagamentos-container');
+  container.innerHTML = '';
+
+  getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
+    const pays = state.payments.filter(p => p.profileIdx === pIdx);
+    const totalPaid = pays.reduce((s,p) => s + p.value, 0);
+
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    const dot = `<span style="width:10px;height:10px;border-radius:50%;background:${getProfileColor(pIdx)};display:inline-block;"></span>`;
+    header.innerHTML = `<div class="card-title">${dot} ${pName}</div>
+      <div class="card-total positive">${fmt(totalPaid)} pagos</div>`;
+    card.appendChild(header);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+
+    const table = document.createElement('table');
+    table.innerHTML = `<thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th></th></tr></thead>`;
+
+    const tbody = document.createElement('tbody');
+    if (pays.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty">Nenhum pagamento registrado.</div></td></tr>`;
+    } else {
+      pays.forEach(p => {
+        const tr = document.createElement('tr');
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-danger btn-sm';
+        delBtn.innerHTML = '🗑';
+        delBtn.onclick = () => removePayment(p.id);
+
+        const tdDel = document.createElement('td');
+        tdDel.appendChild(delBtn);
+
+        tr.innerHTML = `<td>${p.date||'—'}</td><td>${p.desc}</td><td class="val-cell positive">${fmt(p.value)}</td>`;
+        tr.appendChild(tdDel);
+        tbody.appendChild(tr);
+      });
+    }
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    card.appendChild(wrap);
+
+    const addBar = document.createElement('div');
+    addBar.className = 'payment-add-row';
+
+    const inDate = document.createElement('input');
+    inDate.type = 'date'; inDate.id = 'pay-date-'+pIdx;
+
+    const inDesc = document.createElement('input');
+    inDesc.type = 'text'; inDesc.id = 'pay-desc-'+pIdx; inDesc.placeholder = 'Descrição';
+
+    const inVal = document.createElement('input');
+    inVal.type = 'number'; inVal.id = 'pay-val-'+pIdx; inVal.placeholder = 'Valor'; inVal.step = '0.01';
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn btn-primary btn-sm';
+    addBtn.textContent = '＋ Registrar';
+    addBtn.onclick = () => addPayment(pIdx);
+
+    addBar.append(inDate, inDesc, inVal, addBtn);
+    card.appendChild(addBar);
+    container.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  SALDO FINAL
+// ══════════════════════════════════════════════════════
+function renderSaldo() {
+  const container = document.getElementById('saldo-container');
+  container.innerHTML = '';
+
+  const grid = document.createElement('div');
+  grid.className = 'profile-grid';
+
+  getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
+    const rows = getAllRowsByProfile(pIdx);
+    const totalGastos = rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+    const pays = state.payments.filter(p => p.profileIdx === pIdx);
+    const totalPago = pays.reduce((s,p) => s + p.value, 0);
+    const saldo = totalPago - totalGastos;
+
+    const pCard = document.createElement('div');
+    pCard.className = 'profile-card';
+    pCard.dataset.p = pIdx;
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'profile-card-name';
+    nameDiv.textContent = pName;
+
+    const r1 = document.createElement('div'); r1.className = 'profile-card-row';
+    r1.innerHTML = `<span class="label">Total de gastos</span><span class="val-cell negative">−${fmt(totalGastos)}</span>`;
+
+    const r2 = document.createElement('div'); r2.className = 'profile-card-row';
+    r2.innerHTML = `<span class="label">Total pago</span><span class="val-cell positive">+${fmt(totalPago)}</span>`;
+
+    const r3 = document.createElement('div'); r3.className = 'profile-card-row';
+    const saldoClass = saldo >= 0 ? 'positive' : 'negative';
+    const saldoSign = saldo >= 0 ? '+' : '';
+    r3.innerHTML = `<span class="label" style="font-weight:600">Saldo</span>
+      <span class="profile-card-final ${saldoClass}">${saldoSign}${fmt(saldo)}</span>`;
+
+    pCard.append(nameDiv, r1, r2, r3);
+    grid.appendChild(pCard);
+  });
+
+  container.appendChild(grid);
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `<div class="card-header"><div class="card-title">📋 Resumo Geral</div></div>`;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+
+  const table = document.createElement('table');
+  table.innerHTML = `<thead><tr>
+    <th>Perfil</th><th>Total Gastos</th><th>Total Pago</th><th>Saldo</th>
+  </tr></thead>`;
+
+  const tbody = document.createElement('tbody');
+  let gtGastos = 0, gtPago = 0;
+
+  getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
+    const rows = getAllRowsByProfile(pIdx);
+    const tg = rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+    const pays = state.payments.filter(p => p.profileIdx === pIdx);
+    const tp = pays.reduce((s,p) => s + p.value, 0);
+    const sl = tp - tg;
+    gtGastos += tg; gtPago += tp;
+
+    const tr = document.createElement('tr');
+    const dot = `<span style="width:8px;height:8px;border-radius:50%;background:${getProfileColor(pIdx)};display:inline-block;margin-right:8px;"></span>`;
+    const sc = sl >= 0 ? 'positive' : 'negative';
+    const ss = sl >= 0 ? '+' : '';
+    tr.innerHTML = `
+      <td>${dot}${pName}</td>
+      <td class="val-cell negative">−${fmt(tg)}</td>
+      <td class="val-cell positive">+${fmt(tp)}</td>
+      <td class="val-cell ${sc}">${ss}${fmt(sl)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const tfoot = document.createElement('tfoot');
+  const gtSaldo = gtPago - gtGastos;
+  const gtClass = gtSaldo >= 0 ? 'positive' : 'negative';
+  const gtSign = gtSaldo >= 0 ? '+' : '';
+  tfoot.innerHTML = `<tr>
+    <td>Total Geral</td>
+    <td class="val-cell negative">−${fmt(gtGastos)}</td>
+    <td class="val-cell positive">+${fmt(gtPago)}</td>
+    <td class="val-cell ${gtClass}">${gtSign}${fmt(gtSaldo)}</td>
+  </tr>`;
+
+  table.appendChild(tbody);
+  table.appendChild(tfoot);
+  wrap.appendChild(table);
+  card.appendChild(wrap);
+  container.appendChild(card);
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+renderFaturas();
+renderPix();
+</script>
+</body>
+</html>

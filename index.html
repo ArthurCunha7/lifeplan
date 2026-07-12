@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
+    <title>LifePlan</title>
+    <style>
+      /* Em telas largas (PC), centraliza o app como um cartão de "celular"
+         em vez de esticar o conteúdo de ponta a ponta da tela */
+      @media (min-width: 860px) {
+        #root > div { max-width: 640px; margin: 0 auto; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.10); }
+        #root nav { max-width: 640px; left: 50% !important; right: auto !important; transform: translateX(-50%); }
+      }
+    </style>
+  </head>
+  <body style="margin:0;background:#efe8dd;">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
