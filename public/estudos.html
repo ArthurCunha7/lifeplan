@@ -86,7 +86,8 @@
     <div class="form-row">
       <input type="text" id="subj-name" placeholder="Nome da matéria (ex: Matemática)">
       <input type="number" id="subj-pass" placeholder="Nota mínima p/ passar (ex: 7)" step="0.1" min="0">
-      <input type="number" id="subj-max" placeholder="Nota máxima (ex: 10)" step="0.1" min="0" value="10">
+      <input type="number" id="subj-max" placeholder="Nota máxima (ex: 10)" step="0.1" min="0">
+      <input type="number" id="subj-stages" placeholder="Quantas avaliações/etapas?" step="1" min="1">
       <button class="btn" onclick="addSubject()">+ Adicionar Matéria</button>
     </div>
     <div id="subjects-list"></div>
@@ -112,7 +113,7 @@
       <select id="grade-subject"></select>
       <input type="text" id="grade-name" placeholder="Nome da avaliação (ex: Prova 1)">
       <input type="number" id="grade-value" placeholder="Nota obtida" step="0.1" min="0">
-      <input type="number" id="grade-weight" placeholder="Peso" step="0.1" min="0" value="1">
+      <input type="number" id="grade-weight" placeholder="Peso" step="0.1" min="0">
       <button class="btn" onclick="addGrade()">+ Adicionar Nota</button>
     </div>
     <div id="grades-list"></div>
@@ -141,6 +142,8 @@
     <div class="calendar" id="calendar"></div>
     <h3>📋 Lista de eventos</h3>
     <div id="events-list"></div>
+    <h3>🔗 Eventos da Google Agenda</h3>
+    <div id="google-events-list"><p class="empty">Conecte a Google Agenda na tela Início do LifePlan para ver seus eventos aqui.</p></div>
   </section>
 </main>
 
@@ -229,11 +232,15 @@ function addSubject() {
   const name = document.getElementById('subj-name').value.trim();
   const pass = parseFloat(document.getElementById('subj-pass').value);
   const max = parseFloat(document.getElementById('subj-max').value) || 10;
+  const stages = parseInt(document.getElementById('subj-stages').value, 10);
   if (!name || isNaN(pass)) { alert('Preencha nome e nota mínima!'); return; }
-  data.subjects.push({ id:uid(), name, pass, max });
-  save(); 
+  if (!stages || stages < 1) { alert('Diga quantas avaliações/etapas essa matéria terá!'); return; }
+  data.subjects.push({ id:uid(), name, pass, max, stages });
+  save();
   document.getElementById('subj-name').value='';
   document.getElementById('subj-pass').value='';
+  document.getElementById('subj-max').value='';
+  document.getElementById('subj-stages').value='';
   renderAll();
 }
 
@@ -323,20 +330,25 @@ function getSubjectStatus(subjectId) {
   const subj = data.subjects.find(s=>s.id===subjectId);
   if (!subj) return { text:'', cssClass:'' };
   const grades = data.grades.filter(g=>g.subjectId===subjectId);
-  if (!grades.length) return { text:`Sem notas. Precisa de ${subj.pass} para passar.`, cssClass:'', avg:0, needed:subj.pass };
+  // Matérias antigas (criadas antes de existir esse campo) não têm "stages"
+  // definido — nesse caso mantém o comportamento anterior (veredito imediato).
+  const stages = subj.stages || null;
+  if (!grades.length) {
+    const stageInfo = stages ? ` (0/${stages} avaliações lançadas)` : '';
+    return { text:`Sem notas. Precisa de ${subj.pass} para passar.${stageInfo}`, cssClass:'', avg:0, needed:subj.pass };
+  }
   const totalWeight = grades.reduce((a,g)=>a+g.weight,0);
   const sum = grades.reduce((a,g)=>a+g.value*g.weight,0);
   const avg = sum/totalWeight;
-  
+
+  if (stages && grades.length < stages) {
+    return { text:`📊 Média parcial: ${avg.toFixed(2)} (${grades.length}/${stages} avaliações lançadas — o veredito final só aparece depois de todas)`, cssClass:'', avg, needed:0 };
+  }
+
   if (avg >= subj.pass) {
-    return { text:`✅ APROVADO! Média atual: ${avg.toFixed(2)}`, cssClass:'aprovado', avg, needed:0 };
+    return { text:`✅ APROVADO! Média final: ${avg.toFixed(2)}`, cssClass:'aprovado', avg, needed:0 };
   }
-  // Estimativa: assume mais uma avaliação de peso 1
-  const needed = (subj.pass*(totalWeight+1) - sum);
-  if (needed > subj.max) {
-    return { text:`❌ REPROVADO. Média atual: ${avg.toFixed(2)} (impossível recuperar com 1 avaliação peso 1)`, cssClass:'reprovado', avg, needed };
-  }
-  return { text:`⚠️ Média atual: ${avg.toFixed(2)}. Precisa tirar ${needed.toFixed(2)} na próxima (peso 1) para passar.`, cssClass:'', avg, needed };
+  return { text:`❌ REPROVADO. Média final: ${avg.toFixed(2)}`, cssClass:'reprovado', avg, needed:0 };
 }
 
 function renderGrades() {
@@ -517,6 +529,41 @@ function renderAll() {
   renderGrades();
   renderCalendar();
   renderDashboard();
+  renderGoogleEvents();
+}
+
+// Puxa os eventos da Google Agenda (mesmo token salvo pelo app principal) e
+// mostra aqui, completando a sincronização nos dois sentidos: os eventos
+// criados aqui já vão para o Google (syncEventToGoogleCalendar), e os
+// eventos do Google aparecem aqui.
+async function renderGoogleEvents() {
+  const el = document.getElementById('google-events-list');
+  if (!el) return;
+  const token = localStorage.getItem('gcal_token');
+  if (!token) { el.innerHTML = '<p class="empty">Conecte a Google Agenda na tela Início do LifePlan para ver seus eventos aqui.</p>'; return; }
+  try {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 60).toISOString();
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${start}&timeMax=${end}&singleEvents=true&orderBy=startTime&maxResults=20`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { el.innerHTML = '<p class="empty">Não foi possível carregar os eventos do Google agora.</p>'; return; }
+    const json = await res.json();
+    const items = json.items || [];
+    if (!items.length) { el.innerHTML = '<p class="empty">Nenhum evento futuro na sua Google Agenda.</p>'; return; }
+    el.innerHTML = `<table>
+      <tr><th>Data</th><th>Título</th></tr>
+      ${items.map(e => {
+        const startStr = e.start?.dateTime || e.start?.date;
+        const d = startStr ? new Date(startStr) : null;
+        const dateLabel = d ? d.toLocaleDateString('pt-BR') + (e.start?.dateTime ? ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '') : '-';
+        return `<tr><td>${dateLabel}</td><td>${(e.summary||'(sem título)')}</td></tr>`;
+      }).join('')}
+    </table>`;
+  } catch (e) {
+    console.error(e);
+    el.innerHTML = '<p class="empty">Não foi possível carregar os eventos do Google agora.</p>';
+  }
 }
 
 document.getElementById('study-date').value = todayStr();

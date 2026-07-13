@@ -556,14 +556,14 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
         })}
       </div>
 
-      <nav style={{...S.nav,justifyContent:'center',gap:70}}>
-        <button style={{...S.navBtn(false),flex:'0 0 auto',padding:'12px 28px 10px'}} onClick={onHome}>
-          <span style={{fontSize:20}}>🏠</span>
-          <span style={{fontSize:10,fontWeight:700}}>Início</span>
+      <nav style={{...S.nav,justifyContent:'center',alignItems:'center',gap:14,padding:'10px 0',boxShadow:'0 -2px 10px rgba(0,0,0,0.05)'}}>
+        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}>
+          <span style={{fontSize:22}}>🏠</span>
+          <span style={{fontSize:11,fontWeight:800,color:'#3f6b2f'}}>Início</span>
         </button>
-        <button style={{...S.navBtn(false),flex:'0 0 auto',padding:'12px 28px 10px'}} onClick={onLogout}>
-          <span style={{fontSize:20}}>🚪</span>
-          <span style={{fontSize:10,fontWeight:700}}>Sair</span>
+        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}>
+          <span style={{fontSize:22}}>🚪</span>
+          <span style={{fontSize:11,fontWeight:800,color:'#8a887d'}}>Sair</span>
         </button>
       </nav>
     </div>
@@ -587,6 +587,16 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
   const [workoutGoal,setWorkoutGoal] = useState(3); // meta personalizável de treinos/semana
   const timer=useRef(null);
   const timerProfiles=useRef(null);
+
+  // Refs sempre atualizadas (não presas ao closure de quando o efeito foi
+  // criado) — usadas dentro dos auto-saves pra nunca escrever um valor
+  // desatualizado quando o salvamento dispara por causa de OUTRA mudança
+  // (ex: aplicar um treino a um dia disparava o auto-save de "workoutProfiles",
+  // que usava um "plan" antigo de antes da aplicação, apagando a mudança).
+  const planRef=useRef(plan), shoppingRef=useRef(shopping);
+  const workoutProfilesRef=useRef(workoutProfiles), workoutGoalRef=useRef(workoutGoal);
+  planRef.current=plan; shoppingRef.current=shopping;
+  workoutProfilesRef.current=workoutProfiles; workoutGoalRef.current=workoutGoal;
 
   // Carrega plano e lista do Supabase
   useEffect(()=>{
@@ -620,24 +630,25 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
 
   // Auto-save lista de compras separadamente (com sincronização imediata ao sair da tela,
   // pra Início/Compras nunca ficarem com dados desatualizados). Busca o plan_data
-  // existente antes de sobrescrever, pra nunca apagar campos como workoutLog.
+  // existente antes de sobrescrever, e usa as refs (sempre atualizadas) em vez do
+  // valor "preso" do closure, pra nunca escrever um plano/perfis desatualizados.
   useEffect(()=>{
     if(!userId) return;
     const doSave=async()=>{
       const {data:existing}=await supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle();
-      const plan_data={...(existing?.plan_data||{}),...(plan||[]),shopping,workoutProfiles,workoutGoalPerWeek:workoutGoal};
+      const plan_data={...(existing?.plan_data||{}),...(planRef.current||[]),shopping:shoppingRef.current,workoutProfiles:workoutProfilesRef.current,workoutGoalPerWeek:workoutGoalRef.current};
       supabase.from('user_plans').upsert({user_id:userId,plan_data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
     };
     const t=setTimeout(doSave,500);
     return()=>{clearTimeout(t);doSave();};
   },[shopping,userId]);
 
-  // Auto-save workoutProfiles + meta semanal (mesmo cuidado de preservar o resto)
+  // Auto-save workoutProfiles + meta semanal (mesmo cuidado, sempre via refs)
   useEffect(()=>{
     if(!userId) return;
     const doSave=async()=>{
       const {data:existing}=await supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle();
-      const plan_data={...(existing?.plan_data||{}),...(plan||[]),shopping,workoutProfiles,workoutGoalPerWeek:workoutGoal};
+      const plan_data={...(existing?.plan_data||{}),...(planRef.current||[]),shopping:shoppingRef.current,workoutProfiles:workoutProfilesRef.current,workoutGoalPerWeek:workoutGoalRef.current};
       supabase.from('user_plans').upsert({user_id:userId,plan_data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
     };
     clearTimeout(timerProfiles.current);
@@ -948,14 +959,14 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
       <div style={{height:80}}/>
 
       {/* Bottom nav */}
-      <nav style={{...S.nav,justifyContent:'center',gap:70}}>
-        <button style={{...S.navBtn(false),flex:'0 0 auto',padding:'12px 28px 10px'}} onClick={onHome}>
-          <span style={{fontSize:20}}>🏠</span>
-          <span style={{fontSize:10,fontWeight:700}}>Início</span>
+      <nav style={{...S.nav,justifyContent:'center',alignItems:'center',gap:14,padding:'10px 0',boxShadow:'0 -2px 10px rgba(0,0,0,0.05)'}}>
+        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}>
+          <span style={{fontSize:22}}>🏠</span>
+          <span style={{fontSize:11,fontWeight:800,color:'#3f6b2f'}}>Início</span>
         </button>
-        <button style={{...S.navBtn(false),flex:'0 0 auto',padding:'12px 28px 10px'}} onClick={onLogout}>
-          <span style={{fontSize:20}}>🚪</span>
-          <span style={{fontSize:10,fontWeight:700}}>Sair</span>
+        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}>
+          <span style={{fontSize:22}}>🚪</span>
+          <span style={{fontSize:11,fontWeight:800,color:'#8a887d'}}>Sair</span>
         </button>
       </nav>
 
@@ -1028,6 +1039,46 @@ function useGoogleCalendar(){
   const [status,setStatus]=useState(GOOGLE_CLIENT_ID?'idle':'no-key');
   const tokenClient=useRef(null);
 
+  function saveToken(accessToken,expiresInSec){
+    localStorage.setItem('gcal_token',accessToken);
+    localStorage.setItem('gcal_token_expiry',String(Date.now()+((expiresInSec||3500)*1000)));
+  }
+  function clearToken(){
+    localStorage.removeItem('gcal_token');
+    localStorage.removeItem('gcal_token_expiry');
+    setConnected(false);setStatus('idle');
+  }
+
+  async function ensureTokenClient(){
+    await loadGoogleScript();
+    if(!tokenClient.current){
+      tokenClient.current=window.google.accounts.oauth2.initTokenClient({
+        client_id:GOOGLE_CLIENT_ID,
+        scope:GOOGLE_SCOPES,
+        callback:(resp)=>{
+          if(resp?.access_token){
+            setConnected(true);setStatus('connected');
+            saveToken(resp.access_token,resp.expires_in);
+            fetchUpcomingEvents(resp.access_token);
+          }else{
+            clearToken();
+          }
+        },
+        error_callback:()=>{clearToken();},
+      });
+    }
+    return tokenClient.current;
+  }
+
+  // Tenta renovar o acesso sem pedir nada ao usuário (aproveitando a sessão
+  // já autorizada no navegador). Só se essa tentativa silenciosa falhar é
+  // que realmente exige clicar em "Conectar Google" de novo.
+  async function trySilentRefresh(){
+    if(!GOOGLE_CLIENT_ID) return;
+    const client=await ensureTokenClient();
+    client.requestAccessToken({prompt:''});
+  }
+
   async function fetchUpcomingEvents(accessToken){
     try{
       const now=new Date();
@@ -1035,7 +1086,12 @@ function useGoogleCalendar(){
       const end=new Date(now.getFullYear(),now.getMonth(),now.getDate()+7).toISOString();
       const url=`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${start}&timeMax=${end}&singleEvents=true&orderBy=startTime&maxResults=15`;
       const res=await fetch(url,{headers:{Authorization:`Bearer ${accessToken}`}});
-      if(!res.ok) throw new Error('token inválido');
+      if(res.status===401||res.status===403){
+        // token expirado/revogado: tenta renovar sozinho antes de desistir
+        trySilentRefresh();
+        return;
+      }
+      if(!res.ok) return; // erro passageiro (rede etc.) — não desconecta à toa
       const data=await res.json();
       const todayStr=now.toDateString();
       setEvents((data.items||[]).map(e=>{
@@ -1049,32 +1105,24 @@ function useGoogleCalendar(){
         return {id:e.id,title:e.summary||'(sem título)',time:label};
       }));
     }catch{
-      setConnected(false);setStatus('idle');localStorage.removeItem('gcal_token');
+      // falha de rede/temporária — mantém conectado, só não atualiza agora
     }
   }
 
   async function connect(){
     if(!GOOGLE_CLIENT_ID){setStatus('no-key');return;}
-    await loadGoogleScript();
-    if(!tokenClient.current){
-      tokenClient.current=window.google.accounts.oauth2.initTokenClient({
-        client_id:GOOGLE_CLIENT_ID,
-        scope:GOOGLE_SCOPES,
-        callback:(resp)=>{
-          if(resp?.access_token){
-            setConnected(true);setStatus('connected');
-            localStorage.setItem('gcal_token',resp.access_token);
-            fetchUpcomingEvents(resp.access_token);
-          }
-        }
-      });
-    }
-    tokenClient.current.requestAccessToken();
+    const client=await ensureTokenClient();
+    client.requestAccessToken();
   }
 
   useEffect(()=>{
     const t=localStorage.getItem('gcal_token');
-    if(t&&GOOGLE_CLIENT_ID){setConnected(true);setStatus('connected');fetchUpcomingEvents(t);}
+    const expiry=parseInt(localStorage.getItem('gcal_token_expiry')||'0',10);
+    if(t&&GOOGLE_CLIENT_ID){
+      setConnected(true);setStatus('connected');
+      if(Date.now()<expiry-60000) fetchUpcomingEvents(t);
+      else trySilentRefresh(); // token vencido: renova sozinho, sem pedir nada
+    }
   },[]);
 
   return {events,connected,status,connect};
@@ -1546,9 +1594,9 @@ function StudyTab({onHome,onOpenProfile,onLogout}){
         </div>
         <FocusTimer/>
       </div>
-      <nav style={{...S.nav,justifyContent:'center',gap:70}}>
-        <button style={{...S.navBtn(false),flex:'0 0 auto',padding:'12px 28px 10px'}} onClick={onHome}><span style={{fontSize:20}}>🏠</span><span style={{fontSize:10,fontWeight:700}}>Início</span></button>
-        <button style={{...S.navBtn(false),flex:'0 0 auto',padding:'12px 28px 10px'}} onClick={onLogout}><span style={{fontSize:20}}>🚪</span><span style={{fontSize:10,fontWeight:700}}>Sair</span></button>
+      <nav style={{...S.nav,justifyContent:'center',alignItems:'center',gap:14,padding:'10px 0',boxShadow:'0 -2px 10px rgba(0,0,0,0.05)'}}>
+        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}><span style={{fontSize:22}}>🏠</span><span style={{fontSize:11,fontWeight:800,color:'#3f6b2f'}}>Início</span></button>
+        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}><span style={{fontSize:22}}>🚪</span><span style={{fontSize:11,fontWeight:800,color:'#8a887d'}}>Sair</span></button>
       </nav>
     </div>
   );
@@ -1566,9 +1614,9 @@ function FinanceTab({onHome,onOpenProfile,onLogout}){
           <iframe title="Finanças" src={`/controle-financeiro.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}`} style={{width:'100%',height:'100%',border:'none'}}/>
         </div>
       </div>
-      <nav style={{...S.nav,justifyContent:'center',gap:70}}>
-        <button style={{...S.navBtn(false),flex:'0 0 auto',padding:'12px 28px 10px'}} onClick={onHome}><span style={{fontSize:20}}>🏠</span><span style={{fontSize:10,fontWeight:700}}>Início</span></button>
-        <button style={{...S.navBtn(false),flex:'0 0 auto',padding:'12px 28px 10px'}} onClick={onLogout}><span style={{fontSize:20}}>🚪</span><span style={{fontSize:10,fontWeight:700}}>Sair</span></button>
+      <nav style={{...S.nav,justifyContent:'center',alignItems:'center',gap:14,padding:'10px 0',boxShadow:'0 -2px 10px rgba(0,0,0,0.05)'}}>
+        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}><span style={{fontSize:22}}>🏠</span><span style={{fontSize:11,fontWeight:800,color:'#3f6b2f'}}>Início</span></button>
+        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}><span style={{fontSize:22}}>🚪</span><span style={{fontSize:11,fontWeight:800,color:'#8a887d'}}>Sair</span></button>
       </nav>
     </div>
   );
@@ -1586,9 +1634,9 @@ function HabitsTab({onHome,onOpenProfile,onLogout}){
           <iframe title="Hábitos e Performance" src={`/my-fit-era.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}&hideHeader=1`} style={{width:'100%',height:'100%',border:'none'}}/>
         </div>
       </div>
-      <nav style={{...S.nav,justifyContent:'center',gap:70}}>
-        <button style={{...S.navBtn(false),flex:'0 0 auto',padding:'12px 28px 10px'}} onClick={onHome}><span style={{fontSize:20}}>🏠</span><span style={{fontSize:10,fontWeight:700}}>Início</span></button>
-        <button style={{...S.navBtn(false),flex:'0 0 auto',padding:'12px 28px 10px'}} onClick={onLogout}><span style={{fontSize:20}}>🚪</span><span style={{fontSize:10,fontWeight:700}}>Sair</span></button>
+      <nav style={{...S.nav,justifyContent:'center',alignItems:'center',gap:14,padding:'10px 0',boxShadow:'0 -2px 10px rgba(0,0,0,0.05)'}}>
+        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}><span style={{fontSize:22}}>🏠</span><span style={{fontSize:11,fontWeight:800,color:'#3f6b2f'}}>Início</span></button>
+        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}><span style={{fontSize:22}}>🚪</span><span style={{fontSize:11,fontWeight:800,color:'#8a887d'}}>Sair</span></button>
       </nav>
     </div>
   );
