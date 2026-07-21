@@ -134,9 +134,10 @@
 
   .card-total {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
-    font-weight: 500;
+    font-size: 19px;
+    font-weight: 700;
     color: var(--accent2);
+    white-space: nowrap;
   }
 
   .table-wrap { overflow-x: auto; }
@@ -284,8 +285,9 @@
 
   .val-cell {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
+    white-space: nowrap;
   }
 
   .negative { color: var(--danger) !important; }
@@ -644,7 +646,7 @@
 <header>
   <div class="logo">💳 <span>Controle</span>Financeiro</div>
   <nav id="nav">
-    <button class="active" onclick="showTab('faturas')">Faturas & Pix</button>
+    <button class="active" onclick="showTab('faturas')">Faturas</button>
     <button onclick="showTab('resumo')">Resumo</button>
     <button onclick="showTab('pagamentos')">Pagamentos</button>
     <button onclick="showTab('perfis')">Perfis</button>
@@ -652,43 +654,11 @@
   </nav>
 </header>
 
-<!-- TAB 1 — FATURAS & PIX -->
+<!-- TAB 1 — FATURAS -->
 <div id="tab-faturas" class="tab active">
   <div id="faturas-container"></div>
   <div style="padding:0 0 24px">
     <button class="btn btn-ghost" onclick="addFatura()">＋ Nova Fatura</button>
-  </div>
-
-  <!-- PIX SECTION -->
-  <div class="section-head" style="margin-top:8px">
-    <div class="section-title">🔵 Gastos com Pix</div>
-  </div>
-  <div class="card" id="pix-card">
-    <div class="card-header">
-      <div class="card-title">🔵 Pix</div>
-      <div class="card-total negative" id="pix-total">R$ 0,00</div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Descrição</th>
-            <th>Valor (R$)</th>
-            <th>Perfil responsável</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="pix-tbody"></tbody>
-      </table>
-    </div>
-    <div class="payment-add-row" id="pix-add-bar">
-      <input type="date" id="pix-date" />
-      <input type="text" id="pix-desc" placeholder="Descrição" style="flex:2;min-width:140px" />
-      <input type="number" id="pix-val" placeholder="Valor" step="0.01" style="flex:1;min-width:100px" />
-      <div id="pix-profile-chips" style="display:flex;gap:4px;flex-wrap:wrap;min-width:160px"></div>
-      <button class="btn btn-primary btn-sm" onclick="addPix()">＋ Adicionar</button>
-    </div>
   </div>
 </div>
 
@@ -775,6 +745,12 @@ if (SUPABASE_URL && SUPABASE_KEY) {
 //  STATE
 // ══════════════════════════════════════════════════════
 let state = loadState() || getDefaultState();
+
+// Preferências de exibição (só na tela, não salvas na nuvem): quais faturas
+// e cards de perfil estão recolhidos, e se o saldo por perfil está visível.
+let _collapsedFaturas = {};
+let _collapsedProfiles = {};
+let _saldoVisible = true;
 
 let __cfSaveTimer = null;
 function scheduleCloudSave() {
@@ -1097,7 +1073,7 @@ function showTab(name) {
 }
 
 function renderActive(name) {
-  if (name === 'faturas') { renderFaturas(); renderPix(); }
+  if (name === 'faturas') { renderFaturas(); }
   else if (name === 'resumo') { renderSaldo(); renderPerfis(); }
   else if (name === 'pagamentos') renderPagamentos();
   else if (name === 'perfis') renderProfilesManager();
@@ -2507,7 +2483,6 @@ function renderFaturas() {
 
     table.appendChild(tbody);
     wrap.appendChild(table);
-    card.appendChild(wrap);
 
     const addBar = document.createElement('div');
     addBar.className = 'add-row-bar';
@@ -2516,7 +2491,24 @@ function renderFaturas() {
     addBtn.textContent = '＋ Adicionar linha';
     addBtn.onclick = () => addRow(f.id);
     addBar.appendChild(addBtn);
-    card.appendChild(addBar);
+
+    // Corpo retrátil (tabela + botão de adicionar linha)
+    const body = document.createElement('div');
+    body.id = 'fatura-body-' + f.id;
+    body.appendChild(wrap);
+    body.appendChild(addBar);
+    if (_collapsedFaturas[f.id]) body.style.display = 'none';
+    card.appendChild(body);
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'btn btn-ghost btn-sm';
+    toggleBtn.textContent = _collapsedFaturas[f.id] ? '▸' : '▾';
+    toggleBtn.title = 'Recolher/expandir';
+    toggleBtn.onclick = () => {
+      _collapsedFaturas[f.id] = !_collapsedFaturas[f.id];
+      renderFaturas();
+    };
+    rightHeader.insertBefore(toggleBtn, removeBtn);
 
     container.appendChild(card);
   });
@@ -2634,7 +2626,11 @@ function renderPerfis() {
     table.appendChild(tbody);
     table.appendChild(tfoot);
     wrap.appendChild(table);
-    card.appendChild(wrap);
+
+    const body = document.createElement('div');
+    body.id = 'profile-body-' + pIdx;
+
+    body.appendChild(wrap);
 
     if (hasCat && rows.length > 0) {
       const catTotals = {};
@@ -2658,8 +2654,21 @@ function renderPerfis() {
           catDiv.appendChild(row);
         }
       });
-      card.appendChild(catDiv);
+      body.appendChild(catDiv);
     }
+
+    if (_collapsedProfiles[pIdx]) body.style.display = 'none';
+    card.appendChild(body);
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'btn btn-ghost btn-sm';
+    toggleBtn.textContent = _collapsedProfiles[pIdx] ? '▸' : '▾';
+    toggleBtn.title = 'Recolher/expandir';
+    toggleBtn.onclick = () => {
+      _collapsedProfiles[pIdx] = !_collapsedProfiles[pIdx];
+      renderPerfis();
+    };
+    header.insertBefore(toggleBtn, totalEl);
 
     container.appendChild(card);
   });
@@ -2769,9 +2778,22 @@ function renderPagamentos() {
 // ══════════════════════════════════════════════════════
 //  SALDO FINAL
 // ══════════════════════════════════════════════════════
+function fmtSaldo(val) {
+  return _saldoVisible ? fmt(val) : '••••';
+}
+
 function renderSaldo() {
   const container = document.getElementById('saldo-container');
   container.innerHTML = '';
+
+  const toggleWrap = document.createElement('div');
+  toggleWrap.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:8px;';
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'btn btn-ghost btn-sm';
+  toggleBtn.textContent = _saldoVisible ? '👁️ Ocultar valores' : '🙈 Mostrar valores';
+  toggleBtn.onclick = () => { _saldoVisible = !_saldoVisible; renderSaldo(); };
+  toggleWrap.appendChild(toggleBtn);
+  container.appendChild(toggleWrap);
 
   const grid = document.createElement('div');
   grid.className = 'profile-grid';
@@ -2792,16 +2814,16 @@ function renderSaldo() {
     nameDiv.textContent = pName;
 
     const r1 = document.createElement('div'); r1.className = 'profile-card-row';
-    r1.innerHTML = `<span class="label">Total de gastos</span><span class="val-cell negative">−${fmt(totalGastos)}</span>`;
+    r1.innerHTML = `<span class="label">Total de gastos</span><span class="val-cell negative">${_saldoVisible?'−':''}${fmtSaldo(totalGastos)}</span>`;
 
     const r2 = document.createElement('div'); r2.className = 'profile-card-row';
-    r2.innerHTML = `<span class="label">Total pago</span><span class="val-cell positive">+${fmt(totalPago)}</span>`;
+    r2.innerHTML = `<span class="label">Total pago</span><span class="val-cell positive">${_saldoVisible?'+':''}${fmtSaldo(totalPago)}</span>`;
 
     const r3 = document.createElement('div'); r3.className = 'profile-card-row';
     const saldoClass = saldo >= 0 ? 'positive' : 'negative';
-    const saldoSign = saldo >= 0 ? '+' : '';
+    const saldoSign = (_saldoVisible && saldo >= 0) ? '+' : '';
     r3.innerHTML = `<span class="label" style="font-weight:600">Saldo</span>
-      <span class="profile-card-final ${saldoClass}">${saldoSign}${fmt(saldo)}</span>`;
+      <span class="profile-card-final ${saldoClass}">${saldoSign}${fmtSaldo(saldo)}</span>`;
 
     pCard.append(nameDiv, r1, r2, r3);
     grid.appendChild(pCard);
@@ -2835,12 +2857,12 @@ function renderSaldo() {
     const tr = document.createElement('tr');
     const dot = `<span style="width:8px;height:8px;border-radius:50%;background:${getProfileColor(pIdx)};display:inline-block;margin-right:8px;"></span>`;
     const sc = sl >= 0 ? 'positive' : 'negative';
-    const ss = sl >= 0 ? '+' : '';
+    const ss = (_saldoVisible && sl >= 0) ? '+' : '';
     tr.innerHTML = `
       <td>${dot}${pName}</td>
-      <td class="val-cell negative">−${fmt(tg)}</td>
-      <td class="val-cell positive">+${fmt(tp)}</td>
-      <td class="val-cell ${sc}">${ss}${fmt(sl)}</td>
+      <td class="val-cell negative">${_saldoVisible?'−':''}${fmtSaldo(tg)}</td>
+      <td class="val-cell positive">${_saldoVisible?'+':''}${fmtSaldo(tp)}</td>
+      <td class="val-cell ${sc}">${ss}${fmtSaldo(sl)}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -2848,12 +2870,12 @@ function renderSaldo() {
   const tfoot = document.createElement('tfoot');
   const gtSaldo = gtPago - gtGastos;
   const gtClass = gtSaldo >= 0 ? 'positive' : 'negative';
-  const gtSign = gtSaldo >= 0 ? '+' : '';
+  const gtSign = (_saldoVisible && gtSaldo >= 0) ? '+' : '';
   tfoot.innerHTML = `<tr>
     <td>Total Geral</td>
-    <td class="val-cell negative">−${fmt(gtGastos)}</td>
-    <td class="val-cell positive">+${fmt(gtPago)}</td>
-    <td class="val-cell ${gtClass}">${gtSign}${fmt(gtSaldo)}</td>
+    <td class="val-cell negative">${_saldoVisible?'−':''}${fmtSaldo(gtGastos)}</td>
+    <td class="val-cell positive">${_saldoVisible?'+':''}${fmtSaldo(gtPago)}</td>
+    <td class="val-cell ${gtClass}">${gtSign}${fmtSaldo(gtSaldo)}</td>
   </tr>`;
 
   table.appendChild(tbody);

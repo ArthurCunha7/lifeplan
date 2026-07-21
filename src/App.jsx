@@ -255,8 +255,22 @@ function ProfilePage({userId,initialProfile,onSave,onBack}){
     try{
       await supabase.from('profiles').upsert({id:userId,weight:+form.weight,height:+form.height,age:+form.age,sex:form.sex,activity:form.activity,goal:form.goal});
       const newPlan=generatePlan({weight:+form.weight,height:+form.height,age:+form.age,sex:form.sex,activity:form.activity,goal:form.goal});
-      await saveUserPlan(userId,newPlan);
-      setDone(true);setTimeout(()=>onSave(newPlan,form),1200);
+      // Preserva os treinos que o usuário já tinha aplicado a cada dia — sem
+      // isso, editar o perfil (mesmo só o peso) apagava todos os treinos
+      // configurados, porque gerava um plano novo do zero a cada vez.
+      let mergedPlan=newPlan;
+      try{
+        const existingPlan=await loadUserPlan(userId);
+        if(existingPlan&&existingPlan.length){
+          mergedPlan=newPlan.map((day,i)=>{
+            const old=existingPlan[i];
+            if(old&&old.typeLabel) return {...day,type:old.type,typeLabel:old.typeLabel,exercises:old.exercises};
+            return day;
+          });
+        }
+      }catch{}
+      await saveUserPlan(userId,mergedPlan);
+      setDone(true);setTimeout(()=>onSave(mergedPlan,form),1200);
     }catch(e){alert('Erro: '+e.message);}finally{setLoading(false);}
   }
   return(
@@ -598,6 +612,33 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
   planRef.current=plan; shoppingRef.current=shopping;
   workoutProfilesRef.current=workoutProfiles; workoutGoalRef.current=workoutGoal;
 
+  // Registra os 4 campos que esta tela mantém na fila central de salvamento
+  // (sempre via refs, então a fila nunca escreve um valor desatualizado)
+  useEffect(()=>{
+    if(!userId) return;
+    const unregs=[
+      registerPlanDataField('plan',()=>planRef.current),
+      registerPlanDataField('shopping',()=>shoppingRef.current),
+      registerPlanDataField('workoutProfiles',()=>workoutProfilesRef.current),
+      registerPlanDataField('workoutGoalPerWeek',()=>workoutGoalRef.current),
+    ];
+    return ()=>unregs.forEach(u=>u());
+  },[userId]);
+
+  // Rede de segurança extra: cobre o caso de recarregar a página (F5) ou
+  // fechar a aba de repente, que NÃO passa pela limpeza normal do React
+  // (o "return" dos useEffect só roda ao trocar de tela dentro do app, não
+  // num fechamento/recarregamento abrupto do navegador).
+  useEffect(()=>{
+    if(!userId) return;
+    const flushNow=()=>requestPlanDataSave(userId);
+    window.addEventListener('pagehide',flushNow);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushNow();});
+    return()=>{
+      window.removeEventListener('pagehide',flushNow);
+    };
+  },[userId]);
+
   // Carrega plano e lista do Supabase
   useEffect(()=>{
     loadUserPlan(userId).then(saved=>{
@@ -612,48 +653,32 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
       });
   },[userId]);
 
-  // Auto-save plano
+  // Pede o salvamento a cada mudança do plano (a fila central faz a escrita
+  // de verdade, então nunca corre com o salvamento de compras/treinos)
   useEffect(()=>{
     if(!plan||!plan.length||!userId) return;
     clearTimeout(timer.current);
-    timer.current=setTimeout(async()=>{
-      setSaving(true);
-      try{await saveUserPlan(userId,plan);setSaveMsg('✅ Salvo');setTimeout(()=>setSaveMsg(''),2000);}
-      catch{setSaveMsg('❌ Erro');}finally{setSaving(false);}
-    },2000);
-    return()=>{
-      clearTimeout(timer.current);
-      // garante que a última mudança não se perca se o usuário trocar de aba rápido
-      saveUserPlan(userId,plan).catch(()=>{});
-    };
+    setSaving(true);
+    timer.current=setTimeout(()=>{
+      requestPlanDataSave(userId);
+      setSaveMsg('✅ Salvo');setSaving(false);setTimeout(()=>setSaveMsg(''),2000);
+    },1200);
+    return()=>{clearTimeout(timer.current);requestPlanDataSave(userId);};
   },[plan,userId]);
 
-  // Auto-save lista de compras separadamente (com sincronização imediata ao sair da tela,
-  // pra Início/Compras nunca ficarem com dados desatualizados). Busca o plan_data
-  // existente antes de sobrescrever, e usa as refs (sempre atualizadas) em vez do
-  // valor "preso" do closure, pra nunca escrever um plano/perfis desatualizados.
+  // Pede o salvamento a cada mudança da lista de compras (mesma fila central)
   useEffect(()=>{
     if(!userId) return;
-    const doSave=async()=>{
-      const {data:existing}=await supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle();
-      const plan_data={...(existing?.plan_data||{}),...(planRef.current||[]),shopping:shoppingRef.current,workoutProfiles:workoutProfilesRef.current,workoutGoalPerWeek:workoutGoalRef.current};
-      supabase.from('user_plans').upsert({user_id:userId,plan_data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
-    };
-    const t=setTimeout(doSave,500);
-    return()=>{clearTimeout(t);doSave();};
+    const t=setTimeout(()=>requestPlanDataSave(userId),400);
+    return()=>{clearTimeout(t);requestPlanDataSave(userId);};
   },[shopping,userId]);
 
-  // Auto-save workoutProfiles + meta semanal (mesmo cuidado, sempre via refs)
+  // Pede o salvamento a cada mudança de perfis de treino / meta semanal
   useEffect(()=>{
     if(!userId) return;
-    const doSave=async()=>{
-      const {data:existing}=await supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle();
-      const plan_data={...(existing?.plan_data||{}),...(planRef.current||[]),shopping:shoppingRef.current,workoutProfiles:workoutProfilesRef.current,workoutGoalPerWeek:workoutGoalRef.current};
-      supabase.from('user_plans').upsert({user_id:userId,plan_data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
-    };
     clearTimeout(timerProfiles.current);
-    timerProfiles.current=setTimeout(doSave,1500);
-    return()=>{clearTimeout(timerProfiles.current);doSave();};
+    timerProfiles.current=setTimeout(()=>requestPlanDataSave(userId),400);
+    return()=>{clearTimeout(timerProfiles.current);requestPlanDataSave(userId);};
   },[workoutProfiles,workoutGoal,userId]);
 
   // ── helpers de plano
@@ -1038,6 +1063,7 @@ function useGoogleCalendar(){
   const [connected,setConnected]=useState(false);
   const [status,setStatus]=useState(GOOGLE_CLIENT_ID?'idle':'no-key');
   const tokenClient=useRef(null);
+  const isSilentAttempt=useRef(false);
 
   function saveToken(accessToken,expiresInSec){
     localStorage.setItem('gcal_token',accessToken);
@@ -1060,23 +1086,31 @@ function useGoogleCalendar(){
             setConnected(true);setStatus('connected');
             saveToken(resp.access_token,resp.expires_in);
             fetchUpcomingEvents(resp.access_token);
-          }else{
+          }else if(!isSilentAttempt.current){
+            // só desconecta de verdade se foi o usuário clicando em "Conectar"
+            // — uma tentativa silenciosa em segundo plano que falhou não deve
+            // te tirar da conta, só tenta de novo mais tarde.
             clearToken();
           }
         },
-        error_callback:()=>{clearToken();},
+        error_callback:()=>{
+          if(!isSilentAttempt.current) clearToken();
+        },
       });
     }
     return tokenClient.current;
   }
 
   // Tenta renovar o acesso sem pedir nada ao usuário (aproveitando a sessão
-  // já autorizada no navegador). Só se essa tentativa silenciosa falhar é
-  // que realmente exige clicar em "Conectar Google" de novo.
+  // já autorizada no navegador). Se isso falhar, NÃO desconecta — apenas
+  // continua mostrando os dados já conhecidos e tenta de novo mais tarde.
+  // Só clicar em "Conectar Google" de novo é tratado como desconexão real.
   async function trySilentRefresh(){
     if(!GOOGLE_CLIENT_ID) return;
     const client=await ensureTokenClient();
+    isSilentAttempt.current=true;
     client.requestAccessToken({prompt:''});
+    setTimeout(()=>{isSilentAttempt.current=false;},4000);
   }
 
   async function fetchUpcomingEvents(accessToken){
@@ -1111,6 +1145,7 @@ function useGoogleCalendar(){
 
   async function connect(){
     if(!GOOGLE_CLIENT_ID){setStatus('no-key');return;}
+    isSilentAttempt.current=false;
     const client=await ensureTokenClient();
     client.requestAccessToken();
   }
@@ -1128,21 +1163,59 @@ function useGoogleCalendar(){
   return {events,connected,status,connect};
 }
 
-// Meta de água personalizável (reseta o consumo do dia automaticamente à meia-noite)
-// Helper genérico: busca o plan_data existente, faz merge só das chaves
-// passadas em partialUpdate (preservando tudo o mais) e salva de volta.
-// Usado por água, agenda manual e quadro de horários para sincronizar na
-// nuvem sem nunca apagar os outros dados já salvos no mesmo registro.
-async function mergeAndSavePlanData(userId,partialUpdate){
-  if(!userId) return;
-  const {data:existing}=await supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle();
-  const plan_data={...(existing?.plan_data||{}),...partialUpdate};
-  return supabase.from('user_plans').upsert({user_id:userId,plan_data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+// ── FILA CENTRAL DE SALVAMENTO (user_plans.plan_data) ────────────────────────
+// Todas as partes do app que gravam em user_plans (plano, compras, treinos,
+// água, agenda manual, quadro de horários, treino-feito) passam por AQUI,
+// em vez de cada uma fazer sua própria leitura-mescla-escrita. Isso elimina
+// de vez a corrida entre gravações concorrentes: nunca duas escritas ao
+// mesmo tempo, e cada escrita sempre usa o valor mais atual de cada campo
+// (via "getters" que leem refs sempre atualizadas), nunca uma cópia presa
+// de quando foi agendada.
+const planDataQueue = { pending:false, dirty:false, userId:null, getters:{} };
+
+function registerPlanDataField(key,getter){
+  planDataQueue.getters[key]=getter;
+  return ()=>{ if(planDataQueue.getters[key]===getter) delete planDataQueue.getters[key]; };
 }
 
+function requestPlanDataSave(userId){
+  if(!userId) return;
+  planDataQueue.userId=userId;
+  planDataQueue.dirty=true;
+  if(planDataQueue.pending) return; // já tem uma gravação em andamento — ela pega essa mudança na próxima volta
+  runPlanDataQueue();
+}
+
+async function runPlanDataQueue(){
+  if(!planDataQueue.userId||planDataQueue.pending) return;
+  planDataQueue.pending=true;
+  try{
+    while(planDataQueue.dirty){
+      planDataQueue.dirty=false;
+      const userId=planDataQueue.userId;
+      try{
+        const {data:existing}=await supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle();
+        const patch={};
+        for(const [key,getter] of Object.entries(planDataQueue.getters)){
+          const val=getter();
+          if(val===undefined) continue;
+          if(key==='plan') Object.assign(patch,val||[]); // plano é array -> vira chaves numéricas 0-6
+          else patch[key]=val;
+        }
+        const plan_data={...(existing?.plan_data||{}),...patch};
+        await supabase.from('user_plans').upsert({user_id:userId,plan_data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+      }catch(e){ console.error('Erro ao salvar dados do LifePlan:',e); }
+    }
+  }finally{
+    planDataQueue.pending=false;
+  }
+}
+
+
+// Meta de água personalizável (reseta o consumo do dia automaticamente à
+// meia-noite). Usa data local (não UTC) para o reset acontecer no horário
+// certo no fuso do usuário.
 function useWaterTracker(userId){
-  // Usa data local (não UTC) para o reset acontecer exatamente à meia-noite
-  // no fuso horário do usuário, e não em outro horário por acaso do UTC.
   const todayKey=()=>{
     const d=new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -1166,11 +1239,21 @@ function useWaterTracker(userId){
     });
   },[userId]);
 
-  // Salva na nuvem (com atraso pra não disparar uma chamada a cada clique)
+  // Registra o valor mais atual na fila central (nunca uma cópia presa)
+  const dataRef=useRef(data);
+  dataRef.current=data;
   useEffect(()=>{
     if(!userId) return;
-    const t=setTimeout(()=>{mergeAndSavePlanData(userId,{water:data});},800);
-    return()=>clearTimeout(t);
+    return registerPlanDataField('water',()=>dataRef.current);
+  },[userId]);
+
+  // Pede o salvamento (com atraso pra não disparar uma chamada a cada clique);
+  // a fila central é quem de fato lê/escreve, então nunca corre com outros
+  // campos (agenda, quadro de horários etc.) sendo salvos ao mesmo tempo.
+  useEffect(()=>{
+    if(!userId) return;
+    const t=setTimeout(()=>requestPlanDataSave(userId),400);
+    return()=>{clearTimeout(t);requestPlanDataSave(userId);};
   },[data,userId]);
 
   // Confere a cada minuto se o dia virou, mesmo com o app aberto continuamente
@@ -1199,10 +1282,18 @@ function useManualAgenda(userId){
     });
   },[userId]);
 
+  // Registra na fila central (sempre lê o valor mais atual via ref)
+  const itemsRef=useRef(items);
+  itemsRef.current=items;
   useEffect(()=>{
     if(!userId) return;
-    const t=setTimeout(()=>{mergeAndSavePlanData(userId,{agendaManual:items});},800);
-    return()=>clearTimeout(t);
+    return registerPlanDataField('agendaManual',()=>itemsRef.current);
+  },[userId]);
+
+  useEffect(()=>{
+    if(!userId) return;
+    const t=setTimeout(()=>requestPlanDataSave(userId),400);
+    return()=>{clearTimeout(t);requestPlanDataSave(userId);};
   },[items,userId]);
 
   function add(title,time){setItems(p=>[...p,{id:'m'+Date.now(),title,time}].sort((a,b)=>String(a.time).localeCompare(String(b.time))));}
@@ -1217,93 +1308,193 @@ function useClock(){
   return now;
 }
 
+// ── CONFIGURAÇÃO GOOGLE WEATHER API ───────────────────────────────────────────
+// Fonte principal do clima. Precisa de uma API Key própria (diferente do
+// Client ID OAuth usado pro login/agenda):
+// 1) No mesmo projeto do Google Cloud, vá em "APIs & Services > Library" e
+//    habilite a "Weather API"
+// 2) Em "APIs & Services > Credentials", crie uma "API Key"
+// 3) Restrinja essa chave por "HTTP referrers" com o domínio do seu site
+//    (recomendado, evita uso indevido da chave)
+// 4) Cole a chave no .env como VITE_GOOGLE_WEATHER_API_KEY
+// Sem essa chave configurada, o app usa o Open-Meteo automaticamente (não
+// precisa de chave nenhuma), então nada quebra enquanto isso não é feito.
+const GOOGLE_WEATHER_API_KEY = import.meta.env.VITE_GOOGLE_WEATHER_API_KEY || '';
+
 function useWeatherLocation(){
-  const [state,setState]=useState({loading:true,temp:null,city:null,error:null,code:null,isDay:1,uvMax:null,rain:null,sunrise:null,sunset:null,tempTrend:null});
+  const [state,setState]=useState({loading:true,temp:null,city:null,error:null,code:null,iconUri:null,isDay:1,uvMax:null,rain:null,sunrise:null,sunset:null,tempTrend:null});
   useEffect(()=>{
     if(!navigator.geolocation){setState(s=>({...s,loading:false,error:'Geolocalização indisponível'}));return;}
     navigator.geolocation.getCurrentPosition(async(pos)=>{
       const {latitude,longitude}=pos.coords;
       try{
-        const [wRes,gRes]=await Promise.all([
-          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=precipitation_probability,temperature_2m&daily=uv_index_max,sunrise,sunset&timezone=auto`),
-          fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`)
-        ]);
-        const wData=await wRes.json();
-        const gData=await gRes.json();
-
-        // janela de chuva prevista (próximas ~18h), usando probabilidade de precipitação por hora
-        let rain=null;
-        const times=wData?.hourly?.time||[];
-        const probs=wData?.hourly?.precipitation_probability||[];
-        const temps=wData?.hourly?.temperature_2m||[];
-        const nowMs=Date.now();
-        const nowIdx=times.findIndex(t=>new Date(t).getTime()>=nowMs);
-        if(nowIdx>=0){
-          const THRESH=50;
-          let startIdx=-1;
-          for(let i=nowIdx;i<Math.min(times.length,nowIdx+18);i++){
-            if(probs[i]>=THRESH){startIdx=i;break;}
-          }
-          if(startIdx>=0){
-            let endIdx=startIdx;
-            for(let i=startIdx;i<Math.min(times.length,startIdx+18);i++){
-              if(probs[i]>=THRESH) endIdx=i; else break;
-            }
-            const fmt=t=>new Date(t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-            rain={active:startIdx===nowIdx,starts:fmt(times[startIdx]),stops:fmt(times[Math.min(endIdx+1,times.length-1)])};
-          }
-        }
-
-        // variação de temperatura nas próximas ~2h
-        let tempTrend=null;
-        if(nowIdx>=0 && temps.length>nowIdx+2){
-          const nowTemp=wData?.current_weather?.temperature;
-          const futureTemp=temps[nowIdx+2];
-          const delta=futureTemp-nowTemp;
-          if(Math.abs(delta)>=3) tempTrend={delta:Math.round(delta),rising:delta>0};
-        }
-
-        const fmtHM=iso=>iso?new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):null;
-
-        setState({
-          loading:false,error:null,
-          temp:Math.round(wData?.current_weather?.temperature),
-          city:gData?.city||gData?.locality||gData?.principalSubdivision||'Local desconhecido',
-          code:wData?.current_weather?.weathercode??0,
-          isDay:wData?.current_weather?.is_day??1,
-          uvMax:wData?.daily?.uv_index_max?.[0]??null,
-          sunrise:fmtHM(wData?.daily?.sunrise?.[0]),
-          sunset:fmtHM(wData?.daily?.sunset?.[0]),
-          tempTrend,
-          rain,
-        });
+        if(GOOGLE_WEATHER_API_KEY) await fetchFromGoogleWeather(latitude,longitude,setState);
+        else await fetchFromOpenMeteo(latitude,longitude,setState);
       }catch{setState(s=>({...s,loading:false,error:'Falha ao buscar o clima'}));}
     },()=>{setState(s=>({...s,loading:false,error:'Permissão de localização negada'}));},{timeout:8000});
   },[]);
   return state;
 }
 
+async function fetchFromGoogleWeather(latitude,longitude,setState){
+  const key=GOOGLE_WEATHER_API_KEY;
+  const base='https://weather.googleapis.com/v1';
+  const loc=`location.latitude=${latitude}&location.longitude=${longitude}`;
+  const [curRes,daysRes,hoursRes,geoRes]=await Promise.all([
+    fetch(`${base}/currentConditions:lookup?key=${key}&${loc}&languageCode=pt-BR`),
+    fetch(`${base}/forecast/days:lookup?key=${key}&${loc}&days=1&languageCode=pt-BR`),
+    fetch(`${base}/forecast/hours:lookup?key=${key}&${loc}&hours=18&languageCode=pt-BR`),
+    fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`),
+  ]);
+  if(!curRes.ok){
+    // chave inválida, API não habilitada, sem billing etc. — cai pro Open-Meteo
+    await fetchFromOpenMeteo(latitude,longitude,setState);
+    return;
+  }
+  const cur=await curRes.json();
+  const daysData=daysRes.ok?await daysRes.json():null;
+  const hoursData=hoursRes.ok?await hoursRes.json():null;
+  const geo=await geoRes.json();
+
+  const today=daysData?.forecastDays?.[0];
+  const fmtHM=iso=>iso?new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):null;
+  const sunrise=fmtHM(today?.sunEvents?.sunriseTime);
+  const sunset=fmtHM(today?.sunEvents?.sunsetTime);
+  const uvMax=today?.daytimeForecast?.uvIndex??cur.uvIndex??null;
+
+  // janela de chuva prevista, usando probabilidade de precipitação por hora
+  let rain=null;
+  const hours=hoursData?.forecastHours||[];
+  const THRESH=50;
+  let startIdx=-1;
+  for(let i=0;i<hours.length;i++){
+    if((hours[i]?.precipitation?.probability?.percent||0)>=THRESH){startIdx=i;break;}
+  }
+  if(startIdx>=0){
+    let endIdx=startIdx;
+    for(let i=startIdx;i<hours.length;i++){
+      if((hours[i]?.precipitation?.probability?.percent||0)>=THRESH) endIdx=i; else break;
+    }
+    const fmtHour=h=>h?.interval?.startTime?fmtHM(h.interval.startTime):'';
+    rain={active:startIdx===0,starts:fmtHour(hours[startIdx]),stops:fmtHour(hours[Math.min(endIdx+1,hours.length-1)])};
+  }
+
+  // variação de temperatura nas próximas ~2h
+  let tempTrend=null;
+  if(hours.length>2 && cur.temperature?.degrees!=null && hours[2]?.temperature?.degrees!=null){
+    const delta=hours[2].temperature.degrees-cur.temperature.degrees;
+    if(Math.abs(delta)>=3) tempTrend={delta:Math.round(delta),rising:delta>0};
+  }
+
+  setState({
+    loading:false,error:null,
+    temp:Math.round(cur.temperature?.degrees),
+    city:geo?.city||geo?.locality||geo?.principalSubdivision||'Local desconhecido',
+    code:cur.weatherCondition?.type||null,
+    iconUri:cur.weatherCondition?.iconBaseUri||null,
+    isDay:cur.isDaytime?1:0,
+    uvMax,sunrise,sunset,tempTrend,rain,
+  });
+}
+
+// Alternativa sem chave nenhuma, usada automaticamente se a Google Weather
+// API não estiver configurada — assim o clima nunca fica "quebrado".
+async function fetchFromOpenMeteo(latitude,longitude,setState){
+  const [wRes,gRes]=await Promise.all([
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=precipitation_probability,temperature_2m&daily=uv_index_max,sunrise,sunset&timezone=auto`),
+    fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`)
+  ]);
+  const wData=await wRes.json();
+  const gData=await gRes.json();
+
+  let rain=null;
+  const times=wData?.hourly?.time||[];
+  const probs=wData?.hourly?.precipitation_probability||[];
+  const temps=wData?.hourly?.temperature_2m||[];
+  const nowMs=Date.now();
+  const nowIdx=times.findIndex(t=>new Date(t).getTime()>=nowMs);
+  if(nowIdx>=0){
+    const THRESH=50;
+    let startIdx=-1;
+    for(let i=nowIdx;i<Math.min(times.length,nowIdx+18);i++){
+      if(probs[i]>=THRESH){startIdx=i;break;}
+    }
+    if(startIdx>=0){
+      let endIdx=startIdx;
+      for(let i=startIdx;i<Math.min(times.length,startIdx+18);i++){
+        if(probs[i]>=THRESH) endIdx=i; else break;
+      }
+      const fmt=t=>new Date(t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      rain={active:startIdx===nowIdx,starts:fmt(times[startIdx]),stops:fmt(times[Math.min(endIdx+1,times.length-1)])};
+    }
+  }
+
+  let tempTrend=null;
+  if(nowIdx>=0 && temps.length>nowIdx+2){
+    const nowTemp=wData?.current_weather?.temperature;
+    const futureTemp=temps[nowIdx+2];
+    const delta=futureTemp-nowTemp;
+    if(Math.abs(delta)>=3) tempTrend={delta:Math.round(delta),rising:delta>0};
+  }
+
+  const fmtHM=iso=>iso?new Date(iso).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):null;
+
+  setState({
+    loading:false,error:null,
+    temp:Math.round(wData?.current_weather?.temperature),
+    city:gData?.city||gData?.locality||gData?.principalSubdivision||'Local desconhecido',
+    code:wData?.current_weather?.weathercode??0,
+    iconUri:null,
+    isDay:wData?.current_weather?.is_day??1,
+    uvMax:wData?.daily?.uv_index_max?.[0]??null,
+    sunrise:fmtHM(wData?.daily?.sunrise?.[0]),
+    sunset:fmtHM(wData?.daily?.sunset?.[0]),
+    tempTrend,rain,
+  });
+}
+
 // Gradiente dinâmico de fundo do balão de clima, de acordo com a condição
 // atual (limpo, nublado, chuva, tempestade, neve, névoa) e se é dia ou noite.
+// Aceita tanto o "type" da Google Weather API (string, ex: "CLEAR") quanto o
+// código WMO do Open-Meteo (número), usado como alternativa sem chave.
+const GW_RAIN_TYPES=['WIND_AND_RAIN','LIGHT_RAIN_SHOWERS','CHANCE_OF_SHOWERS','SCATTERED_SHOWERS','RAIN_SHOWERS','HEAVY_RAIN_SHOWERS','LIGHT_TO_MODERATE_RAIN','MODERATE_TO_HEAVY_RAIN','RAIN','LIGHT_RAIN','HEAVY_RAIN','RAIN_PERIODICALLY_HEAVY','RAIN_AND_SNOW'];
+const GW_SNOW_TYPES=['LIGHT_SNOW_SHOWERS','CHANCE_OF_SNOW_SHOWERS','SCATTERED_SNOW_SHOWERS','SNOW_SHOWERS','HEAVY_SNOW_SHOWERS','LIGHT_TO_MODERATE_SNOW','MODERATE_TO_HEAVY_SNOW','SNOW','LIGHT_SNOW','HEAVY_SNOW','BLOWING_SNOW'];
+const GW_STORM_TYPES=['SNOWSTORM','SNOW_PERIODICALLY_HEAVY','HEAVY_SNOW_STORM','HAIL','HAIL_SHOWERS','THUNDERSTORM','THUNDERSHOWER','LIGHT_THUNDERSTORM_RAIN','SCATTERED_THUNDERSTORMS','HEAVY_THUNDERSTORM'];
+
 function weatherGradient(code,isDay){
   const day=isDay===1||isDay===undefined;
-  if(code===0) return day
-    ? 'linear-gradient(135deg,#4f9de0 0%,#8fd0f0 100%)'
-    : 'linear-gradient(135deg,#1a2a5e 0%,#3b4d8c 100%)';
-  if([1,2].includes(code)) return day
-    ? 'linear-gradient(135deg,#5b9bd5 0%,#a7d4ef 100%)'
-    : 'linear-gradient(135deg,#232e52 0%,#4a5a8a 100%)';
+  const clearGrad=day?'linear-gradient(135deg,#4f9de0 0%,#8fd0f0 100%)':'linear-gradient(135deg,#1a2a5e 0%,#3b4d8c 100%)';
+
+  if(typeof code==='string'){
+    const t=code;
+    if(t==='CLEAR') return clearGrad;
+    if(['MOSTLY_CLEAR','PARTLY_CLOUDY'].includes(t)) return day?'linear-gradient(135deg,#5b9bd5 0%,#a7d4ef 100%)':'linear-gradient(135deg,#232e52 0%,#4a5a8a 100%)';
+    if(['MOSTLY_CLOUDY','CLOUDY','WINDY'].includes(t)) return 'linear-gradient(135deg,#8a97a3 0%,#c3cdd6 100%)';
+    if(GW_RAIN_TYPES.includes(t)) return 'linear-gradient(135deg,#4a6178 0%,#7891a8 100%)';
+    if(GW_SNOW_TYPES.includes(t)) return 'linear-gradient(135deg,#a9c6e0 0%,#e4eef7 100%)';
+    if(GW_STORM_TYPES.includes(t)) return 'linear-gradient(135deg,#3a3f52 0%,#5f6478 100%)';
+    return clearGrad;
+  }
+
+  // código WMO (Open-Meteo)
+  if(code===0) return clearGrad;
+  if([1,2].includes(code)) return day?'linear-gradient(135deg,#5b9bd5 0%,#a7d4ef 100%)':'linear-gradient(135deg,#232e52 0%,#4a5a8a 100%)';
   if(code===3) return 'linear-gradient(135deg,#8a97a3 0%,#c3cdd6 100%)';
   if([45,48].includes(code)) return 'linear-gradient(135deg,#9aa3ab 0%,#c9d1d8 100%)';
   if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return 'linear-gradient(135deg,#4a6178 0%,#7891a8 100%)';
   if([71,73,75,77,85,86].includes(code)) return 'linear-gradient(135deg,#a9c6e0 0%,#e4eef7 100%)';
   if([95,96,99].includes(code)) return 'linear-gradient(135deg,#3a3f52 0%,#5f6478 100%)';
-  return day ? 'linear-gradient(135deg,#4f9de0 0%,#8fd0f0 100%)' : 'linear-gradient(135deg,#1a2a5e 0%,#3b4d8c 100%)';
+  return clearGrad;
 }
 
-// Ícone de clima dinâmico (estilo "blob" flat, parecido com o widget do Google),
-// escolhido a partir do código meteorológico (WMO) + se é dia ou noite.
-function WeatherIcon({code,isDay,size=56}){
+// Ícone de clima: usa o ícone oficial da Google Weather API quando disponível
+// (iconUri), ou desenha um ícone "blob" flat como alternativa quando estiver
+// usando o Open-Meteo (sem chave configurada).
+function WeatherIcon({code,isDay,iconUri,size=56}){
+  if(iconUri){
+    return <img src={`${iconUri}.svg`} alt="" width={size} height={size} style={{display:'block'}}/>;
+  }
+
   const day=isDay===1||isDay===undefined;
   const sunGrad=<defs><radialGradient id="sunG" cx="35%" cy="30%" r="75%"><stop offset="0%" stopColor="#ffe98a"/><stop offset="100%" stopColor="#ffb703"/></radialGradient>
     <linearGradient id="cloudG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffffff"/><stop offset="100%" stopColor="#dfe6ee"/></linearGradient>
@@ -1373,11 +1564,19 @@ function useTimetable(userId){
     });
   },[userId]);
 
-  // Salva na nuvem a cada mudança (com atraso pra agrupar digitação rápida)
+  // Registra na fila central (sempre lê o valor mais atual via ref)
+  const dataRef=useRef(data);
+  dataRef.current=data;
   useEffect(()=>{
     if(!userId) return;
-    const t=setTimeout(()=>{mergeAndSavePlanData(userId,{timetable:data});},800);
-    return()=>clearTimeout(t);
+    return registerPlanDataField('timetable',()=>dataRef.current);
+  },[userId]);
+
+  // Pede o salvamento a cada mudança (com atraso pra agrupar digitação rápida)
+  useEffect(()=>{
+    if(!userId) return;
+    const t=setTimeout(()=>requestPlanDataSave(userId),400);
+    return()=>{clearTimeout(t);requestPlanDataSave(userId);};
   },[data,userId]);
 
   function addRow(label){
@@ -1606,11 +1805,8 @@ function StudyTab({onHome,onOpenProfile,onLogout}){
 function FinanceTab({onHome,onOpenProfile,onLogout}){
   return(
     <div style={S.wrap}>
-      <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'#1c1c1a'}}>💰 Finanças</div>
-      </div>
-      <div style={{padding:16,paddingBottom:100}}>
-        <div style={{borderRadius:16,overflow:'hidden',border:'1px solid #e4ddd0',height:'80vh',minHeight:560,background:'#ffffff'}}>
+      <div style={{padding:'10px 12px 100px'}}>
+        <div style={{borderRadius:16,overflow:'hidden',border:'1px solid #e4ddd0',height:'92vh',minHeight:640,background:'#ffffff'}}>
           <iframe title="Finanças" src={`/controle-financeiro.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}`} style={{width:'100%',height:'100%',border:'none'}}/>
         </div>
       </div>
@@ -1867,7 +2063,9 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   const [planPreview,setPlanPreview]=useState(null);
   const [shoppingCount,setShoppingCount]=useState(null);
   const [saldoVisible,setSaldoVisible]=useState(false);
-  const [workoutDoneToday,setWorkoutDoneToday]=useState(false);
+
+  const [workoutLog,setWorkoutLog]=useState({});
+  const workoutDoneToday=!!workoutLog[localDateKey()];
 
   useEffect(()=>{
     loadUserPlan(userId).then(plan=>{
@@ -1880,22 +2078,28 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
       .then(({data})=>{
         const shopping=data?.plan_data?.shopping;
         setShoppingCount(Array.isArray(shopping)?shopping.filter(i=>!i.checked).length:null);
-        const log=data?.plan_data?.workoutLog||{};
-        setWorkoutDoneToday(!!log[localDateKey()]);
+        setWorkoutLog(data?.plan_data?.workoutLog||{});
       }).catch(()=>{});
   },[userId]);
 
-  async function toggleWorkoutDone(){
-    const newVal=!workoutDoneToday;
-    setWorkoutDoneToday(newVal); // otimista
-    try{
-      const {data}=await supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle();
-      const pd=data?.plan_data||{};
-      const log={...(pd.workoutLog||{})};
-      const key=localDateKey();
-      if(newVal) log[key]=true; else delete log[key];
-      await supabase.from('user_plans').upsert({user_id:userId,plan_data:{...pd,workoutLog:log},updated_at:new Date().toISOString()},{onConflict:'user_id'});
-    }catch{setWorkoutDoneToday(!newVal);}
+  // Registra na fila central (mesma fila usada por água/agenda/horários/plano
+  // — nunca mais uma escrita independente correndo com as outras)
+  const workoutLogRef=useRef(workoutLog);
+  workoutLogRef.current=workoutLog;
+  useEffect(()=>{
+    if(!userId) return;
+    return registerPlanDataField('workoutLog',()=>workoutLogRef.current);
+  },[userId]);
+
+  function toggleWorkoutDone(){
+    const key=localDateKey();
+    setWorkoutLog(prev=>{
+      const next={...prev};
+      if(next[key]) delete next[key]; else next[key]=true;
+      return next;
+    });
+    // dá um instante pro estado assentar e então pede o salvamento
+    setTimeout(()=>requestPlanDataSave(userId),50);
   }
 
   const nextExam=getNextExam();
@@ -1955,7 +2159,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
           ):(
             <>
               <div style={{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
-                <WeatherIcon code={weather.code} isDay={weather.isDay} size={68}/>
+                <WeatherIcon code={weather.code} isDay={weather.isDay} iconUri={weather.iconUri} size={68}/>
                 <div style={{flex:'1 1 120px'}}>
                   <div style={{fontSize:36,fontWeight:900,color:'#ffffff',lineHeight:1,textShadow:'0 2px 6px rgba(0,0,0,0.15)'}}>{weather.temp}°</div>
                   <div style={{fontSize:16,fontWeight:800,color:'rgba(255,255,255,0.95)',display:'flex',alignItems:'center',gap:4,marginTop:2}}>📍 {weather.city}</div>
@@ -2151,6 +2355,10 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   );
 }
 
+// Telas que fazem sentido "retomar" depois de um F5 — nunca restauramos para
+// estados transitórios como loading/login/register/profile.
+const RESUMABLE_SCREENS=['home','nutrition','shopping','treinos','estudos','financas','habitos','timetable'];
+
 // ── ROOT ──────────────────────────────────────────────────────────────────────
 export default function App(){
   const [screen,setScreen]=useState('loading');
@@ -2158,9 +2366,20 @@ export default function App(){
   const [profile,setProfile]=useState(null);
   const userIdRef=useRef(null);
 
+  // Sempre que a tela muda para uma das "retomáveis", lembra qual é —
+  // assim um F5 dentro de qualquer aba continua na mesma aba, em vez de
+  // voltar pra Início.
+  useEffect(()=>{
+    if(RESUMABLE_SCREENS.includes(screen)) sessionStorage.setItem('lifeplan_screen',screen);
+  },[screen]);
+
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{
-      if(session?.user){userIdRef.current=session.user.id;setUserId(session.user.id);setScreen('home');}
+      if(session?.user){
+        userIdRef.current=session.user.id;setUserId(session.user.id);
+        const saved=sessionStorage.getItem('lifeplan_screen');
+        setScreen(saved&&RESUMABLE_SCREENS.includes(saved)?saved:'home');
+      }
       else setScreen('login');
     });
     // Importante: este listener dispara em qualquer evento do Supabase
@@ -2179,6 +2398,7 @@ export default function App(){
         userIdRef.current=null;
         setUserId(null);
         setScreen('login');
+        sessionStorage.removeItem('lifeplan_screen');
       }
     });
     return()=>subscription.unsubscribe();
