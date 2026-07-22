@@ -639,24 +639,33 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
     };
   },[userId]);
 
-  // Carrega plano e lista do Supabase
+  const [dataLoaded,setDataLoaded]=useState(false);
+
+  // Carrega plano e lista do Supabase. Só depois que os DOIS carregamentos
+  // terminarem é que os efeitos de auto-save abaixo são liberados — sem
+  // isso, se a internet demorasse um pouco, o auto-save de compras/treinos
+  // disparava com os valores padrão (vazios) ANTES do carregamento real
+  // terminar, sobrescrevendo os treinos/compras já salvos com nada.
   useEffect(()=>{
+    setDataLoaded(false);
+    let doneA=false,doneB=false;
+    const checkDone=()=>{ if(doneA&&doneB) setDataLoaded(true); };
     loadUserPlan(userId).then(saved=>{
       if(saved&&saved.length) setPlan(saved); else setPlan([]);
-    }).catch(()=>setPlan([]));
+    }).catch(()=>setPlan([])).finally(()=>{doneA=true;checkDone();});
     // Carrega lista de compras e perfis de treino
     supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle()
       .then(({data})=>{
         if(data?.plan_data?.shopping) setShopping(data.plan_data.shopping);
         if(data?.plan_data?.workoutProfiles) setWorkoutProfiles(data.plan_data.workoutProfiles);
         if(data?.plan_data?.workoutGoalPerWeek) setWorkoutGoal(data.plan_data.workoutGoalPerWeek);
-      });
+      }).finally(()=>{doneB=true;checkDone();});
   },[userId]);
 
   // Pede o salvamento a cada mudança do plano (a fila central faz a escrita
   // de verdade, então nunca corre com o salvamento de compras/treinos)
   useEffect(()=>{
-    if(!plan||!plan.length||!userId) return;
+    if(!plan||!plan.length||!userId||!dataLoaded) return;
     clearTimeout(timer.current);
     setSaving(true);
     timer.current=setTimeout(()=>{
@@ -664,22 +673,22 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
       setSaveMsg('✅ Salvo');setSaving(false);setTimeout(()=>setSaveMsg(''),2000);
     },1200);
     return()=>{clearTimeout(timer.current);requestPlanDataSave(userId);};
-  },[plan,userId]);
+  },[plan,userId,dataLoaded]);
 
   // Pede o salvamento a cada mudança da lista de compras (mesma fila central)
   useEffect(()=>{
-    if(!userId) return;
+    if(!userId||!dataLoaded) return;
     const t=setTimeout(()=>requestPlanDataSave(userId),400);
     return()=>{clearTimeout(t);requestPlanDataSave(userId);};
-  },[shopping,userId]);
+  },[shopping,userId,dataLoaded]);
 
   // Pede o salvamento a cada mudança de perfis de treino / meta semanal
   useEffect(()=>{
-    if(!userId) return;
+    if(!userId||!dataLoaded) return;
     clearTimeout(timerProfiles.current);
     timerProfiles.current=setTimeout(()=>requestPlanDataSave(userId),400);
     return()=>{clearTimeout(timerProfiles.current);requestPlanDataSave(userId);};
-  },[workoutProfiles,workoutGoal,userId]);
+  },[workoutProfiles,workoutGoal,userId,dataLoaded]);
 
   // ── helpers de plano
   function updateQty(mi,fid,qty){
@@ -1230,13 +1239,14 @@ function useWaterTracker(userId){
   useEffect(()=>{localStorage.setItem('water_v1',JSON.stringify(data));},[data]);
 
   // Carrega a meta/consumo salvos na nuvem (permite trocar de dispositivo)
+  const [waterLoaded,setWaterLoaded]=useState(false);
   useEffect(()=>{
     if(!userId) return;
     supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle().then(({data:row})=>{
       const cloud=row?.plan_data?.water;
       if(cloud&&cloud.date===todayKey()) setData(cloud);
       else if(cloud) setData(d=>({...d,goal:cloud.goal||d.goal})); // dia diferente: mantém só a meta
-    });
+    }).finally(()=>setWaterLoaded(true));
   },[userId]);
 
   // Registra o valor mais atual na fila central (nunca uma cópia presa)
@@ -1250,11 +1260,14 @@ function useWaterTracker(userId){
   // Pede o salvamento (com atraso pra não disparar uma chamada a cada clique);
   // a fila central é quem de fato lê/escreve, então nunca corre com outros
   // campos (agenda, quadro de horários etc.) sendo salvos ao mesmo tempo.
+  // Só libera depois que o carregamento da nuvem terminar — sem isso, um
+  // dispositivo novo (sem cache local) podia salvar o valor padrão (zerado)
+  // por cima do que já estava salvo, antes do carregamento real chegar.
   useEffect(()=>{
-    if(!userId) return;
+    if(!userId||!waterLoaded) return;
     const t=setTimeout(()=>requestPlanDataSave(userId),400);
     return()=>{clearTimeout(t);requestPlanDataSave(userId);};
-  },[data,userId]);
+  },[data,userId,waterLoaded]);
 
   // Confere a cada minuto se o dia virou, mesmo com o app aberto continuamente
   useEffect(()=>{
@@ -1275,11 +1288,12 @@ function useManualAgenda(userId){
   });
   useEffect(()=>{localStorage.setItem('agenda_manual',JSON.stringify(items));},[items]);
 
+  const [agendaLoaded,setAgendaLoaded]=useState(false);
   useEffect(()=>{
     if(!userId) return;
     supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle().then(({data:row})=>{
       if(Array.isArray(row?.plan_data?.agendaManual)) setItems(row.plan_data.agendaManual);
-    });
+    }).finally(()=>setAgendaLoaded(true));
   },[userId]);
 
   // Registra na fila central (sempre lê o valor mais atual via ref)
@@ -1291,10 +1305,10 @@ function useManualAgenda(userId){
   },[userId]);
 
   useEffect(()=>{
-    if(!userId) return;
+    if(!userId||!agendaLoaded) return;
     const t=setTimeout(()=>requestPlanDataSave(userId),400);
     return()=>{clearTimeout(t);requestPlanDataSave(userId);};
-  },[items,userId]);
+  },[items,userId,agendaLoaded]);
 
   function add(title,time){setItems(p=>[...p,{id:'m'+Date.now(),title,time}].sort((a,b)=>String(a.time).localeCompare(String(b.time))));}
   function remove(id){setItems(p=>p.filter(i=>i.id!==id));}
@@ -1556,12 +1570,13 @@ function useTimetable(userId){
   useEffect(()=>{localStorage.setItem('timetable_v2',JSON.stringify(data));},[data]);
 
   // Carrega a grade salva na nuvem (permite editar em qualquer dispositivo)
+  const [timetableLoaded,setTimetableLoaded]=useState(false);
   useEffect(()=>{
     if(!userId) return;
     supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle().then(({data:row})=>{
       const cloud=row?.plan_data?.timetable;
       if(cloud&&Array.isArray(cloud.rows)) setData(cloud);
-    });
+    }).finally(()=>setTimetableLoaded(true));
   },[userId]);
 
   // Registra na fila central (sempre lê o valor mais atual via ref)
@@ -1574,10 +1589,10 @@ function useTimetable(userId){
 
   // Pede o salvamento a cada mudança (com atraso pra agrupar digitação rápida)
   useEffect(()=>{
-    if(!userId) return;
+    if(!userId||!timetableLoaded) return;
     const t=setTimeout(()=>requestPlanDataSave(userId),400);
     return()=>{clearTimeout(t);requestPlanDataSave(userId);};
-  },[data,userId]);
+  },[data,userId,timetableLoaded]);
 
   function addRow(label){
     setData(d=>({...d,rows:[...d.rows,{id:'r'+Date.now()+Math.random().toString(36).slice(2,6),label:label||'Novo horário'}]}));
@@ -2065,6 +2080,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   const [saldoVisible,setSaldoVisible]=useState(false);
 
   const [workoutLog,setWorkoutLog]=useState({});
+  const [workoutLogLoaded,setWorkoutLogLoaded]=useState(false);
   const workoutDoneToday=!!workoutLog[localDateKey()];
 
   useEffect(()=>{
@@ -2079,17 +2095,20 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
         const shopping=data?.plan_data?.shopping;
         setShoppingCount(Array.isArray(shopping)?shopping.filter(i=>!i.checked).length:null);
         setWorkoutLog(data?.plan_data?.workoutLog||{});
-      }).catch(()=>{});
+      }).catch(()=>{}).finally(()=>setWorkoutLogLoaded(true));
   },[userId]);
 
   // Registra na fila central (mesma fila usada por água/agenda/horários/plano
-  // — nunca mais uma escrita independente correndo com as outras)
+  // — nunca mais uma escrita independente correndo com as outras). Só depois
+  // de carregar de verdade — sem isso, se ÁGUA ou AGENDA disparassem um
+  // salvamento antes do treino-feito carregar, ele entraria na gravação
+  // como "{}" (vazio) e apagaria o histórico de treinos feitos.
   const workoutLogRef=useRef(workoutLog);
   workoutLogRef.current=workoutLog;
   useEffect(()=>{
-    if(!userId) return;
+    if(!userId||!workoutLogLoaded) return;
     return registerPlanDataField('workoutLog',()=>workoutLogRef.current);
-  },[userId]);
+  },[userId,workoutLogLoaded]);
 
   function toggleWorkoutDone(){
     const key=localDateKey();

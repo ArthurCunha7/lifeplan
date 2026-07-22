@@ -8,15 +8,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
     <title>LifePlan</title>
     <style>
-      /* Em telas largas (PC), centraliza o app como um cartão de "celular"
-         em vez de esticar o conteúdo de ponta a ponta da tela */
+      /* Em telas largas (PC), dá mais respiro ao conteúdo em vez de espremer
+         tudo numa coluna estreita de celular — mas ainda com um limite
+         máximo, pra não esticar de ponta a ponta num monitor enorme */
       @media (min-width: 860px) {
-        #root > div { max-width: 640px; margin: 0 auto; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.10); }
-        #root nav { max-width: 640px; left: 50% !important; right: auto !important; transform: translateX(-50%); }
+        #root > div { max-width: 1040px; margin: 0 auto; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.10); }
+        #root nav { max-width: 1040px; left: 50% !important; right: auto !important; transform: translateX(-50%); }
       }
     </style>
   </head>
-  <body style="margin:0;background:#efe8dd;">
+  <body style="margin:0;background:#efe8dd;overflow-x:hidden;">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -647,9 +647,8 @@
   <div class="logo">💳 <span>Controle</span>Financeiro</div>
   <nav id="nav">
     <button class="active" onclick="showTab('faturas')">Faturas</button>
-    <button onclick="showTab('resumo')">Resumo</button>
+    <button onclick="showTab('resumo')">Resumo &amp; Perfis</button>
     <button onclick="showTab('pagamentos')">Pagamentos</button>
-    <button onclick="showTab('perfis')">Perfis</button>
     <button onclick="showTab('balanco')">Balanço Mensal</button>
   </nav>
 </header>
@@ -662,7 +661,7 @@
   </div>
 </div>
 
-<!-- TAB 2 — RESUMO (Saldo Final + Resumo por Perfil) -->
+<!-- TAB 2 — RESUMO & PERFIS (Saldo Final + Resumo por Perfil + Gerenciar Perfis) -->
 <div id="tab-resumo" class="tab">
   <div class="section-head">
     <div class="section-title">⚖️ Saldo Final por Perfil</div>
@@ -673,19 +672,8 @@
     <div class="section-title">📊 Gastos por Perfil</div>
   </div>
   <div id="perfis-summary"></div>
-</div>
 
-<!-- TAB 3 — PAGAMENTOS -->
-<div id="tab-pagamentos" class="tab">
-  <div class="section-head">
-    <div class="section-title">💸 Registro de Pagamentos</div>
-  </div>
-  <div id="pagamentos-container"></div>
-</div>
-
-<!-- TAB 4 — PERFIS -->
-<div id="tab-perfis-manager" class="tab">
-  <div class="section-head">
+  <div class="section-head" style="margin-top:16px">
     <div class="section-title">👤 Gerenciar Perfis</div>
   </div>
   <div class="card">
@@ -695,6 +683,14 @@
     </div>
     <div id="profiles-manager-body"></div>
   </div>
+</div>
+
+<!-- TAB 3 — PAGAMENTOS -->
+<div id="tab-pagamentos" class="tab">
+  <div class="section-head">
+    <div class="section-title">💸 Registro de Pagamentos</div>
+  </div>
+  <div id="pagamentos-container"></div>
 </div>
 
 <!-- TAB 5 — BALANÇO MENSAL -->
@@ -753,17 +749,23 @@ let _collapsedProfiles = {};
 let _saldoVisible = true;
 
 let __cfSaveTimer = null;
+function flushCloudSave() {
+  if (!supa || !currentUser) return;
+  supa.from('finance_data').upsert({
+    user_id: currentUser.id, data: state, updated_at: new Date().toISOString()
+  }).then(({error}) => { if (error) console.error('Erro ao salvar finanças na nuvem:', error); });
+}
 function scheduleCloudSave() {
   if (!supa || !currentUser) return;
   clearTimeout(__cfSaveTimer);
-  __cfSaveTimer = setTimeout(async () => {
-    try {
-      await supa.from('finance_data').upsert({
-        user_id: currentUser.id, data: state, updated_at: new Date().toISOString()
-      });
-    } catch (e) { console.error('Erro ao salvar finanças na nuvem:', e); }
-  }, 700);
+  __cfSaveTimer = setTimeout(flushCloudSave, 250);
 }
+// Rede de segurança: como esta página roda dentro de um iframe (não um
+// componente React), não existe um aviso confiável de "estou prestes a ser
+// removida" quando o usuário troca de aba no app principal. Isso tenta
+// forçar o envio se o navegador perceber a aba escondendo/fechando.
+window.addEventListener('pagehide', () => { if (__cfSaveTimer) { clearTimeout(__cfSaveTimer); flushCloudSave(); } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && __cfSaveTimer) { clearTimeout(__cfSaveTimer); flushCloudSave(); } });
 
 async function loadFinanceFromCloud() {
   if (!supa) return;
@@ -845,16 +847,6 @@ function getDefaultState() {
         sign: 1, includeInSaldo: true
       },
       {
-        id: 'saidas', name: 'Saídas Futuras', icon: '💸', type: 'custom',
-        columns: [
-          { id: 'nome', name: 'Nome', type: 'text' },
-          { id: 'val', name: 'Valor (R$)', type: 'number' },
-          { id: 'obs', name: 'Obs', type: 'text' }
-        ],
-        rows: [],
-        sign: -1, includeInSaldo: true
-      },
-      {
         id: 'referencia', name: 'Referência', icon: '📌', type: 'custom',
         columns: [
           { id: 'cat', name: 'Categoria', type: 'text' },
@@ -932,22 +924,6 @@ if (!state.balancoTables) {
     sign: 1, includeInSaldo: true
   });
 
-  // Migrate Saídas
-  const oldSaidas = state.saidas || [];
-  state.balancoTables.push({
-    id: 'saidas', name: 'Saídas', icon: '💸', type: 'custom',
-    columns: [
-      { id: 'nome', name: 'Nome', type: 'text' },
-      { id: 'val', name: 'Valor (R$)', type: 'number' },
-      { id: 'obs', name: 'Obs', type: 'text' }
-    ],
-    rows: oldSaidas.map(s => ({
-      id: s.id || genId(),
-      values: { nome: s.name, val: parseFloat(s.value) || 0, obs: s.obs || '' }
-    })),
-    sign: -1, includeInSaldo: true
-  });
-
   // Lançamentos (computed, built-in, informational by default)
   state.balancoTables.push({
     id: 'lancamentos', name: 'Lançamentos', icon: '🔮', type: 'lancamentos',
@@ -955,6 +931,12 @@ if (!state.balancoTables) {
     refTableId: 'referencia',
     sign: 0, includeInSaldo: false
   });
+}
+
+// Remove a tabela "Saídas" para quem já tinha ela salva de antes (pedido do
+// usuário: essa tabela não deve mais aparecer na aba Balanço Mensal)
+if (state.balancoTables) {
+  state.balancoTables = state.balancoTables.filter(t => t.id !== 'saidas');
 }
 
 if (state.activeProfiles === undefined) {
@@ -1064,19 +1046,18 @@ function loadState() {
 function showTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  const tabId = name === 'perfis' ? 'tab-perfis-manager' : 'tab-'+name;
+  const tabId = 'tab-'+name;
   document.getElementById(tabId).classList.add('active');
   const btns = document.querySelectorAll('nav button');
-  const map = ['faturas','resumo','pagamentos','perfis','balanco'];
+  const map = ['faturas','resumo','pagamentos','balanco'];
   btns[map.indexOf(name)].classList.add('active');
   renderActive(name);
 }
 
 function renderActive(name) {
   if (name === 'faturas') { renderFaturas(); }
-  else if (name === 'resumo') { renderSaldo(); renderPerfis(); }
+  else if (name === 'resumo') { renderSaldo(); renderPerfis(); renderProfilesManager(); }
   else if (name === 'pagamentos') renderPagamentos();
-  else if (name === 'perfis') renderProfilesManager();
   else if (name === 'balanco') renderBalanco();
 }
 
@@ -2080,7 +2061,7 @@ function renderSaldoBuilder() {
           nameInp.oninput = e => { row.values['nome'] = e.target.value; saveState(); };
           const valInp = document.createElement('input');
           valInp.type = 'number'; valInp.value = row.values['val'] || 0; valInp.placeholder = '0,00'; valInp.step = '0.01';
-          valInp.style.cssText = 'flex:1;min-width:80px;max-width:130px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:13px;font-weight:700;color:var(--accent2);font-family:"JetBrains Mono",monospace';
+          valInp.style.cssText = 'flex:1;min-width:110px;max-width:170px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:14px;font-weight:700;color:var(--accent2);font-family:"JetBrains Mono",monospace';
           valInp.onblur = e => { row.values['val'] = parseFloat(e.target.value) || 0; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
           const del = document.createElement('button');
           del.className = 'btn btn-danger btn-sm'; del.innerHTML = '🗑'; del.style.padding = '3px 7px';
@@ -2142,7 +2123,7 @@ function renderSaldoBuilder() {
             if (numCol) {
               const inp = document.createElement('input');
               inp.type = 'number'; inp.value = row.values[numCol.id] ?? 0; inp.placeholder = '0,00'; inp.step = '0.01';
-              inp.style.cssText = 'flex:1;min-width:80px;max-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:12px;color:var(--text);font-family:inherit';
+              inp.style.cssText = 'flex:1;min-width:100px;max-width:160px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;color:var(--text);font-family:inherit';
               inp.onblur = e => { row.values[numCol.id] = parseFloat(e.target.value) || 0; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
               rowEl.appendChild(inp);
             }
@@ -2175,7 +2156,7 @@ function renderSaldoBuilder() {
         if (numCol) {
           numInp = document.createElement('input');
           numInp.type = 'number'; numInp.placeholder = '0,00'; numInp.step = '0.01';
-          numInp.style.cssText = 'flex:1;min-width:80px;max-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:12px;color:var(--text);font-family:inherit';
+          numInp.style.cssText = 'flex:1;min-width:100px;max-width:160px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;color:var(--text);font-family:inherit';
           numInp.oninput = e => { newVals[numCol.id] = parseFloat(e.target.value) || 0; };
           inputs.push(numInp);
           addBar.appendChild(numInp);
@@ -2492,20 +2473,21 @@ function renderFaturas() {
     addBtn.onclick = () => addRow(f.id);
     addBar.appendChild(addBtn);
 
-    // Corpo retrátil (tabela + botão de adicionar linha)
+    // Corpo retrátil (tabela + botão de adicionar linha) — vem RECOLHIDO por
+    // padrão; só fica aberto se o usuário explicitamente expandir (=== false)
     const body = document.createElement('div');
     body.id = 'fatura-body-' + f.id;
     body.appendChild(wrap);
     body.appendChild(addBar);
-    if (_collapsedFaturas[f.id]) body.style.display = 'none';
+    if (_collapsedFaturas[f.id] !== false) body.style.display = 'none';
     card.appendChild(body);
 
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'btn btn-ghost btn-sm';
-    toggleBtn.textContent = _collapsedFaturas[f.id] ? '▸' : '▾';
+    toggleBtn.textContent = _collapsedFaturas[f.id] !== false ? '▸' : '▾';
     toggleBtn.title = 'Recolher/expandir';
     toggleBtn.onclick = () => {
-      _collapsedFaturas[f.id] = !_collapsedFaturas[f.id];
+      _collapsedFaturas[f.id] = _collapsedFaturas[f.id] === false ? true : false;
       renderFaturas();
     };
     rightHeader.insertBefore(toggleBtn, removeBtn);
