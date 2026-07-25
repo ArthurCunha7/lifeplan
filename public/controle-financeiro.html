@@ -747,6 +747,7 @@ let state = loadState() || getDefaultState();
 let _collapsedFaturas = {};
 let _collapsedProfiles = {};
 let _saldoVisible = true;
+let _gastosVisible = false; // Gastos por Perfil vêm censurados por padrão
 
 let __cfSaveTimer = null;
 function flushCloudSave() {
@@ -993,36 +994,43 @@ if (!state.saidas) state.saidas = [];
 if (!state.pixRows) state.pixRows = [];
 if (state.saldoSectionIndex === undefined) state.saldoSectionIndex = 999;
 
-// Ensure banco table exists
-if (state.balancoTables && !state.balancoTables.find(t => t.id === 'banco')) {
-  state.balancoTables.unshift({
-    id: 'banco', name: 'Saldo em Conta', icon: '🏦', type: 'custom',
-    columns: [
-      { id: 'nome', name: 'Banco / Conta', type: 'text' },
-      { id: 'val', name: 'Valor (R$)', type: 'number' }
-    ],
-    rows: [],
-    sign: 1, includeInSaldo: true
-  });
+// Garante a tabela "Saldo em Conta" na PRIMEIRA vez (uma migração única — se
+// o usuário excluir depois, não volta sozinha)
+if (state.balancoTables && !state._migratedBancoV1) {
+  state._migratedBancoV1 = true;
+  if (!state.balancoTables.find(t => t.id === 'banco')) {
+    state.balancoTables.unshift({
+      id: 'banco', name: 'Saldo em Conta', icon: '🏦', type: 'custom',
+      columns: [
+        { id: 'nome', name: 'Banco / Conta', type: 'text' },
+        { id: 'val', name: 'Valor (R$)', type: 'number' }
+      ],
+      rows: [],
+      sign: 1, includeInSaldo: true
+    });
+  }
 }
 
-// Ensure PIX balanço table exists
-if (state.balancoTables && !state.balancoTables.find(t => t.id === 'pix_balanco')) {
-  const faturasIdx = state.balancoTables.findIndex(t => t.id === 'faturas');
-  const pixTable = {
-    id: 'pix_balanco', name: 'Pix', icon: '🔵', type: 'custom',
-    columns: [
-      { id: 'desc', name: 'Descrição', type: 'text' },
-      { id: 'val', name: 'Valor (R$)', type: 'number' },
-      { id: 'data', name: 'Data', type: 'text' }
-    ],
-    rows: [],
-    sign: -1, includeInSaldo: true
-  };
-  if (faturasIdx >= 0) {
-    state.balancoTables.splice(faturasIdx + 1, 0, pixTable);
-  } else {
-    state.balancoTables.push(pixTable);
+// Garante a tabela "Pix" na PRIMEIRA vez (mesma lógica: migração única)
+if (state.balancoTables && !state._migratedPixBalancoV1) {
+  state._migratedPixBalancoV1 = true;
+  if (!state.balancoTables.find(t => t.id === 'pix_balanco')) {
+    const faturasIdx = state.balancoTables.findIndex(t => t.id === 'faturas');
+    const pixTable = {
+      id: 'pix_balanco', name: 'Pix', icon: '🔵', type: 'custom',
+      columns: [
+        { id: 'desc', name: 'Descrição', type: 'text' },
+        { id: 'val', name: 'Valor (R$)', type: 'number' },
+        { id: 'data', name: 'Data', type: 'text' }
+      ],
+      rows: [],
+      sign: -1, includeInSaldo: true
+    };
+    if (faturasIdx >= 0) {
+      state.balancoTables.splice(faturasIdx + 1, 0, pixTable);
+    } else {
+      state.balancoTables.push(pixTable);
+    }
   }
 }
 
@@ -1067,6 +1075,15 @@ function renderActive(name) {
 function fmt(v) {
   const n = parseFloat(v) || 0;
   return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// Converte uma data no formato ISO (AAAA-MM-DD, usada pelos <input type="date">)
+// para o padrão brasileiro (DD/MM/AAAA) na hora de exibir.
+function formatDateBR(iso) {
+  if (!iso) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return iso; // já não está em ISO (ou é outro formato) — mostra como está
+  return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
 function getActiveProfiles() {
@@ -1621,15 +1638,19 @@ function buildBalancoTableCard(t, tIdx, totalTables) {
     };
     titleRow.appendChild(signBtn);
 
-    // ── Delete button (only for custom tables, not built-ins) ──
-    const builtIn = ['referencia','faturas','entradas','saidas','lancamentos','banco','pix_balanco'];
-    if (!builtIn.includes(t.id)) {
-      const delTableBtn = document.createElement('button');
-      delTableBtn.className = 'btn btn-danger btn-sm'; delTableBtn.innerHTML = '🗑';
-      delTableBtn.style.padding = '2px 6px';
-      delTableBtn.onclick = () => removeBalancoTable(t.id);
-      titleRow.appendChild(delTableBtn);
-    }
+    // ── Delete button (agora disponível pra qualquer tabela, inclusive as
+    // "de fábrica" — com um aviso extra pras que têm comportamento especial) ──
+    const specialBehavior = ['entradas','lancamentos','banco'];
+    const delTableBtn = document.createElement('button');
+    delTableBtn.className = 'btn btn-danger btn-sm'; delTableBtn.innerHTML = '🗑';
+    delTableBtn.style.padding = '2px 6px';
+    delTableBtn.onclick = () => {
+      const msg = specialBehavior.includes(t.id)
+        ? `"${t.name}" tem um comportamento especial nessa aba (cálculo próprio). Excluir remove essa funcionalidade também, não só os dados. Quer mesmo excluir?`
+        : `Excluir a tabela "${t.name}"? Isso remove os dados dela do Balanço Mensal.`;
+      if (confirm(msg)) removeBalancoTable(t.id);
+    };
+    titleRow.appendChild(delTableBtn);
 
     section.appendChild(titleRow);
 
@@ -2272,7 +2293,7 @@ function renderPix() {
     const dot = `<span style="width:8px;height:8px;border-radius:50%;background:${dotColor};display:inline-block;margin-right:6px;vertical-align:middle;flex-shrink:0"></span>`;
 
     const tdDate = document.createElement('td');
-    tdDate.textContent = p.date || '—';
+    tdDate.textContent = formatDateBR(p.date) || '—';
 
     const tdDesc = document.createElement('td');
     tdDesc.textContent = p.desc;
@@ -2523,6 +2544,17 @@ function renderPerfis() {
 
   const totalProfiles = state.profiles.length; // 6
 
+  const toggleWrap = document.createElement('div');
+  toggleWrap.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:8px;';
+  const visToggle = document.createElement('button');
+  visToggle.className = 'btn btn-ghost btn-sm';
+  visToggle.textContent = _gastosVisible ? '👁️ Ocultar valores' : '🙈 Mostrar valores';
+  visToggle.onclick = () => { _gastosVisible = !_gastosVisible; renderPerfis(); };
+  toggleWrap.appendChild(visToggle);
+  container.appendChild(toggleWrap);
+
+  const fmtG = v => _gastosVisible ? fmt(Math.abs(v)) : '••••';
+
   getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
     const rows = getAllRowsByProfile(pIdx);
     const total = rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
@@ -2560,7 +2592,7 @@ function renderPerfis() {
     totalEl.className = 'card-total';
     // Multiply entradas (total) by -1 to flip sign display
     const displayTotal = -total;
-    totalEl.textContent = fmt(Math.abs(displayTotal));
+    totalEl.textContent = fmtG(displayTotal);
     totalEl.style.color = displayTotal >= 0 ? 'var(--accent2)' : 'var(--danger)';
 
     header.appendChild(nameEl);
@@ -2588,10 +2620,10 @@ function renderPerfis() {
         const dispVal = -(parseFloat(r.value)||0);
         tr.innerHTML = `
           <td>${r.faturaName}</td>
-          <td>${r.date || '—'}</td>
+          <td>${formatDateBR(r.date) || '—'}</td>
           <td>${r.name || '—'}</td>
           <td>${r.parcelas || '—'}</td>
-          <td class="val-cell ${dispVal >= 0 ? 'positive' : 'negative'}">${dispVal >= 0 ? '+' : ''}${fmt(Math.abs(dispVal))}</td>
+          <td class="val-cell ${dispVal >= 0 ? 'positive' : 'negative'}">${_gastosVisible ? (dispVal >= 0 ? '+' : '') : ''}${fmtG(dispVal)}</td>
           ${catCell}
         `;
         tbody.appendChild(tr);
@@ -2602,7 +2634,7 @@ function renderPerfis() {
     const totalDisplay = -total;
     tfoot.innerHTML = `<tr>
       <td colspan="${hasCat ? 5 : 4}" style="color:var(--muted);font-size:12px">Total</td>
-      <td class="val-cell" style="color:${totalDisplay >= 0 ? 'var(--accent2)' : 'var(--danger)'}">${totalDisplay >= 0 ? '+' : ''}${fmt(Math.abs(totalDisplay))}</td>
+      <td class="val-cell" style="color:${totalDisplay >= 0 ? 'var(--accent2)' : 'var(--danger)'}">${_gastosVisible ? (totalDisplay >= 0 ? '+' : '') : ''}${fmtG(totalDisplay)}</td>
     </tr>`;
 
     table.appendChild(tbody);
@@ -2632,22 +2664,24 @@ function renderPerfis() {
           row.className = 'cat-total-row';
           // Multiply by -1
           const dispVal = -val;
-          row.innerHTML = `<span class="cat-total-label">${cat}</span><span class="val-cell ${dispVal >= 0 ? 'positive' : 'negative'}">${dispVal >= 0 ? '+' : '− '}${fmt(Math.abs(dispVal))}</span>`;
+          row.innerHTML = `<span class="cat-total-label">${cat}</span><span class="val-cell ${dispVal >= 0 ? 'positive' : 'negative'}">${_gastosVisible ? (dispVal >= 0 ? '+' : '− ') : ''}${fmtG(dispVal)}</span>`;
           catDiv.appendChild(row);
         }
       });
       body.appendChild(catDiv);
     }
 
-    if (_collapsedProfiles[pIdx]) body.style.display = 'none';
+    // Recolhido por padrão — só fica aberto se o usuário explicitamente
+    // expandir (=== false)
+    if (_collapsedProfiles[pIdx] !== false) body.style.display = 'none';
     card.appendChild(body);
 
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'btn btn-ghost btn-sm';
-    toggleBtn.textContent = _collapsedProfiles[pIdx] ? '▸' : '▾';
+    toggleBtn.textContent = _collapsedProfiles[pIdx] !== false ? '▸' : '▾';
     toggleBtn.title = 'Recolher/expandir';
     toggleBtn.onclick = () => {
-      _collapsedProfiles[pIdx] = !_collapsedProfiles[pIdx];
+      _collapsedProfiles[pIdx] = _collapsedProfiles[pIdx] === false ? true : false;
       renderPerfis();
     };
     header.insertBefore(toggleBtn, totalEl);
@@ -2724,7 +2758,7 @@ function renderPagamentos() {
         const tdDel = document.createElement('td');
         tdDel.appendChild(delBtn);
 
-        tr.innerHTML = `<td>${p.date||'—'}</td><td>${p.desc}</td><td class="val-cell positive">${fmt(p.value)}</td>`;
+        tr.innerHTML = `<td>${formatDateBR(p.date)||'—'}</td><td>${p.desc}</td><td class="val-cell positive">${fmt(p.value)}</td>`;
         tr.appendChild(tdDel);
         tbody.appendChild(tr);
       });
