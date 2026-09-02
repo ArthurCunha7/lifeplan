@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle Financeiro</title>
+<title>Finanças — LifePlan</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -644,7 +644,7 @@
 <body>
 
 <header>
-  <div class="logo">💳 <span>Controle</span>Financeiro</div>
+  <div class="logo">💳 <span>Fi</span>nanças</div>
   <nav id="nav">
     <button class="active" onclick="showTab('faturas')">Faturas</button>
     <button onclick="showTab('resumo')">Resumo &amp; Perfis</button>
@@ -747,7 +747,7 @@ let state = loadState() || getDefaultState();
 let _collapsedFaturas = {};
 let _collapsedProfiles = {};
 let _saldoVisible = true;
-let _gastosVisible = false; // Gastos por Perfil vêm censurados por padrão
+let _gastosVisiblePerProfile = {}; // censurado por padrão, individual por perfil
 
 let __cfSaveTimer = null;
 function flushCloudSave() {
@@ -1075,6 +1075,16 @@ function renderActive(name) {
 function fmt(v) {
   const n = parseFloat(v) || 0;
   return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function attachElasticWidth(el, minPx, maxPx, charPx) {
+  minPx = minPx || 70; maxPx = maxPx || 260; charPx = charPx || 10.5;
+  const resize = () => {
+    const len = (el.value || el.placeholder || '').toString().length;
+    el.style.width = Math.min(maxPx, Math.max(minPx, len * charPx + 24)) + 'px';
+  };
+  el.addEventListener('input', resize);
+  resize();
 }
 
 // Converte uma data no formato ISO (AAAA-MM-DD, usada pelos <input type="date">)
@@ -2082,7 +2092,8 @@ function renderSaldoBuilder() {
           nameInp.oninput = e => { row.values['nome'] = e.target.value; saveState(); };
           const valInp = document.createElement('input');
           valInp.type = 'number'; valInp.value = row.values['val'] || 0; valInp.placeholder = '0,00'; valInp.step = '0.01';
-          valInp.style.cssText = 'flex:1;min-width:110px;max-width:170px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:14px;font-weight:700;color:var(--accent2);font-family:"JetBrains Mono",monospace';
+          valInp.style.cssText = 'flex:0 0 auto;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:14px;font-weight:700;color:var(--accent2);font-family:"JetBrains Mono",monospace';
+          attachElasticWidth(valInp, 90, 220);
           valInp.onblur = e => { row.values['val'] = parseFloat(e.target.value) || 0; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
           const del = document.createElement('button');
           del.className = 'btn btn-danger btn-sm'; del.innerHTML = '🗑'; del.style.padding = '3px 7px';
@@ -2144,7 +2155,8 @@ function renderSaldoBuilder() {
             if (numCol) {
               const inp = document.createElement('input');
               inp.type = 'number'; inp.value = row.values[numCol.id] ?? 0; inp.placeholder = '0,00'; inp.step = '0.01';
-              inp.style.cssText = 'flex:1;min-width:100px;max-width:160px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;color:var(--text);font-family:inherit';
+              inp.style.cssText = 'flex:0 0 auto;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;color:var(--text);font-family:inherit';
+              attachElasticWidth(inp, 90, 200);
               inp.onblur = e => { row.values[numCol.id] = parseFloat(e.target.value) || 0; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
               rowEl.appendChild(inp);
             }
@@ -2177,7 +2189,8 @@ function renderSaldoBuilder() {
         if (numCol) {
           numInp = document.createElement('input');
           numInp.type = 'number'; numInp.placeholder = '0,00'; numInp.step = '0.01';
-          numInp.style.cssText = 'flex:1;min-width:100px;max-width:160px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;color:var(--text);font-family:inherit';
+          numInp.style.cssText = 'flex:0 0 auto;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;color:var(--text);font-family:inherit';
+          attachElasticWidth(numInp, 90, 200);
           numInp.oninput = e => { newVals[numCol.id] = parseFloat(e.target.value) || 0; };
           inputs.push(numInp);
           addBar.appendChild(numInp);
@@ -2212,100 +2225,6 @@ function renderSaldoBuilder() {
 }
 
 
-
-// ══════════════════════════════════════════════════════
-//  PIX
-// ══════════════════════════════════════════════════════
-let _pixAddProfileIdx = null;
-
-function addPix() {
-  const dateEl = document.getElementById('pix-date');
-  const descEl = document.getElementById('pix-desc');
-  const valEl  = document.getElementById('pix-val');
-
-  const date = dateEl.value;
-  const desc = descEl.value.trim() || 'Pix';
-  const value = parseFloat(valEl.value) || 0;
-
-  if (value <= 0) { alert('Informe um valor válido.'); return; }
-
-  state.pixRows.push({ id: genId(), date, desc, value, profileIdx: _pixAddProfileIdx });
-  saveState();
-  dateEl.value = '';
-  descEl.value = '';
-  valEl.value = '';
-  renderPix();
-}
-
-function removePix(id) {
-  state.pixRows = state.pixRows.filter(p => p.id !== id);
-  saveState();
-  renderPix();
-}
-
-function renderPix() {
-  const tbody = document.getElementById('pix-tbody');
-  const totalEl = document.getElementById('pix-total');
-  if (!tbody) return;
-
-  tbody.innerHTML = '';
-  const total = state.pixRows.reduce((s, p) => s + p.value, 0);
-  if (totalEl) totalEl.textContent = '− ' + fmt(total);
-
-  // Render add-bar profile chips
-  const chipsWrap = document.getElementById('pix-profile-chips');
-  if (chipsWrap) {
-    chipsWrap.innerHTML = '';
-    const addChips = profileChips(_pixAddProfileIdx, newIdx => {
-      _pixAddProfileIdx = _pixAddProfileIdx === newIdx ? null : newIdx;
-      renderPix();
-    });
-    chipsWrap.appendChild(addChips);
-  }
-
-  if (state.pixRows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhum Pix registrado.</div></td></tr>`;
-    return;
-  }
-
-  state.pixRows.forEach(p => {
-    const tr = document.createElement('tr');
-
-    // Profile chips cell (inline, compact)
-    const tdProfile = document.createElement('td');
-    const rowChips = profileChips(p.profileIdx, newIdx => {
-      p.profileIdx = p.profileIdx === newIdx ? null : newIdx;
-      saveState();
-      renderPix();
-    });
-    tdProfile.appendChild(rowChips);
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-danger btn-sm';
-    delBtn.innerHTML = '🗑';
-    delBtn.onclick = () => removePix(p.id);
-    const tdDel = document.createElement('td');
-    tdDel.appendChild(delBtn);
-
-    // Profile color dot for display
-    const dotColor = p.profileIdx !== null ? getProfileColor(p.profileIdx) : '#ccc';
-    const profileName = p.profileIdx !== null ? (state.profiles[p.profileIdx] || '—') : '—';
-    const dot = `<span style="width:8px;height:8px;border-radius:50%;background:${dotColor};display:inline-block;margin-right:6px;vertical-align:middle;flex-shrink:0"></span>`;
-
-    const tdDate = document.createElement('td');
-    tdDate.textContent = formatDateBR(p.date) || '—';
-
-    const tdDesc = document.createElement('td');
-    tdDesc.textContent = p.desc;
-
-    const tdVal = document.createElement('td');
-    tdVal.className = 'val-cell negative';
-    tdVal.textContent = `− ${fmt(p.value)}`;
-
-    tr.append(tdDate, tdDesc, tdVal, tdProfile, tdDel);
-    tbody.appendChild(tr);
-  });
-}
 
 // ══════════════════════════════════════════════════════
 //  FATURAS
@@ -2441,9 +2360,9 @@ function renderFaturas() {
         tdParc.appendChild(inParc);
 
         const tdVal = document.createElement('td');
-        tdVal.style.maxWidth = '110px';
         const inVal = document.createElement('input');
         inVal.type = 'number'; inVal.value = r.value; inVal.placeholder = '0,00'; inVal.step = '0.01';
+        attachElasticWidth(inVal, 80, 200);
         // FIX: use oninput but do NOT re-render; just update state and totals
         inVal.oninput = e => {
           updateRow(f.id, r.id, 'value', e.target.value);
@@ -2525,40 +2444,48 @@ function getAllRowsByProfile(pIdx) {
   state.faturas.forEach(f => {
     f.rows.forEach(r => {
       if (r.profileIdx === pIdx && (parseFloat(r.value)||0) !== 0) {
-        rows.push({ ...r, faturaName: f.name });
+        rows.push({ ...r, faturaName: f.name, faturaId: f.id, kind: 'expense' });
       }
     });
   });
-  // Include PIX transactions assigned to this profile
   (state.pixRows || []).forEach(p => {
     if (p.profileIdx === pIdx && (parseFloat(p.value)||0) !== 0) {
-      rows.push({ id: p.id, date: p.date, name: p.desc, parcelas: '', value: p.value, profileIdx: pIdx, category: null, faturaName: 'Pix' });
+      rows.push({ id: p.id, date: p.date, name: p.desc, parcelas: '', value: p.value, profileIdx: pIdx, category: null, faturaName: 'Pix', kind: 'pix' });
     }
   });
   return rows;
+}
+
+function removePixRow(id) {
+  state.pixRows = (state.pixRows||[]).filter(p => p.id !== id);
+  saveState();
+  renderPerfis();
+}
+function updatePixRow(id, field, value) {
+  const p = (state.pixRows||[]).find(p => p.id === id);
+  if (!p) return;
+  const map = { name: 'desc', date: 'date', value: 'value' };
+  const key = map[field] || field;
+  p[key] = field === 'value' ? (parseFloat(value)||0) : value;
+  saveState();
+}
+
+function getAllTransactionsByProfile(pIdx) {
+  const expenses = getAllRowsByProfile(pIdx).map(r => ({ ...r, txKind: r.kind, txDate: r.date || '' }));
+  const payments = (state.payments||[]).filter(p => p.profileIdx === pIdx).map(p => ({ ...p, txKind: 'payment', txDate: p.date || '', name: p.desc }));
+  return [...expenses, ...payments].sort((a,b) => (a.txDate||'').localeCompare(b.txDate||''));
 }
 
 function renderPerfis() {
   const container = document.getElementById('perfis-summary');
   container.innerHTML = '';
 
-  const totalProfiles = state.profiles.length; // 6
-
-  const toggleWrap = document.createElement('div');
-  toggleWrap.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:8px;';
-  const visToggle = document.createElement('button');
-  visToggle.className = 'btn btn-ghost btn-sm';
-  visToggle.textContent = _gastosVisible ? '👁️ Ocultar valores' : '🙈 Mostrar valores';
-  visToggle.onclick = () => { _gastosVisible = !_gastosVisible; renderPerfis(); };
-  toggleWrap.appendChild(visToggle);
-  container.appendChild(toggleWrap);
-
-  const fmtG = v => _gastosVisible ? fmt(Math.abs(v)) : '••••';
-
   getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
-    const rows = getAllRowsByProfile(pIdx);
-    const total = rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
-    const hasCat = !!getProfileCategories(pIdx);
+    const txs = getAllTransactionsByProfile(pIdx);
+    const totalGastos = txs.filter(t => t.txKind !== 'payment').reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+    const totalPago = txs.filter(t => t.txKind === 'payment').reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+    const saldo = totalPago - totalGastos;
+    const visible = !!_gastosVisiblePerProfile[pIdx];
 
     const card = document.createElement('div');
     card.className = 'card';
@@ -2569,123 +2496,116 @@ function renderPerfis() {
     const nameEl = document.createElement('div');
     nameEl.className = 'card-title';
     const dot = document.createElement('span');
-    dot.style.width = '10px'; dot.style.height = '10px';
-    dot.style.borderRadius = '50%';
-    dot.style.background = getProfileColor(pIdx);
-    dot.style.display = 'inline-block';
-
+    dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:'+getProfileColor(pIdx)+';display:inline-block';
     const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.className = 'profile-name-input';
-    nameInput.style.fontSize = '14px';
-    nameInput.style.fontWeight = '600';
+    nameInput.type = 'text'; nameInput.className = 'profile-name-input';
+    nameInput.style.cssText = 'font-size:14px;font-weight:600';
     nameInput.value = pName;
-    nameInput.oninput = e => {
-      state.profiles[pIdx] = e.target.value;
-      saveState();
-    };
-
-    nameEl.appendChild(dot);
-    nameEl.appendChild(nameInput);
+    nameInput.oninput = e => { state.profiles[pIdx] = e.target.value; saveState(); };
+    nameEl.append(dot, nameInput);
 
     const totalEl = document.createElement('div');
     totalEl.className = 'card-total';
-    // Multiply entradas (total) by -1 to flip sign display
-    const displayTotal = -total;
-    totalEl.textContent = fmtG(displayTotal);
-    totalEl.style.color = displayTotal >= 0 ? 'var(--accent2)' : 'var(--danger)';
+    totalEl.textContent = visible ? (saldo>=0?'+':'') + fmt(saldo) : '••••';
+    totalEl.style.color = saldo >= 0 ? 'var(--accent2)' : 'var(--danger)';
 
-    header.appendChild(nameEl);
-    header.appendChild(totalEl);
-    card.appendChild(header);
-
-    const wrap = document.createElement('div');
-    wrap.className = 'table-wrap';
-
-    const table = document.createElement('table');
-    table.className = 'dyn-table';
-    table.innerHTML = `<thead><tr>
-      <th>Fatura</th><th>Data</th><th>Descrição</th><th>Parcelas</th><th>Valor</th>${hasCat ? '<th>Categoria</th>' : ''}
-    </tr></thead>`;
-
-    const tbody = document.createElement('tbody');
-    if (rows.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="${hasCat ? 6 : 5}"><div class="empty">Nenhum gasto atribuído a este perfil.</div></td></tr>`;
-    } else {
-      rows.forEach(r => {
-        const tr = document.createElement('tr');
-        const cat = hasCat ? (r.category || '—') : '';
-        const catCell = hasCat ? `<td><span class="cat-chip selected" style="pointer-events:none">${cat}</span></td>` : '';
-        // Multiply value by -1
-        const dispVal = -(parseFloat(r.value)||0);
-        tr.innerHTML = `
-          <td>${r.faturaName}</td>
-          <td>${formatDateBR(r.date) || '—'}</td>
-          <td>${r.name || '—'}</td>
-          <td>${r.parcelas || '—'}</td>
-          <td class="val-cell ${dispVal >= 0 ? 'positive' : 'negative'}">${_gastosVisible ? (dispVal >= 0 ? '+' : '') : ''}${fmtG(dispVal)}</td>
-          ${catCell}
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    const tfoot = document.createElement('tfoot');
-    const totalDisplay = -total;
-    tfoot.innerHTML = `<tr>
-      <td colspan="${hasCat ? 5 : 4}" style="color:var(--muted);font-size:12px">Total</td>
-      <td class="val-cell" style="color:${totalDisplay >= 0 ? 'var(--accent2)' : 'var(--danger)'}">${_gastosVisible ? (totalDisplay >= 0 ? '+' : '') : ''}${fmtG(totalDisplay)}</td>
-    </tr>`;
-
-    table.appendChild(tbody);
-    table.appendChild(tfoot);
-    wrap.appendChild(table);
-
-    const body = document.createElement('div');
-    body.id = 'profile-body-' + pIdx;
-
-    body.appendChild(wrap);
-
-    if (hasCat && rows.length > 0) {
-      const catTotals = {};
-      rows.forEach(r => {
-        const cat = r.category || '—';
-        catTotals[cat] = (catTotals[cat] || 0) + (parseFloat(r.value)||0);
-      });
-
-      const catDiv = document.createElement('div');
-      catDiv.style.borderTop = '1px solid var(--border)';
-      catDiv.style.padding = '12px 14px 4px';
-      catDiv.innerHTML = `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px">Gastos por Categoria</div>`;
-
-      Object.entries(catTotals).forEach(([cat, val]) => {
-        if (val !== 0) {
-          const row = document.createElement('div');
-          row.className = 'cat-total-row';
-          // Multiply by -1
-          const dispVal = -val;
-          row.innerHTML = `<span class="cat-total-label">${cat}</span><span class="val-cell ${dispVal >= 0 ? 'positive' : 'negative'}">${_gastosVisible ? (dispVal >= 0 ? '+' : '− ') : ''}${fmtG(dispVal)}</span>`;
-          catDiv.appendChild(row);
-        }
-      });
-      body.appendChild(catDiv);
-    }
-
-    // Recolhido por padrão — só fica aberto se o usuário explicitamente
-    // expandir (=== false)
-    if (_collapsedProfiles[pIdx] !== false) body.style.display = 'none';
-    card.appendChild(body);
+    const eyeBtn = document.createElement('button');
+    eyeBtn.className = 'btn btn-ghost btn-sm';
+    eyeBtn.textContent = visible ? '👁️' : '🙈';
+    eyeBtn.title = 'Mostrar/ocultar valores deste perfil';
+    eyeBtn.onclick = () => { _gastosVisiblePerProfile[pIdx] = !visible; renderPerfis(); };
 
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'btn btn-ghost btn-sm';
     toggleBtn.textContent = _collapsedProfiles[pIdx] !== false ? '▸' : '▾';
     toggleBtn.title = 'Recolher/expandir';
-    toggleBtn.onclick = () => {
-      _collapsedProfiles[pIdx] = _collapsedProfiles[pIdx] === false ? true : false;
-      renderPerfis();
-    };
-    header.insertBefore(toggleBtn, totalEl);
+    toggleBtn.onclick = () => { _collapsedProfiles[pIdx] = _collapsedProfiles[pIdx] === false ? true : false; renderPerfis(); };
 
+    header.append(toggleBtn, nameEl, eyeBtn, totalEl);
+    card.appendChild(header);
+
+    const body = document.createElement('div');
+    body.id = 'profile-body-' + pIdx;
+    if (_collapsedProfiles[pIdx] !== false) body.style.display = 'none';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    const table = document.createElement('table');
+    table.innerHTML = `<thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th></th></tr></thead>`;
+    const tbody = document.createElement('tbody');
+
+    if (txs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhum gasto ou pagamento neste perfil ainda.</div></td></tr>`;
+    } else {
+      txs.forEach(tx => {
+        const tr = document.createElement('tr');
+
+        const tdDate = document.createElement('td');
+        const inDate = document.createElement('input');
+        inDate.type = 'date'; inDate.value = tx.txDate || '';
+        inDate.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;color:var(--text)';
+        inDate.onchange = e => {
+          if (tx.txKind === 'payment') { const p = state.payments.find(p=>p.id===tx.id); if(p){p.date=e.target.value; saveState();} }
+          else if (tx.txKind === 'pix') updatePixRow(tx.id, 'date', e.target.value);
+          else updateRow(tx.faturaId, tx.id, 'date', e.target.value);
+        };
+        tdDate.appendChild(inDate);
+
+        const tdTipo = document.createElement('td');
+        const isPay = tx.txKind === 'payment';
+        tdTipo.innerHTML = isPay
+          ? '<span class="val-cell positive" style="font-size:11px;font-weight:700">💰 Pagamento</span>'
+          : `<span class="val-cell negative" style="font-size:11px;font-weight:700">🧾 ${tx.faturaName||'Gasto'}</span>`;
+
+        const tdDesc = document.createElement('td');
+        const inDesc = document.createElement('input');
+        inDesc.type = 'text'; inDesc.value = tx.name || tx.desc || '';
+        inDesc.placeholder = 'Descrição';
+        inDesc.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;color:var(--text);width:100%;box-sizing:border-box';
+        inDesc.onchange = e => {
+          if (tx.txKind === 'payment') { const p = state.payments.find(p=>p.id===tx.id); if(p){p.desc=e.target.value; saveState();} }
+          else if (tx.txKind === 'pix') updatePixRow(tx.id, 'name', e.target.value);
+          else updateRow(tx.faturaId, tx.id, 'name', e.target.value);
+        };
+        tdDesc.appendChild(inDesc);
+
+        const tdVal = document.createElement('td');
+        const inVal = document.createElement('input');
+        inVal.type = 'number'; inVal.step = '0.01';
+        inVal.value = visible ? tx.value : '';
+        inVal.placeholder = visible ? '0,00' : '••••';
+        inVal.disabled = !visible;
+        inVal.className = isPay ? 'val-cell positive' : 'val-cell negative';
+        attachElasticWidth(inVal, 80, 180);
+        inVal.onchange = e => {
+          if (tx.txKind === 'payment') { const p = state.payments.find(p=>p.id===tx.id); if(p){p.value=parseFloat(e.target.value)||0; saveState();} }
+          else if (tx.txKind === 'pix') updatePixRow(tx.id, 'value', e.target.value);
+          else updateRow(tx.faturaId, tx.id, 'value', e.target.value);
+          renderPerfis(); renderSaldo();
+        };
+        tdVal.appendChild(inVal);
+
+        const tdDel = document.createElement('td');
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-danger btn-sm'; delBtn.innerHTML = '🗑';
+        delBtn.onclick = () => {
+          if (!confirm('Excluir este lançamento?')) return;
+          if (tx.txKind === 'payment') { state.payments = state.payments.filter(p=>p.id!==tx.id); saveState(); }
+          else if (tx.txKind === 'pix') { removePixRow(tx.id); return; }
+          else removeRow(tx.faturaId, tx.id);
+          renderPerfis(); renderSaldo();
+        };
+        tdDel.appendChild(delBtn);
+
+        tr.append(tdDate, tdTipo, tdDesc, tdVal, tdDel);
+        tbody.appendChild(tr);
+      });
+    }
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    body.appendChild(wrap);
+    card.appendChild(body);
     container.appendChild(card);
   });
 }
@@ -2779,6 +2699,7 @@ function renderPagamentos() {
 
     const inVal = document.createElement('input');
     inVal.type = 'number'; inVal.id = 'pay-val-'+pIdx; inVal.placeholder = 'Valor'; inVal.step = '0.01';
+    attachElasticWidth(inVal, 90, 200);
 
     const addBtn = document.createElement('button');
     addBtn.className = 'btn btn-primary btn-sm';
@@ -2905,7 +2826,6 @@ function renderSaldo() {
 //  INIT
 // ══════════════════════════════════════════════════════
 renderFaturas();
-renderPix();
 </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 // src/App.jsx — LifePlan completo
 // Novidades: 🛒 Lista de compras | 🔄 Troca de tipo de treino por dia
-import { useState, useMemo, useRef, useEffect } from "react";
-import { supabase, signUp, signIn, signOut, signInWithGoogle, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
+import { useState, useMemo, useRef, useEffect, Component } from "react";
+import { supabase, signUp, signIn, signOut, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 
 // ── TACO DB ───────────────────────────────────────────────────────────────────
 const TACO_DB = [{"id":1,"n":"Arroz, integral, cozido","c":"Cereais","e":124,"p":2.6,"l":1.0,"cb":25.8},{"id":3,"n":"Arroz, tipo 1, cozido","c":"Cereais","e":128,"p":2.5,"l":0.2,"cb":28.1},{"id":7,"n":"Aveia, flocos, crua","c":"Cereais","e":394,"p":13.9,"l":8.5,"cb":66.6},{"id":52,"n":"Pão, trigo, forma, integral","c":"Cereais","e":253,"p":9.4,"l":3.7,"cb":49.9},{"id":53,"n":"Pão, trigo, francês","c":"Cereais","e":300,"p":8.0,"l":3.1,"cb":58.6},{"id":88,"n":"Batata, doce, cozida","c":"Vegetais","e":77,"p":0.6,"l":0.1,"cb":18.4},{"id":91,"n":"Batata, inglesa, cozida","c":"Vegetais","e":52,"p":1.2,"l":0.0,"cb":11.9},{"id":100,"n":"Brócolis, cozido","c":"Vegetais","e":25,"p":2.1,"l":0.5,"cb":4.4},{"id":109,"n":"Cenoura, cozida","c":"Vegetais","e":30,"p":0.8,"l":0.2,"cb":6.7},{"id":116,"n":"Couve, manteiga, refogada","c":"Vegetais","e":90,"p":1.7,"l":6.6,"cb":8.7},{"id":129,"n":"Mandioca, cozida","c":"Vegetais","e":125,"p":0.6,"l":0.3,"cb":30.1},{"id":157,"n":"Tomate, com semente, cru","c":"Vegetais","e":15,"p":1.1,"l":0.2,"cb":3.1},{"id":179,"n":"Banana, nanica, crua","c":"Frutas","e":92,"p":1.4,"l":0.1,"cb":23.8},{"id":182,"n":"Banana, prata, crua","c":"Frutas","e":98,"p":1.3,"l":0.1,"cb":26.0},{"id":222,"n":"Maçã, Fuji, com casca, crua","c":"Frutas","e":56,"p":0.3,"l":0.0,"cb":15.2},{"id":226,"n":"Mamão, Papaia, cru","c":"Frutas","e":40,"p":0.5,"l":0.1,"cb":10.4},{"id":239,"n":"Morango, cru","c":"Frutas","e":30,"p":0.9,"l":0.3,"cb":6.8},{"id":277,"n":"Atum, conserva em óleo","c":"Pescados","e":166,"p":26.2,"l":6.0,"cb":0},{"id":315,"n":"Salmão, filé, grelhado","c":"Pescados","e":229,"p":23.9,"l":14.0,"cb":0},{"id":318,"n":"Sardinha, assada","c":"Pescados","e":164,"p":32.2,"l":3.0,"cb":0},{"id":326,"n":"Carne, bovina, acém, moído, cozido","c":"Carnes","e":212,"p":26.7,"l":10.9,"cb":0},{"id":381,"n":"Carne, bovina, picanha, grelhada","c":"Carnes","e":289,"p":26.4,"l":19.5,"cb":0},{"id":395,"n":"Frango, coração, grelhado","c":"Carnes","e":207,"p":22.4,"l":12.1,"cb":0.6},{"id":396,"n":"Frango, coxa, com pele, assada","c":"Carnes","e":215,"p":28.5,"l":10.4,"cb":0.1},{"id":408,"n":"Frango, peito, sem pele, cozido","c":"Carnes","e":163,"p":31.5,"l":3.2,"cb":0},{"id":410,"n":"Frango, peito, sem pele, grelhado","c":"Carnes","e":159,"p":32.0,"l":2.5,"cb":0},{"id":413,"n":"Frango, sobrecoxa, sem pele, assada","c":"Carnes","e":233,"p":29.2,"l":12.0,"cb":0},{"id":448,"n":"Iogurte, natural","c":"Laticínios","e":51,"p":4.1,"l":3.0,"cb":1.9},{"id":449,"n":"Iogurte, natural, desnatado","c":"Laticínios","e":41,"p":3.8,"l":0.3,"cb":5.8},{"id":461,"n":"Queijo, minas, frescal","c":"Laticínios","e":264,"p":17.4,"l":20.2,"cb":3.2},{"id":463,"n":"Queijo, mozarela","c":"Laticínios","e":330,"p":22.6,"l":25.2,"cb":3.0},{"id":469,"n":"Queijo, ricota","c":"Laticínios","e":140,"p":12.6,"l":8.1,"cb":3.8},{"id":486,"n":"Ovo, de galinha, clara, cozida","c":"Ovos","e":59,"p":13.4,"l":0.1,"cb":0},{"id":488,"n":"Ovo, de galinha, inteiro, cozido","c":"Ovos","e":146,"p":13.3,"l":9.5,"cb":0.6},{"id":489,"n":"Ovo, de galinha, inteiro, cru","c":"Ovos","e":143,"p":13.0,"l":8.9,"cb":1.6},{"id":557,"n":"Amendoim, grão, cru","c":"Leguminosas","e":544,"p":27.2,"l":43.9,"cb":20.3},{"id":561,"n":"Feijão, carioca, cozido","c":"Leguminosas","e":76,"p":4.8,"l":0.5,"cb":13.6},{"id":567,"n":"Feijão, preto, cozido","c":"Leguminosas","e":77,"p":4.5,"l":0.5,"cb":14.0},{"id":577,"n":"Lentilha, cozida","c":"Leguminosas","e":93,"p":6.3,"l":0.5,"cb":16.3},{"id":584,"n":"Soja, queijo (tofu)","c":"Leguminosas","e":64,"p":6.6,"l":4.0,"cb":2.1},{"id":589,"n":"Castanha-do-Brasil, crua","c":"Nozes","e":643,"p":14.5,"l":63.5,"cb":15.1},{"id":594,"n":"Linhaça, semente","c":"Nozes","e":495,"p":14.1,"l":32.3,"cb":43.3},{"id":507,"n":"Mel, de abelha","c":"Doces","e":309,"p":0,"l":0,"cb":84.0},{"id":1001,"n":"Frango, peito, sem pele, cru","c":"Carnes","e":119,"p":21.5,"l":3.0,"cb":0},{"id":1002,"n":"Frango, peito, com pele, cru","c":"Carnes","e":149,"p":20.8,"l":6.7,"cb":0},{"id":1003,"n":"Frango, coxa, sem pele, crua","c":"Carnes","e":120,"p":17.8,"l":4.9,"cb":0},{"id":1004,"n":"Carne, bovina, picanha, com gordura, crua","c":"Carnes","e":213,"p":18.8,"l":14.7,"cb":0},{"id":1005,"n":"Salmão, sem pele, fresco, cru","c":"Pescados","e":170,"p":19.3,"l":9.7,"cb":0}];
@@ -146,6 +146,9 @@ function AuthWrap({children}){
 }
 function LoginPage({onSwitch,onLogin}){
   const [email,setEmail]=useState(''),[ password,setPassword]=useState(''),[ err,setErr]=useState(''),[ loading,setLoading]=useState(false);
+  const [forgotMode,setForgotMode]=useState(false);
+  const [forgotEmail,setForgotEmail]=useState('');
+  const [forgotSent,setForgotSent]=useState(false);
   async function handle(){
     if(!email||!password){setErr('Preencha todos os campos');return;}
     setLoading(true);
@@ -155,6 +158,32 @@ function LoginPage({onSwitch,onLogin}){
     setLoading(true);
     try{await signInWithGoogle();}catch(e){setErr(e.message||'Erro ao entrar com Google');}finally{setLoading(false);}
   }
+  async function handleForgot(){
+    if(!forgotEmail){setErr('Digite seu e-mail');return;}
+    setLoading(true);setErr('');
+    try{await resetPassword(forgotEmail);setForgotSent(true);}
+    catch(e){setErr(e.message||'Erro ao enviar o link');}
+    finally{setLoading(false);}
+  }
+  if(forgotMode) return(
+    <AuthWrap>
+      <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:48}}>🔑</div><div style={{fontSize:20,fontWeight:800,color:'#1c1c1a'}}>Recuperar senha</div></div>
+      {forgotSent?(
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:13,color:'#6b6a63',lineHeight:1.6,marginBottom:22}}>Se <b>{forgotEmail}</b> tiver uma conta, enviamos um link pra você criar uma senha nova. Confira sua caixa de entrada (e o spam).</div>
+          <button style={{...S.btn('#22c55e'),width:'100%',padding:13}} onClick={()=>{setForgotMode(false);setForgotSent(false);}}>Voltar para o login</button>
+        </div>
+      ):(
+        <>
+          <label style={S.label}>📧 SEU E-MAIL</label>
+          <input style={{...S.input,marginBottom:16}} type="email" placeholder="seu@email.com" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleForgot()}/>
+          {err&&<div style={{color:'#ef4444',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
+          <button style={{...S.btn('#22c55e'),width:'100%',padding:13,marginBottom:12,opacity:loading?.6:1}} onClick={handleForgot} disabled={loading}>{loading?'⏳ Enviando...':'✉️ Enviar link de recuperação'}</button>
+          <div style={{textAlign:'center'}}><button style={{background:'none',border:'none',color:'#8a887d',cursor:'pointer',fontSize:12}} onClick={()=>{setForgotMode(false);setErr('');}}>← Voltar para o login</button></div>
+        </>
+      )}
+    </AuthWrap>
+  );
   return(
     <AuthWrap>
       <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:48}}>💪</div><div style={{fontSize:24,fontWeight:900,color:'#1c1c1a'}}>LifePlan</div><div style={{fontSize:12,color:'#8a887d',marginTop:4}}>Tabela TACO · NEPA/UNICAMP</div></div>
@@ -171,10 +200,39 @@ function LoginPage({onSwitch,onLogin}){
       <label style={S.label}>📧 E-MAIL</label>
       <input style={{...S.input,marginBottom:12}} type="email" placeholder="seu@email.com" value={email} onChange={e=>setEmail(e.target.value)}/>
       <label style={S.label}>🔒 SENHA</label>
-      <input style={{...S.input,marginBottom:16}} type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>
+      <input style={{...S.input,marginBottom:8}} type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>
+      <div style={{textAlign:'right',marginBottom:16}}><button style={{background:'none',border:'none',color:'#8a887d',cursor:'pointer',fontSize:12}} onClick={()=>{setForgotMode(true);setErr('');}}>Esqueci minha senha</button></div>
       {err&&<div style={{color:'#ef4444',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
       <button style={{...S.btn('#22c55e'),width:'100%',padding:13,marginBottom:16,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'⏳ Entrando...':'🚀 Entrar'}</button>
       <div style={{textAlign:'center',fontSize:13,color:'#8a887d'}}>Não tem conta?{' '}<button style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontWeight:700}} onClick={onSwitch}>Cadastrar →</button></div>
+    </AuthWrap>
+  );
+}
+function ResetPasswordPage({onDone}){
+  const [pass,setPass]=useState(''),[confirm,setConfirm]=useState(''),[err,setErr]=useState(''),[loading,setLoading]=useState(false),[done,setDone]=useState(false);
+  async function handle(){
+    if(pass.length<6){setErr('Senha mínima: 6 caracteres');return;}
+    if(pass!==confirm){setErr('Senhas não conferem');return;}
+    setLoading(true);setErr('');
+    try{await updatePassword(pass);setDone(true);setTimeout(onDone,1800);}
+    catch(e){setErr(e.message||'Erro ao definir a nova senha');}
+    finally{setLoading(false);}
+  }
+  return(
+    <AuthWrap>
+      <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:48}}>🔑</div><div style={{fontSize:20,fontWeight:800,color:'#1c1c1a'}}>Defina sua nova senha</div></div>
+      {done?(
+        <div style={{textAlign:'center',fontSize:14,color:'#3f6b2f',fontWeight:700}}>✅ Senha alterada! Levando você pro app...</div>
+      ):(
+        <>
+          <label style={S.label}>🔒 NOVA SENHA</label>
+          <input style={{...S.input,marginBottom:12}} type="password" placeholder="mínimo 6 caracteres" value={pass} onChange={e=>setPass(e.target.value)}/>
+          <label style={S.label}>🔒 CONFIRME A NOVA SENHA</label>
+          <input style={{...S.input,marginBottom:16}} type="password" placeholder="repita a senha" value={confirm} onChange={e=>setConfirm(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>
+          {err&&<div style={{color:'#ef4444',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
+          <button style={{...S.btn('#22c55e'),width:'100%',padding:13,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'⏳ Salvando...':'✅ Salvar nova senha'}</button>
+        </>
+      )}
     </AuthWrap>
   );
 }
@@ -1687,26 +1745,49 @@ function getNextExam(){
 // tabela do Balanço que está marcada para entrar no saldo (mesma lógica de
 // sinais/inclusão usada no controle-financeiro.html). O valor exato sempre
 // pode ser conferido dentro da própria aba Finanças.
-// Replica EXATAMENTE a fórmula real usada na aba Finanças (função renderSaldo,
-// "Total Geral" = total pago − total gasto, somando só linhas já atribuídas
-// a algum perfil, exatamente como getAllRowsByProfile faz lá dentro).
-// A versão anterior somava genericamente as tabelas do Balanço, o que não
-// batia com o cálculo de verdade — por isso os dois números divergiam.
+// Replica EXATAMENTE a fórmula do "💡 SALDO DO MÊS" (aba Balanço Mensal),
+// que é o número de verdade que aparece lá — diferente do "Total Geral" da
+// aba Resumo & Perfis (outro cálculo). Fica sincronizado, sem inventar uma
+// terceira fórmula aproximada.
+function cfGetAllRowsByProfile(state,pIdx){
+  const rows=[];
+  (state.faturas||[]).forEach(f=>{
+    (f.rows||[]).forEach(r=>{ if(r.profileIdx===pIdx) rows.push(r); });
+  });
+  (state.pixRows||[]).forEach(p=>{ if(p.profileIdx===pIdx) rows.push(p); });
+  return rows;
+}
+function cfComputeEntradasTotal(state){
+  let total=0;
+  const profiles=state.profiles||[];
+  profiles.forEach((name,idx)=>{
+    if(state.entradasProfiles && state.entradasProfiles[idx]===false) return;
+    const rows=cfGetAllRowsByProfile(state,idx);
+    const tg=rows.reduce((s,r)=>s+(parseFloat(r.value)||0),0);
+    const pays=(state.payments||[]).filter(p=>p.profileIdx===idx);
+    const tp=pays.reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+    total += (tp-tg)*-1;
+  });
+  return total;
+}
+function cfGetTableTotal(state,t){
+  if(t.type==='entradas') return cfComputeEntradasTotal(state);
+  if(t.type==='lancamentos') return 0;
+  const numCols=(t.columns||[]).filter(c=>c.type==='number');
+  if(!numCols.length) return 0;
+  const valCol=numCols[0];
+  return (t.rows||[]).reduce((s,r)=>s+(parseFloat(r.values?.[valCol.id])||0),0);
+}
 function getSaldoPreview(){
   try{
     const state=JSON.parse(localStorage.getItem('cf_state'));
-    if(!state) return null;
-    let totalGastos=0;
-    (state.faturas||[]).forEach(f=>{
-      (f.rows||[]).forEach(r=>{
-        if(r.profileIdx!=null) totalGastos+=parseFloat(r.value)||0;
-      });
+    if(!state?.balancoTables) return null;
+    let saldoFinal=0;
+    state.balancoTables.forEach(t=>{
+      if(!t.includeInSaldo||t.sign===0) return;
+      saldoFinal += cfGetTableTotal(state,t)*t.sign;
     });
-    (state.pixRows||[]).forEach(p=>{
-      if(p.profileIdx!=null) totalGastos+=parseFloat(p.value)||0;
-    });
-    const totalPago=(state.payments||[]).reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-    return totalPago-totalGastos;
+    return saldoFinal;
   }catch{return null;}
 }
 
@@ -2385,11 +2466,13 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
 const RESUMABLE_SCREENS=['home','nutrition','shopping','treinos','estudos','financas','habitos','timetable'];
 
 // ── ROOT ──────────────────────────────────────────────────────────────────────
-export default function App(){
+function AppInner(){
   const [screen,setScreen]=useState('loading');
   const [userId,setUserId]=useState(null);
   const [profile,setProfile]=useState(null);
   const userIdRef=useRef(null);
+  const screenRef=useRef(screen);
+  screenRef.current=screen;
 
   // Sempre que a tela muda para uma das "retomáveis", lembra qual é —
   // assim um F5 dentro de qualquer aba continua na mesma aba, em vez de
@@ -2413,12 +2496,16 @@ export default function App(){
     // Treinos). Por isso só trocamos de tela em transições reais de
     // login/logout — nunca em cada evento — senão a aba Treinos "voltava
     // sozinha" para a Início.
-    const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((event,session)=>{
+      if(event==='PASSWORD_RECOVERY'){
+        setScreen('reset-password');
+        return;
+      }
       if(session?.user){
         const isNewLogin=userIdRef.current!==session.user.id;
         userIdRef.current=session.user.id;
         setUserId(session.user.id);
-        if(isNewLogin) setScreen('home');
+        if(isNewLogin && screenRef.current!=='reset-password') setScreen('home');
       }else{
         userIdRef.current=null;
         setUserId(null);
@@ -2459,6 +2546,38 @@ export default function App(){
   if(screen==='estudos') return <StudyTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
   if(screen==='financas') return <FinanceTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
   if(screen==='habitos') return <HabitsTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
+  if(screen==='reset-password') return <ResetPasswordPage onDone={()=>setScreen('home')}/>;
   if(screen==='register') return <RegisterPage onSwitch={()=>setScreen('login')} onLogin={()=>setScreen('home')}/>;
   return <LoginPage onSwitch={()=>setScreen('register')} onLogin={()=>setScreen('home')}/>;
+}
+
+// ── ERROR BOUNDARY ────────────────────────────────────────────────────────────
+class ErrorBoundary extends Component {
+  constructor(props){ super(props); this.state={hasError:false}; }
+  static getDerivedStateFromError(){ return {hasError:true}; }
+  componentDidCatch(error,info){ console.error('Erro capturado pelo LifePlan:',error,info); }
+  handleReload=()=>{ window.location.reload(); };
+  handleGoHome=()=>{ try{ sessionStorage.removeItem('lifeplan_screen'); }catch{} window.location.reload(); };
+  render(){
+    if(this.state.hasError){
+      return(
+        <div style={{minHeight:'100vh',background:'#efe8dd',display:'flex',alignItems:'center',justifyContent:'center',padding:24,fontFamily:'system-ui,sans-serif'}}>
+          <div style={{maxWidth:380,textAlign:'center',background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:20,padding:'32px 24px',boxShadow:'0 4px 20px rgba(0,0,0,0.08)'}}>
+            <div style={{fontSize:48,marginBottom:12}}>😵‍💫</div>
+            <div style={{fontSize:18,fontWeight:800,color:'#1c1c1a',marginBottom:8}}>Algo deu errado</div>
+            <div style={{fontSize:13,color:'#6b6a63',lineHeight:1.6,marginBottom:22}}>Essa tela travou de forma inesperada. Seus dados já salvos na nuvem não foram afetados — geralmente um recarregamento resolve.</div>
+            <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
+              <button onClick={this.handleReload} style={{background:'#7f9770',color:'#fff',border:'none',borderRadius:12,padding:'10px 20px',fontWeight:800,fontSize:13,cursor:'pointer'}}>🔄 Recarregar</button>
+              <button onClick={this.handleGoHome} style={{background:'#f2efe4',color:'#3f6b2f',border:'1px solid #e4ddd0',borderRadius:12,padding:'10px 20px',fontWeight:800,fontSize:13,cursor:'pointer'}}>🏠 Voltar para o Início</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function App(){
+  return(<ErrorBoundary><AppInner/></ErrorBoundary>);
 }
