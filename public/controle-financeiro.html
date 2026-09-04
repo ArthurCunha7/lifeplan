@@ -701,8 +701,9 @@
 
   <div id="balanco-tables-container"></div>
 
-  <div style="padding:4px 0 24px">
+  <div style="padding:4px 0 24px;display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn btn-ghost btn-sm" onclick="addBalancoTable()">＋ Nova tabela</button>
+    <button class="btn btn-ghost btn-sm" onclick="addPlanejamentoTable()">📊 ＋ Planejamento Mensal</button>
   </div>
 </div>
 
@@ -1433,6 +1434,7 @@ function getTableTotal(t) {
   // Returns computed numeric total for a table (for SALDO use)
   if (t.type === 'entradas') return computeEntradas().total;
   if (t.type === 'lancamentos') return 0; // informational, not summed unless sign != 0
+  if (t.type === 'planejamento') return 0; // é uma visão comparativa por categoria, não soma pro saldo
   // custom: sum all columns of type 'number'
   const numCols = t.columns.filter(c => c.type === 'number');
   if (numCols.length === 0) return 0;
@@ -1472,6 +1474,27 @@ function addBalancoTable() {
     rows: [],
     sign: -1,
     includeInSaldo: true
+  };
+  state.balancoTables.push(t);
+  saveState();
+  renderBalanco();
+}
+
+// Tabela especial: cada linha é uma categoria (vinculada a um perfil) com um
+// valor de expectativa/orçamento. O "gasto" de cada linha é calculado
+// automaticamente a partir das faturas que usam aquela categoria+perfil —
+// não é editado manualmente. Renderizada com uma função própria (não a
+// genérica de soma de colunas), incluindo o gráfico de barras comparando
+// expectativa vs. gasto.
+function addPlanejamentoTable() {
+  const t = {
+    id: genId(),
+    name: 'Planejamento Mensal',
+    icon: '📊',
+    type: 'planejamento',
+    rows: [], // cada linha: { id, categoria, valor, profileIdx }
+    sign: 0,
+    includeInSaldo: false
   };
   state.balancoTables.push(t);
   saveState();
@@ -1672,6 +1695,8 @@ function buildBalancoTableCard(t, tIdx, totalTables) {
       renderEntradasCard(card, t);
     } else if (t.type === 'lancamentos') {
       renderLancamentosCard(card, t);
+    } else if (t.type === 'planejamento') {
+      renderPlanejamentoCard(card, t);
     } else if (t.id === 'banco') {
       renderBancoCard(card, t);
     } else {
@@ -1858,6 +1883,176 @@ function renderEntradasCard(card, t) {
   table.append(tbody, tfoot);
   wrap.appendChild(table);
   card.appendChild(wrap);
+}
+
+// Soma quanto já foi gasto numa categoria+perfil específicos, olhando as
+// faturas e o pix — é isso que faz o "Gasto" da tabela de Planejamento e o
+// gráfico ficarem dinâmicos, sem precisar editar nada manualmente.
+function computeGastoCategoria(profileIdx, categoria) {
+  let total = 0;
+  state.faturas.forEach(f => {
+    f.rows.forEach(r => {
+      if (r.profileIdx === profileIdx && (r.category || '') === categoria) {
+        total += parseFloat(r.value) || 0;
+      }
+    });
+  });
+  return total;
+}
+
+function addPlanejamentoRow(t) {
+  t.rows.push({ id: genId(), categoria: '', valor: 0, profileIdx: null });
+  saveState();
+  renderBalancoTables();
+}
+function removePlanejamentoRow(t, rowId) {
+  t.rows = t.rows.filter(r => r.id !== rowId);
+  saveState();
+  renderBalancoTables();
+}
+
+function renderPlanejamentoCard(card, t) {
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+  const table = document.createElement('table');
+  table.innerHTML = `<thead><tr><th>Categoria</th><th>Perfil</th><th>Expectativa</th><th>Gasto</th><th>Restante</th><th></th></tr></thead>`;
+  const tbody = document.createElement('tbody');
+
+  if (!t.rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Nenhuma categoria ainda — adicione abaixo.</div></td></tr>`;
+  }
+
+  t.rows.forEach(row => {
+    const tr = document.createElement('tr');
+
+    const tdCat = document.createElement('td');
+    const cats = row.profileIdx != null ? getProfileCategories(row.profileIdx) : null;
+    if (!cats) {
+      const hint = document.createElement('span');
+      hint.style.cssText = 'color:var(--muted);font-size:11px';
+      hint.textContent = row.profileIdx == null ? 'Escolha o perfil ao lado →' : 'Este perfil ainda não tem categorias';
+      tdCat.appendChild(hint);
+    } else {
+      const selCat = document.createElement('select');
+      selCat.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:12px;color:var(--text);width:100%;box-sizing:border-box';
+      const optEmpty = document.createElement('option');
+      optEmpty.value = ''; optEmpty.textContent = '— selecione a categoria —';
+      selCat.appendChild(optEmpty);
+      cats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.textContent = c;
+        if (c === row.categoria) opt.selected = true;
+        selCat.appendChild(opt);
+      });
+      selCat.onchange = e => { row.categoria = e.target.value; saveState(); renderBalancoTables(); };
+      tdCat.appendChild(selCat);
+    }
+
+    const tdProfile = document.createElement('td');
+    tdProfile.appendChild(profileChips(row.profileIdx, newIdx => {
+      row.profileIdx = row.profileIdx === newIdx ? null : newIdx;
+      saveState(); renderBalancoTables();
+    }));
+
+    const gasto = row.profileIdx != null && row.categoria ? computeGastoCategoria(row.profileIdx, row.categoria) : 0;
+    const restante = (parseFloat(row.valor)||0) - gasto;
+
+    const tdVal = document.createElement('td');
+    const inVal = document.createElement('input');
+    inVal.type = 'number'; inVal.step = '0.01'; inVal.value = row.valor || 0; inVal.placeholder = '0,00';
+    inVal.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:13px;font-weight:700;color:var(--accent2);font-family:"JetBrains Mono",monospace';
+    attachElasticWidth(inVal, 80, 160);
+    inVal.onchange = e => { row.valor = parseFloat(e.target.value)||0; saveState(); renderBalancoTables(); };
+    tdVal.appendChild(inVal);
+
+    const tdGasto = document.createElement('td');
+    tdGasto.className = 'val-cell negative';
+    tdGasto.textContent = fmt(gasto);
+
+    const tdRestante = document.createElement('td');
+    tdRestante.className = 'val-cell ' + (restante >= 0 ? 'positive' : 'negative');
+    tdRestante.textContent = (restante >= 0 ? '+' : '') + fmt(restante);
+
+    const tdDel = document.createElement('td');
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-danger btn-sm'; delBtn.innerHTML = '🗑';
+    delBtn.onclick = () => { if (confirm('Remover esta categoria do planejamento?')) removePlanejamentoRow(t, row.id); };
+    tdDel.appendChild(delBtn);
+
+    tr.append(tdCat, tdProfile, tdVal, tdGasto, tdRestante, tdDel);
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  card.appendChild(wrap);
+
+  const addBar = document.createElement('div');
+  addBar.className = 'add-row-bar';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn btn-ghost btn-sm';
+  addBtn.textContent = '＋ Adicionar categoria';
+  addBtn.onclick = () => addPlanejamentoRow(t);
+  addBar.appendChild(addBtn);
+  card.appendChild(addBar);
+
+  // ── Gráfico de barras: expectativa vs. gasto, uma dupla de barras por categoria ──
+  const validRows = t.rows.filter(r => r.categoria && r.profileIdx != null);
+  if (validRows.length) {
+    const chartWrap = document.createElement('div');
+    chartWrap.style.cssText = 'padding:18px 16px;border-top:1px solid var(--border)';
+
+    const maxVal = Math.max(1, ...validRows.map(r => Math.max(parseFloat(r.valor)||0, computeGastoCategoria(r.profileIdx, r.categoria))));
+    const chartH = 140;
+
+    const bars = document.createElement('div');
+    bars.style.cssText = 'display:flex;gap:22px;align-items:flex-end;overflow-x:auto;padding-bottom:8px';
+
+    validRows.forEach(row => {
+      const gasto = computeGastoCategoria(row.profileIdx, row.categoria);
+      const expH = Math.round((parseFloat(row.valor)||0) / maxVal * chartH);
+      const gasH = Math.round(gasto / maxVal * chartH);
+      const overBudget = gasto > (parseFloat(row.valor)||0);
+
+      const group = document.createElement('div');
+      group.style.cssText = 'display:flex;flex-direction:column;align-items:center;min-width:74px';
+
+      const barsRow = document.createElement('div');
+      barsRow.style.cssText = `display:flex;gap:6px;align-items:flex-end;height:${chartH}px`;
+
+      const expBar = document.createElement('div');
+      expBar.title = 'Expectativa: ' + fmt(row.valor||0);
+      expBar.style.cssText = `width:22px;height:${expH}px;background:var(--accent2);border-radius:4px 4px 0 0;opacity:.55`;
+
+      const gasBar = document.createElement('div');
+      gasBar.title = 'Gasto: ' + fmt(gasto);
+      gasBar.style.cssText = `width:22px;height:${gasH}px;background:${overBudget?'var(--danger)':'var(--accent2)'};border-radius:4px 4px 0 0`;
+
+      barsRow.append(expBar, gasBar);
+
+      const label = document.createElement('div');
+      label.style.cssText = 'font-size:11px;color:var(--muted);text-align:center;margin-top:6px;max-width:74px;overflow-wrap:break-word';
+      label.textContent = row.categoria;
+
+      const valuesLabel = document.createElement('div');
+      valuesLabel.style.cssText = 'font-size:10px;color:var(--muted);text-align:center;font-family:"JetBrains Mono",monospace';
+      valuesLabel.textContent = fmt(gasto) + ' / ' + fmt(row.valor||0);
+
+      group.append(barsRow, label, valuesLabel);
+      bars.appendChild(group);
+    });
+
+    const legend = document.createElement('div');
+    legend.style.cssText = 'display:flex;gap:16px;font-size:11px;color:var(--muted);margin-top:12px';
+    legend.innerHTML = `
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent2);opacity:.55;border-radius:2px;margin-right:5px"></span>Expectativa</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent2);border-radius:2px;margin-right:5px"></span>Gasto (dentro do previsto)</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--danger);border-radius:2px;margin-right:5px"></span>Gasto (estourou)</span>
+    `;
+
+    chartWrap.append(bars, legend);
+    card.appendChild(chartWrap);
+  }
 }
 
 function renderLancamentosCard(card, t) {

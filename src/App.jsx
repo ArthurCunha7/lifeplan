@@ -1773,6 +1773,7 @@ function cfComputeEntradasTotal(state){
 function cfGetTableTotal(state,t){
   if(t.type==='entradas') return cfComputeEntradasTotal(state);
   if(t.type==='lancamentos') return 0;
+  if(t.type==='planejamento') return 0;
   const numCols=(t.columns||[]).filter(c=>c.type==='number');
   if(!numCols.length) return 0;
   const valCol=numCols[0];
