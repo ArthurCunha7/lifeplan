@@ -22,6 +22,21 @@
     --card-radius: 12px;
   }
 
+  [data-theme="dark"] {
+    --bg: #17181a;
+    --surface: #232527;
+    --surface2: #2b2d30;
+    --border: #3c3e41;
+    --accent: #c99b6a;
+    --accent2: #7fa082;
+    --danger: #d97873;
+    --warn: #dba968;
+    --text: #ecebe8;
+    --muted: #a3a29d;
+  }
+
+  body { transition: background-color .2s, color .2s; }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -639,25 +654,65 @@
   .lancamento-diff-positive { color: var(--accent2); }
   .lancamento-diff-negative { color: var(--danger); }
   .lancamento-diff-neutral { color: var(--muted); }
+
+  /* ── Relatório em PDF (impressão) ────────────────────────────────────── */
+  #pdf-report { padding: 24px; color: #1a1a1a; background: #fff; }
+  #pdf-report h1 { font-size: 22px; margin-bottom: 2px; }
+  #pdf-report .pdf-subtitle { font-size: 12px; color: #666; margin-bottom: 20px; }
+  #pdf-report h2 { font-size: 16px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #333; }
+  #pdf-report h3 { font-size: 13px; margin: 14px 0 6px; color: #333; }
+  #pdf-report table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 11px; }
+  #pdf-report th, #pdf-report td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
+  #pdf-report th { background: #eee; }
+  #pdf-report .pdf-total-row td { font-weight: bold; background: #f7f7f7; }
+  #pdf-report .pdf-neg { color: #b03a2e; }
+  #pdf-report .pdf-pos { color: #1e7e34; }
+  #pdf-report .pdf-empty { font-size: 11px; color: #888; font-style: italic; margin-bottom: 10px; }
+  @media print {
+    body * { visibility: hidden; }
+    #pdf-report, #pdf-report * { visibility: visible; }
+    #pdf-report { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 10px 20px; }
+  }
 </style>
+<script>
+  // Aplica o tema salvo o quanto antes, pra não piscar claro antes de escurecer
+  (function(){
+    try{
+      if(localStorage.getItem('lifeplan_theme') === 'dark'){
+        document.documentElement.setAttribute('data-theme','dark');
+      }
+    }catch(e){}
+  })();
+</script>
 </head>
 <body>
 
+<div id="pdf-report" style="display:none"></div>
+
 <header>
-  <div class="logo">💳 <span>Fi</span>nanças</div>
   <nav id="nav">
     <button class="active" onclick="showTab('faturas')">Faturas</button>
     <button onclick="showTab('resumo')">Resumo &amp; Perfis</button>
-    <button onclick="showTab('pagamentos')">Pagamentos</button>
     <button onclick="showTab('balanco')">Balanço Mensal</button>
   </nav>
+  <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar um PDF com faturas, pagamentos, resumo por perfil e balanço" style="margin-left:auto">📄 Exportar PDF</button>
 </header>
 
-<!-- TAB 1 — FATURAS -->
+<!-- TAB 1 — FATURAS + PAGAMENTOS -->
 <div id="tab-faturas" class="tab active">
   <div id="faturas-container"></div>
   <div style="padding:0 0 24px">
     <button class="btn btn-ghost" onclick="addFatura()">＋ Nova Fatura</button>
+  </div>
+
+  <div class="card" id="pagamentos-card">
+    <div class="card-header">
+      <button class="btn btn-ghost btn-sm" id="pagamentos-toggle-btn" onclick="togglePagamentosSection()">▸</button>
+      <div class="card-title">💸 Registro de Pagamentos</div>
+    </div>
+    <div id="pagamentos-body" style="display:none">
+      <div id="pagamentos-container"></div>
+    </div>
   </div>
 </div>
 
@@ -683,14 +738,6 @@
     </div>
     <div id="profiles-manager-body"></div>
   </div>
-</div>
-
-<!-- TAB 3 — PAGAMENTOS -->
-<div id="tab-pagamentos" class="tab">
-  <div class="section-head">
-    <div class="section-title">💸 Registro de Pagamentos</div>
-  </div>
-  <div id="pagamentos-container"></div>
 </div>
 
 <!-- TAB 5 — BALANÇO MENSAL -->
@@ -829,16 +876,6 @@ function getDefaultState() {
           { id: 'val', name: 'Valor (R$)', type: 'number' },
           { id: 'fechamento', name: 'Fechamento', type: 'text' },
           { id: 'vencimento', name: 'Vencimento', type: 'text' }
-        ],
-        rows: [],
-        sign: -1, includeInSaldo: true
-      },
-      {
-        id: 'pix_balanco', name: 'Pix', icon: '🔵', type: 'custom',
-        columns: [
-          { id: 'desc', name: 'Descrição', type: 'text' },
-          { id: 'val', name: 'Valor (R$)', type: 'number' },
-          { id: 'data', name: 'Data', type: 'text' }
         ],
         rows: [],
         sign: -1, includeInSaldo: true
@@ -1012,30 +1049,123 @@ if (state.balancoTables && !state._migratedBancoV1) {
   }
 }
 
-// Garante a tabela "Pix" na PRIMEIRA vez (mesma lógica: migração única)
-if (state.balancoTables && !state._migratedPixBalancoV1) {
-  state._migratedPixBalancoV1 = true;
-  if (!state.balancoTables.find(t => t.id === 'pix_balanco')) {
-    const faturasIdx = state.balancoTables.findIndex(t => t.id === 'faturas');
-    const pixTable = {
-      id: 'pix_balanco', name: 'Pix', icon: '🔵', type: 'custom',
-      columns: [
-        { id: 'desc', name: 'Descrição', type: 'text' },
-        { id: 'val', name: 'Valor (R$)', type: 'number' },
-        { id: 'data', name: 'Data', type: 'text' }
-      ],
-      rows: [],
-      sign: -1, includeInSaldo: true
-    };
-    if (faturasIdx >= 0) {
-      state.balancoTables.splice(faturasIdx + 1, 0, pixTable);
-    } else {
-      state.balancoTables.push(pixTable);
-    }
-  }
+// A tabela "Pix" foi removida do Balanço Mensal (pedido do usuário) — quem
+// já tinha ela salva de antes tem ela excluída automaticamente aqui.
+if (state.balancoTables) {
+  state.balancoTables = state.balancoTables.filter(t => t.id !== 'pix_balanco');
 }
 
 function genId() { return Math.random().toString(36).slice(2,9); }
+
+// ── MODO ESCURO ────────────────────────────────────────────────────────────
+// Não tem botão aqui dentro — o único botão do app inteiro fica no LifePlan
+// (fora do iframe), e avisa esta página via postMessage quando muda.
+window.addEventListener('message', (e) => {
+  if (e.origin !== window.location.origin) return;
+  if (!e.data || !e.data.lifeplanTheme) return;
+  if (e.data.lifeplanTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  else document.documentElement.removeAttribute('data-theme');
+});
+
+// ── EXPORTAR RELATÓRIO EM PDF ──────────────────────────────────────────────
+// Monta um relatório com faturas, pagamentos, resumo por perfil e balanço
+// mensal, tudo num único documento, e usa o "Imprimir > Salvar como PDF" do
+// próprio navegador — não precisa de nenhuma biblioteca externa.
+function exportFinanceReportPDF() {
+  const today = new Date().toLocaleDateString('pt-BR');
+  let html = `<h1>Relatório Financeiro</h1><div class="pdf-subtitle">Gerado em ${today} — LifePlan</div>`;
+
+  // ── FATURAS ──
+  html += `<h2>🧾 Faturas</h2>`;
+  if (!state.faturas.length) {
+    html += `<div class="pdf-empty">Nenhuma fatura cadastrada.</div>`;
+  }
+  state.faturas.forEach(f => {
+    const total = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+    html += `<h3>${f.name} — Total: ${fmt(total)}</h3>`;
+    if (!f.rows.length) {
+      html += `<div class="pdf-empty">Sem lançamentos.</div>`;
+    } else {
+      html += `<table><thead><tr><th>Data</th><th>Descrição</th><th>Parcelas</th><th>Perfil</th><th>Categoria</th><th>Valor</th></tr></thead><tbody>`;
+      f.rows.forEach(r => {
+        const profileName = r.profileIdx != null ? (state.profiles[r.profileIdx]||'—') : '—';
+        html += `<tr><td>${formatDateBR(r.date)||'—'}</td><td>${r.name||'—'}</td><td>${r.parcelas||'—'}</td><td>${profileName}</td><td>${r.category||'—'}</td><td>${fmt(r.value)}</td></tr>`;
+      });
+      html += `<tr class="pdf-total-row"><td colspan="5">Total</td><td>${fmt(total)}</td></tr>`;
+      html += `</tbody></table>`;
+    }
+  });
+
+  // ── PAGAMENTOS ──
+  html += `<h2>💸 Pagamentos</h2>`;
+  const totalPagoGeral = state.payments.reduce((s,p) => s + (parseFloat(p.value)||0), 0);
+  if (!state.payments.length) {
+    html += `<div class="pdf-empty">Nenhum pagamento registrado.</div>`;
+  } else {
+    html += `<table><thead><tr><th>Data</th><th>Descrição</th><th>Perfil</th><th>Valor</th></tr></thead><tbody>`;
+    [...state.payments].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(p => {
+      const profileName = p.profileIdx != null ? (state.profiles[p.profileIdx]||'—') : '—';
+      html += `<tr><td>${formatDateBR(p.date)||'—'}</td><td>${p.desc||'—'}</td><td>${profileName}</td><td class="pdf-pos">${fmt(p.value)}</td></tr>`;
+    });
+    html += `<tr class="pdf-total-row"><td colspan="3">Total pago</td><td>${fmt(totalPagoGeral)}</td></tr>`;
+    html += `</tbody></table>`;
+  }
+
+  // ── RESUMO POR PERFIL (mesma fórmula real da aba Resumo & Perfis) ──
+  html += `<h2>⚖️ Resumo por Perfil</h2>`;
+  html += `<table><thead><tr><th>Perfil</th><th>Total Gastos</th><th>Total Pago</th><th>Saldo</th></tr></thead><tbody>`;
+  let gtGastos = 0, gtPago = 0;
+  getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
+    const rows = getAllRowsByProfile(pIdx);
+    const tg = rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+    const pays = state.payments.filter(p => p.profileIdx === pIdx);
+    const tp = pays.reduce((s,p) => s + (parseFloat(p.value)||0), 0);
+    const sl = tp - tg;
+    gtGastos += tg; gtPago += tp;
+    html += `<tr><td>${pName}</td><td class="pdf-neg">${fmt(tg)}</td><td class="pdf-pos">${fmt(tp)}</td><td class="${sl>=0?'pdf-pos':'pdf-neg'}">${fmt(sl)}</td></tr>`;
+  });
+  html += `<tr class="pdf-total-row"><td>Total Geral</td><td>${fmt(gtGastos)}</td><td>${fmt(gtPago)}</td><td>${fmt(gtPago-gtGastos)}</td></tr>`;
+  html += `</tbody></table>`;
+
+  // ── BALANÇO MENSAL ──
+  html += `<h2>📅 Balanço Mensal</h2>`;
+  let saldoFinal = 0;
+  state.balancoTables.forEach(t => {
+    if (t.includeInSaldo && t.sign !== 0) saldoFinal += getTableTotal(t) * t.sign;
+    html += `<h3>${t.icon||''} ${t.name}</h3>`;
+    if (t.type === 'planejamento') {
+      const rows = (t.rows||[]).filter(r => r.categoria && r.profileIdx != null);
+      if (!rows.length) { html += `<div class="pdf-empty">Nenhuma categoria cadastrada.</div>`; }
+      else {
+        html += `<table><thead><tr><th>Categoria</th><th>Perfil</th><th>Expectativa</th><th>Gasto</th><th>Restante</th></tr></thead><tbody>`;
+        rows.forEach(r => {
+          const gasto = computeGastoCategoria(r.profileIdx, r.categoria);
+          const restante = (parseFloat(r.valor)||0) - gasto;
+          html += `<tr><td>${r.categoria}</td><td>${state.profiles[r.profileIdx]||'—'}</td><td>${fmt(r.valor)}</td><td class="pdf-neg">${fmt(gasto)}</td><td class="${restante>=0?'pdf-pos':'pdf-neg'}">${fmt(restante)}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+      }
+    } else if (t.type === 'custom' && t.columns && t.columns.length) {
+      if (!t.rows.length) { html += `<div class="pdf-empty">Sem lançamentos.</div>`; }
+      else {
+        html += `<table><thead><tr>${t.columns.map(c=>`<th>${c.name}</th>`).join('')}</tr></thead><tbody>`;
+        t.rows.forEach(r => {
+          html += `<tr>${t.columns.map(c=>{
+            const v = r.values?.[c.id];
+            return `<td>${c.type==='number' ? fmt(v||0) : (v||'—')}</td>`;
+          }).join('')}</tr>`;
+        });
+        html += `</tbody></table>`;
+      }
+    } else {
+      html += `<div class="pdf-empty">Total: ${fmt(getTableTotal(t))}</div>`;
+    }
+  });
+  html += `<h3>💡 Saldo do Mês: <span class="${saldoFinal>=0?'pdf-pos':'pdf-neg'}">${fmt(saldoFinal)}</span></h3>`;
+
+  document.getElementById('pdf-report').innerHTML = html;
+  window.print();
+}
 
 function saveState() {
   try { localStorage.setItem('cf_state', JSON.stringify(state)); } catch(e){}
@@ -1058,15 +1188,21 @@ function showTab(name) {
   const tabId = 'tab-'+name;
   document.getElementById(tabId).classList.add('active');
   const btns = document.querySelectorAll('nav button');
-  const map = ['faturas','resumo','pagamentos','balanco'];
+  const map = ['faturas','resumo','balanco'];
   btns[map.indexOf(name)].classList.add('active');
   renderActive(name);
 }
 
+let _pagamentosCollapsed = true; // seção recolhida por padrão, igual às faturas
+function togglePagamentosSection() {
+  _pagamentosCollapsed = !_pagamentosCollapsed;
+  document.getElementById('pagamentos-body').style.display = _pagamentosCollapsed ? 'none' : '';
+  document.getElementById('pagamentos-toggle-btn').textContent = _pagamentosCollapsed ? '▸' : '▾';
+}
+
 function renderActive(name) {
-  if (name === 'faturas') { renderFaturas(); }
+  if (name === 'faturas') { renderFaturas(); renderPagamentos(); }
   else if (name === 'resumo') { renderSaldo(); renderPerfis(); renderProfilesManager(); }
-  else if (name === 'pagamentos') renderPagamentos();
   else if (name === 'balanco') renderBalanco();
 }
 
@@ -1434,7 +1570,13 @@ function getTableTotal(t) {
   // Returns computed numeric total for a table (for SALDO use)
   if (t.type === 'entradas') return computeEntradas().total;
   if (t.type === 'lancamentos') return 0; // informational, not summed unless sign != 0
-  if (t.type === 'planejamento') return 0; // é uma visão comparativa por categoria, não soma pro saldo
+  if (t.type === 'planejamento') {
+    // Soma do "Restante" de todas as categorias válidas — é isso que entra
+    // no Saldo do Mês (com sinal negativo, configurado por padrão), porque
+    // representa dinheiro que ainda vai ser gasto este mês.
+    return (t.rows||[]).filter(r => r.categoria && r.profileIdx != null)
+      .reduce((s,r) => s + ((parseFloat(r.valor)||0) - computeGastoCategoria(r.profileIdx, r.categoria)), 0);
+  }
   // custom: sum all columns of type 'number'
   const numCols = t.columns.filter(c => c.type === 'number');
   if (numCols.length === 0) return 0;
@@ -1493,8 +1635,8 @@ function addPlanejamentoTable() {
     icon: '📊',
     type: 'planejamento',
     rows: [], // cada linha: { id, categoria, valor, profileIdx }
-    sign: 0,
-    includeInSaldo: false
+    sign: -1,
+    includeInSaldo: true
   };
   state.balancoTables.push(t);
   saveState();
@@ -1986,6 +2128,26 @@ function renderPlanejamentoCard(card, t) {
   table.appendChild(tbody);
   wrap.appendChild(table);
   card.appendChild(wrap);
+
+  // ── Resumo: total estimado do mês e quanto ainda falta gastar ──
+  const validRowsForSummary = t.rows.filter(r => r.categoria && r.profileIdx != null);
+  if (validRowsForSummary.length) {
+    const totalEstimado = validRowsForSummary.reduce((s,r) => s + (parseFloat(r.valor)||0), 0);
+    const totalRestante = validRowsForSummary.reduce((s,r) => s + ((parseFloat(r.valor)||0) - computeGastoCategoria(r.profileIdx, r.categoria)), 0);
+    const summary = document.createElement('div');
+    summary.style.cssText = 'display:flex;gap:24px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid var(--border);background:var(--surface2)';
+    summary.innerHTML = `
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Total estimado do mês</div>
+        <div class="val-cell" style="font-size:17px;font-weight:700;color:var(--text)">${fmt(totalEstimado)}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Ainda falta gastar</div>
+        <div class="val-cell ${totalRestante >= 0 ? 'positive' : 'negative'}" style="font-size:17px;font-weight:700">${totalRestante >= 0 ? '' : '− '}${fmt(Math.abs(totalRestante))}</div>
+      </div>
+    `;
+    card.appendChild(summary);
+  }
 
   const addBar = document.createElement('div');
   addBar.className = 'add-row-bar';
@@ -3021,6 +3183,7 @@ function renderSaldo() {
 //  INIT
 // ══════════════════════════════════════════════════════
 renderFaturas();
+renderPagamentos();
 </script>
 </body>
 </html>

@@ -47,6 +47,36 @@
     --cat-selected-border: #b9c8ab;
     --cat-selected-text: #3f6b2f;
   }
+  [data-theme="dark"] {
+    --bg: #17181a;
+    --surface: #232527;
+    --border: #3c3e41;
+    --text: #ecebe8;
+    --text-muted: #b9b7b1;
+    --text-subtle: #928f88;
+    --accent: #93ab84;
+    --accent-soft: #2a3226;
+    --success: #4ade80;
+    --success-soft: #1c2e1f;
+    --warning: #f0ad4e;
+    --warning-soft: #332918;
+    --danger: #f87171;
+    --danger-soft: #331e1e;
+    --cat-hover: #2a3226;
+    --cat-success: #204426;
+    --cat-success-text: #86efac;
+    --cat-success-border: #2f6b3a;
+    --cat-danger: #442222;
+    --cat-danger-text: #fca5a5;
+    --cat-danger-border: #6b2f2f;
+    --cat-partial: #453a1c;
+    --cat-partial-text: #fde68a;
+    --cat-partial-border: #6b5a2f;
+    --cat-selected-bg: #2a3226;
+    --cat-selected-border: #4a6b3a;
+    --cat-selected-text: #93ab84;
+  }
+  body { transition: background-color .2s, color .2s; }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { overflow-x: hidden; }
   body {
@@ -657,6 +687,15 @@ body.embed-scoped{padding-bottom:0!important;}
 body.hide-chrome .app-topbar,
 body.hide-chrome .page-header{display:none!important;}
 </style>
+<script>
+  (function(){
+    try{
+      if(localStorage.getItem('lifeplan_theme') === 'dark'){
+        document.documentElement.setAttribute('data-theme','dark');
+      }
+    }catch(e){}
+  })();
+</script>
 </head>
 <body>
 
@@ -1333,6 +1372,16 @@ function closeAccountMenu() {
   document.getElementById('accountDropdown')?.classList.remove('show');
   document.getElementById('accountTrigger')?.setAttribute('aria-expanded', 'false');
 }
+// ── MODO ESCURO ────────────────────────────────────────────────────────────
+// Não tem botão aqui dentro — o único botão do app inteiro fica no LifePlan
+// (fora do iframe), e avisa esta página via postMessage quando muda.
+window.addEventListener('message', (e) => {
+  if (e.origin !== window.location.origin) return;
+  if (!e.data || !e.data.lifeplanTheme) return;
+  if (e.data.lifeplanTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  else document.documentElement.removeAttribute('data-theme');
+});
+
 function openSettings() {
   closeAccountMenu();
   const active = document.querySelector('.panel.active');

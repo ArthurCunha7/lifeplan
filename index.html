@@ -8,16 +8,64 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
     <title>LifePlan</title>
     <style>
-      /* Em telas largas (PC), dá mais respiro ao conteúdo em vez de espremer
-         tudo numa coluna estreita de celular — mas ainda com um limite
-         máximo, pra não esticar de ponta a ponta num monitor enorme */
+      :root {
+        --bg: #efe8dd;
+        --surface: #ffffff;
+        --surface2: #f2efe4;
+        --text: #1c1c1a;
+        --muted: #8a887d;
+        --muted2: #6b6a63;
+        --border: #e4ddd0;
+        --border2: #ddd4c4;
+        --accent: #7f9770;
+        --accent-dark: #3f6b2f;
+        --accent-light: #b9c8ab;
+        --accent-soft: #eef2e7;
+        --success: #22c55e;
+        --danger: #ef4444;
+        --info: #3b82f6;
+      }
+      [data-theme="dark"] {
+        --bg: #17181a;
+        --surface: #232527;
+        --surface2: #2b2d30;
+        --text: #ecebe8;
+        --muted: #a3a29d;
+        --muted2: #c2c0ba;
+        --border: #3c3e41;
+        --border2: #47494c;
+        --accent: #93ab84;
+        --accent-dark: #b9c8ab;
+        --accent-light: #5f7a52;
+        --accent-soft: #2a3226;
+        --success: #4ade80;
+        --danger: #f87171;
+        --info: #60a5fa;
+      }
+      body { background: var(--bg); transition: background-color .2s, color .2s; }
+      /* Sem limite de largura no desktop — usa a tela toda, igual quando um
+         arquivo .html é aberto direto no navegador. Exceto Login e Início,
+         que continuam com o visual mais "de celular" centralizado. */
       @media (min-width: 860px) {
-        #root > div { max-width: 1040px; margin: 0 auto; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.10); }
-        #root nav { max-width: 1040px; left: 50% !important; right: auto !important; transform: translateX(-50%); }
+        #root nav { left: 50% !important; right: auto !important; transform: translateX(-50%); }
+        #root > div.narrow-tab { max-width: 1040px; margin: 0 auto; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.10); }
       }
     </style>
+    <script>
+      // Aplica o tema salvo o quanto antes, pra não piscar claro antes de
+      // escurecer — a mesma chave usada pelos outros apps (Finanças,
+      // Estudos, Hábitos), já que todos são do mesmo site e compartilham
+      // o localStorage automaticamente.
+      (function(){
+        try{
+          if(localStorage.getItem('lifeplan_theme') === 'dark'){
+            document.documentElement.setAttribute('data-theme','dark');
+          }
+        }catch(e){}
+      })();
+    </script>
   </head>
-  <body style="margin:0;background:#efe8dd;overflow-x:hidden;">
+  <body style="margin:0;overflow-x:hidden;">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

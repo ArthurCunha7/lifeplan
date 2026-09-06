@@ -1,50 +1,85 @@
 <html lang="pt-BR"><head>
 <meta charset="UTF-8">
-<title>Meu Controle de Estudos</title>
+<title>Estudos — LifePlan</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+  :root {
+    --bg: #efe8dd;
+    --surface: #fff;
+    --surface2: #faf7f0;
+    --surface3: #f8f9fa;
+    --border: #e4ddd0;
+    --border2: #eee;
+    --text: #1c1c1a;
+    --muted: #666;
+    --muted2: #999;
+    --accent: #7f9770;
+    --accent-dark: #3f6b2f;
+    --accent-light: #8faf7a;
+    --accent-soft: #eef2e7;
+    --row-hover: #f0f0f0;
+    --track: #e0e0e0;
+  }
+  [data-theme="dark"] {
+    --bg: #17181a;
+    --surface: #232527;
+    --surface2: #2b2d30;
+    --surface3: #26282a;
+    --border: #3c3e41;
+    --border2: #3c3e41;
+    --text: #ecebe8;
+    --muted: #b9b7b1;
+    --muted2: #928f88;
+    --accent: #93ab84;
+    --accent-dark: #b9c8ab;
+    --accent-light: #7a9169;
+    --accent-soft: #2a3226;
+    --row-hover: #2b2d30;
+    --track: #3c3e41;
+  }
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-  body { background:#efe8dd; min-height:100vh; color:#1c1c1a; }
-  header { background:#7f9770; padding:1rem 2rem; color:#fff; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+  body { background:var(--bg); min-height:100vh; color:var(--text); transition:background-color .2s, color .2s; }
+  header { background:var(--accent); padding:1rem 2rem; color:#fff; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
   header h1 { font-size:1.5rem; }
   nav button { background:transparent; color:#fff; border:2px solid transparent; padding:0.5rem 1rem; margin:0 0.2rem; border-radius:8px; cursor:pointer; font-weight:600; transition:0.3s; }
-  nav button:hover, nav button.active { background:#fff; color:#3f6b2f; }
+  nav button:hover, nav button.active { background:#fff; color:var(--accent-dark); }
   main { padding:2rem; max-width:1200px; margin:0 auto; }
-  .tab { display:none; background:#fff; padding:2rem; border-radius:15px; box-shadow:0 4px 16px rgba(0,0,0,0.08); border:1px solid #e4ddd0; animation:fadeIn 0.3s; }
+  .tab { display:none; background:var(--surface); padding:2rem; border-radius:15px; box-shadow:0 4px 16px rgba(0,0,0,0.08); border:1px solid var(--border); animation:fadeIn 0.3s; }
   .tab.active { display:block; }
   @keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
-  h2 { color:#3f6b2f; margin-bottom:1rem; border-bottom:3px solid #7f9770; padding-bottom:0.5rem; }
-  h3 { color:#7f9770; margin:1rem 0 0.5rem; }
+  h2 { color:var(--accent-dark); margin-bottom:1rem; border-bottom:3px solid var(--accent); padding-bottom:0.5rem; }
+  h3 { color:var(--accent); margin:1rem 0 0.5rem; }
   .form-row { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem; }
   input, select, textarea, button { padding:0.6rem; border:1px solid #ccc; border-radius:6px; font-size:0.95rem; }
-  input:focus, select:focus, textarea:focus { outline:none; border-color:#7f9770; }
-  .btn { background:#7f9770; color:#fff; border:none; cursor:pointer; font-weight:600; transition:0.3s; }
-  .btn:hover { background:#3f6b2f; }
+  input, select, textarea { background:var(--surface); color:var(--text); border-color:var(--border); }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); }
+  .btn { background:var(--accent); color:#fff; border:none; cursor:pointer; font-weight:600; transition:0.3s; }
+  .btn:hover { background:var(--accent-dark); }
   .btn-danger { background:#e74c3c; }
   .btn-danger:hover { background:#c0392b; }
   .btn-success { background:#27ae60; }
   .btn-success:hover { background:#1e8449; }
-  .card { background:#faf7f0; padding:1rem; border-radius:10px; margin-bottom:1rem; border-left:5px solid #7f9770; }
+  .card { background:var(--surface2); padding:1rem; border-radius:10px; margin-bottom:1rem; border-left:5px solid var(--accent); }
   .card.aprovado { border-left-color:#27ae60; }
   .card.reprovado { border-left-color:#e74c3c; }
   .card-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; }
   .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; margin:1rem 0; }
-  .stat { background:linear-gradient(135deg,#8faf7a,#7f9770); color:#fff; padding:1.5rem; border-radius:12px; text-align:center; }
+  .stat { background:linear-gradient(135deg,var(--accent-light),var(--accent)); color:#fff; padding:1.5rem; border-radius:12px; text-align:center; }
   .stat h4 { font-size:0.9rem; opacity:0.9; }
   .stat p { font-size:2rem; font-weight:bold; margin-top:0.3rem; }
   table { width:100%; border-collapse:collapse; margin-top:1rem; }
-  th, td { padding:0.7rem; text-align:left; border-bottom:1px solid #eee; }
-  th { background:#7f9770; color:#fff; }
-  tr:hover { background:#f0f0f0; }
-  .progress { background:#e0e0e0; height:20px; border-radius:10px; overflow:hidden; margin-top:0.3rem; }
+  th, td { padding:0.7rem; text-align:left; border-bottom:1px solid var(--border2); }
+  th { background:var(--accent); color:#fff; }
+  tr:hover { background:var(--row-hover); }
+  .progress { background:var(--track); height:20px; border-radius:10px; overflow:hidden; margin-top:0.3rem; }
   .progress-bar { height:100%; background:linear-gradient(90deg,#27ae60,#2ecc71); display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.8rem; font-weight:bold; transition:width 0.5s; }
   .calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:1rem; }
-  .day-name { background:#7f9770; color:#fff; padding:0.5rem; text-align:center; font-weight:bold; border-radius:6px; }
-  .day { background:#f8f9fa; padding:0.5rem; min-height:80px; border-radius:6px; cursor:pointer; transition:0.3s; border:2px solid transparent; }
-  .day:hover { background:#eef2e7; border-color:#7f9770; }
-  .day.has-event { background:#fff3cd; border-color:#ffc107; }
-  .day.today { background:#d4edda; border-color:#27ae60; font-weight:bold; }
+  .day-name { background:var(--accent); color:#fff; padding:0.5rem; text-align:center; font-weight:bold; border-radius:6px; }
+  .day { background:var(--surface3); padding:0.5rem; min-height:80px; border-radius:6px; cursor:pointer; transition:0.3s; border:2px solid transparent; color:var(--text); }
+  .day:hover { background:var(--accent-soft); border-color:var(--accent); }
+  .day.has-event { background:#fff3cd; border-color:#ffc107; color:#4a3b00; }
+  .day.today { background:#d4edda; border-color:#27ae60; font-weight:bold; color:#0f3d1f; }
   .day .num { font-weight:bold; }
   .event-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#e74c3c; margin:2px; }
   .calendar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
@@ -52,9 +87,18 @@
   .badge.prova { background:#e74c3c; }
   .badge.trabalho { background:#f39c12; }
   .badge.outro { background:#3498db; }
-  .empty { text-align:center; color:#999; padding:2rem; font-style:italic; }
-  small { color:#666; }
+  .empty { text-align:center; color:var(--muted2); padding:2rem; font-style:italic; }
+  small { color:var(--muted); }
 </style>
+<script>
+  (function(){
+    try{
+      if(localStorage.getItem('lifeplan_theme') === 'dark'){
+        document.documentElement.setAttribute('data-theme','dark');
+      }
+    }catch(e){}
+  })();
+</script>
 </head>
 <body>
 <header>
@@ -172,6 +216,16 @@ let data = JSON.parse(localStorage.getItem('studyApp')) || {
 let currentDate = new Date();
 
 const uid = () => Date.now() + Math.random().toString(36).slice(2,7);
+
+// ── MODO ESCURO ────────────────────────────────────────────────────────────
+// Não tem botão aqui dentro — o único botão do app inteiro fica no LifePlan
+// (fora do iframe), e avisa esta página via postMessage quando muda.
+window.addEventListener('message', (e) => {
+  if (e.origin !== window.location.origin) return;
+  if (!e.data || !e.data.lifeplanTheme) return;
+  if (e.data.lifeplanTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  else document.documentElement.removeAttribute('data-theme');
+});
 
 let __saveTimer = null;
 function save() {

@@ -9,7 +9,7 @@ const TACO_MAP = Object.fromEntries(TACO_DB.map(t => [t.id, t]));
 
 // ── TIPOS DE TREINO disponíveis para troca ────────────────────────────────────
 const WORKOUT_TYPES = [
-  { type:'strength', label:'Musculação',  icon:'🏋️', color:'#22c55e',
+  { type:'strength', label:'Musculação',  icon:'🏋️', color:'var(--success)',
     options:[
       { typeLabel:'Treino A – Leg Front',    detail:'Agachamento · Leg Press · Cadeira Extensora 🦵',        exercises:'Agachamento 4×8 · Leg Press 4×10 · Cadeira Extensora 4×12 · Panturrilha 5×12' },
       { typeLabel:'Treino B – Upper',        detail:'Supino · Remada · Desenvolvimento 🏋️',                  exercises:'Supino 4×8 · Pull-up 3×10 · Remada 3×8 · Desenvolvimento 3×8 · Crucifixo 3×12' },
@@ -18,7 +18,7 @@ const WORKOUT_TYPES = [
       { typeLabel:'Full Body',               detail:'Treino completo do corpo 🔥',                           exercises:'Agachamento 3×8 · Supino 3×8 · Remada 3×8 · Desenvolvimento 3×8 · Rosca 3×10 · Tríceps 3×10' },
     ]
   },
-  { type:'cardio',   label:'Cardio',      icon:'🚴', color:'#3b82f6',
+  { type:'cardio',   label:'Cardio',      icon:'🚴', color:'var(--info)',
     options:[
       { typeLabel:'Cardio – Bike',           detail:'Bicicleta ergométrica 40min 🚴',                        exercises:'Bicicleta ergométrica 40 min em intensidade moderada' },
       { typeLabel:'Cardio – Corrida',        detail:'Corrida 5-10km 🏃',                                     exercises:'Corrida leve a moderada 5–10km' },
@@ -27,7 +27,7 @@ const WORKOUT_TYPES = [
       { typeLabel:'Cardio – Natação',        detail:'Natação 45min 🏊',                                      exercises:'Natação contínua 45 min ritmo moderado' },
     ]
   },
-  { type:'rest',     label:'Descanso',    icon:'😴', color:'#8a887d',
+  { type:'rest',     label:'Descanso',    icon:'😴', color:'var(--muted)',
     options:[
       { typeLabel:'Descanso',                detail:'Recuperação ativa 😴',                                  exercises:'Nenhum treino – foco em sono e recuperação' },
       { typeLabel:'Mobilidade',              detail:'Alongamento e mobilidade 🧘',                           exercises:'Alongamento global 30min + foam roller' },
@@ -123,24 +123,24 @@ function searchTACO(query,limit=9){
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const S={
-  wrap:   {minHeight:'100vh',background:'#efe8dd',color:'#1c1c1a',fontFamily:'system-ui,sans-serif',paddingBottom:80},
-  header: {background:'#ffffff',borderBottom:'1px solid #e4ddd0',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:100,boxShadow:'0 1px 6px rgba(0,0,0,0.04)'},
-  card:   {background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:16,margin:'0 16px 12px',padding:'16px'},
-  input:  {width:'100%',background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:10,color:'#1c1c1a',fontSize:14,padding:'10px 12px',outline:'none',boxSizing:'border-box'},
-  select: {width:'100%',background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:10,color:'#1c1c1a',fontSize:14,padding:'10px 12px',outline:'none',boxSizing:'border-box'},
-  label:  {fontSize:11,fontWeight:700,color:'#6b6a63',marginBottom:6,display:'block',letterSpacing:.8},
+  wrap:   {minHeight:'100vh',background:'var(--bg)',color:'var(--text)',fontFamily:'system-ui,sans-serif',paddingBottom:80},
+  header: {background:'var(--surface)',borderBottom:'1px solid var(--border)',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:100,boxShadow:'0 1px 6px rgba(0,0,0,0.04)'},
+  card:   {background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,margin:'0 16px 12px',padding:'16px'},
+  input:  {width:'100%',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,color:'var(--text)',fontSize:14,padding:'10px 12px',outline:'none',boxSizing:'border-box'},
+  select: {width:'100%',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,color:'var(--text)',fontSize:14,padding:'10px 12px',outline:'none',boxSizing:'border-box'},
+  label:  {fontSize:11,fontWeight:700,color:'var(--muted2)',marginBottom:6,display:'block',letterSpacing:.8},
   badge:  c=>({background:c+'22',color:c,padding:'2px 7px',borderRadius:6,fontWeight:700,fontSize:10}),
-  btn:    (c='#7f9770')=>({background:c,border:'none',borderRadius:10,color:'#fff',padding:'10px 18px',fontSize:13,fontWeight:700,cursor:'pointer'}),
+  btn:    (c='var(--accent)')=>({background:c,border:'none',borderRadius:10,color:'#fff',padding:'10px 18px',fontSize:13,fontWeight:700,cursor:'pointer'}),
   // bottom nav
-  nav:    {position:'fixed',bottom:0,left:0,right:0,background:'#ffffff',borderTop:'1px solid #e4ddd0',display:'flex',zIndex:100},
-  navBtn: active=>({flex:1,background:'none',border:'none',padding:'12px 0 10px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:3,color:active?'#7f9770':'#8a887d'}),
+  nav:    {position:'fixed',bottom:0,left:0,right:0,background:'var(--surface)',borderTop:'1px solid var(--border)',display:'flex',zIndex:100},
+  navBtn: active=>({flex:1,background:'none',border:'none',padding:'12px 0 10px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:3,color:active?'var(--accent)':'var(--muted)'}),
 };
 
 // ── AUTH PAGES ────────────────────────────────────────────────────────────────
 function AuthWrap({children}){
   return(
-    <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#efe8dd,#dce6d3)',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-      <div style={{width:'100%',maxWidth:400,background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:24,padding:32}}>{children}</div>
+    <div className="narrow-tab" style={{minHeight:'100vh',background:'linear-gradient(135deg,var(--bg),#dce6d3)',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+      <div style={{width:'100%',maxWidth:400,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:24,padding:32}}>{children}</div>
     </div>
   );
 }
@@ -167,44 +167,44 @@ function LoginPage({onSwitch,onLogin}){
   }
   if(forgotMode) return(
     <AuthWrap>
-      <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:48}}>🔑</div><div style={{fontSize:20,fontWeight:800,color:'#1c1c1a'}}>Recuperar senha</div></div>
+      <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:48}}>🔑</div><div style={{fontSize:20,fontWeight:800,color:'var(--text)'}}>Recuperar senha</div></div>
       {forgotSent?(
         <div style={{textAlign:'center'}}>
-          <div style={{fontSize:13,color:'#6b6a63',lineHeight:1.6,marginBottom:22}}>Se <b>{forgotEmail}</b> tiver uma conta, enviamos um link pra você criar uma senha nova. Confira sua caixa de entrada (e o spam).</div>
-          <button style={{...S.btn('#22c55e'),width:'100%',padding:13}} onClick={()=>{setForgotMode(false);setForgotSent(false);}}>Voltar para o login</button>
+          <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:22}}>Se <b>{forgotEmail}</b> tiver uma conta, enviamos um link pra você criar uma senha nova. Confira sua caixa de entrada (e o spam).</div>
+          <button style={{...S.btn('var(--success)'),width:'100%',padding:13}} onClick={()=>{setForgotMode(false);setForgotSent(false);}}>Voltar para o login</button>
         </div>
       ):(
         <>
           <label style={S.label}>📧 SEU E-MAIL</label>
           <input style={{...S.input,marginBottom:16}} type="email" placeholder="seu@email.com" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleForgot()}/>
-          {err&&<div style={{color:'#ef4444',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
-          <button style={{...S.btn('#22c55e'),width:'100%',padding:13,marginBottom:12,opacity:loading?.6:1}} onClick={handleForgot} disabled={loading}>{loading?'⏳ Enviando...':'✉️ Enviar link de recuperação'}</button>
-          <div style={{textAlign:'center'}}><button style={{background:'none',border:'none',color:'#8a887d',cursor:'pointer',fontSize:12}} onClick={()=>{setForgotMode(false);setErr('');}}>← Voltar para o login</button></div>
+          {err&&<div style={{color:'var(--danger)',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
+          <button style={{...S.btn('var(--success)'),width:'100%',padding:13,marginBottom:12,opacity:loading?.6:1}} onClick={handleForgot} disabled={loading}>{loading?'⏳ Enviando...':'✉️ Enviar link de recuperação'}</button>
+          <div style={{textAlign:'center'}}><button style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:12}} onClick={()=>{setForgotMode(false);setErr('');}}>← Voltar para o login</button></div>
         </>
       )}
     </AuthWrap>
   );
   return(
     <AuthWrap>
-      <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:48}}>💪</div><div style={{fontSize:24,fontWeight:900,color:'#1c1c1a'}}>LifePlan</div><div style={{fontSize:12,color:'#8a887d',marginTop:4}}>Tabela TACO · NEPA/UNICAMP</div></div>
-      <div style={{fontSize:20,fontWeight:800,color:'#1c1c1a',textAlign:'center',marginBottom:24}}>Bem-vindo de volta</div>
-      <button style={{width:'100%',padding:13,marginBottom:16,borderRadius:10,border:'1px solid #ddd4c4',background:'#ffffff',color:'#1c1c1a',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}} onClick={handleGoogle} disabled={loading}>
+      <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:48}}>💪</div><div style={{fontSize:24,fontWeight:900,color:'var(--text)'}}>LifePlan</div><div style={{fontSize:12,color:'var(--muted)',marginTop:4}}>Tabela TACO · NEPA/UNICAMP</div></div>
+      <div style={{fontSize:20,fontWeight:800,color:'var(--text)',textAlign:'center',marginBottom:24}}>Bem-vindo de volta</div>
+      <button style={{width:'100%',padding:13,marginBottom:16,borderRadius:10,border:'1px solid var(--border2)',background:'var(--surface)',color:'var(--text)',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}} onClick={handleGoogle} disabled={loading}>
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style={{width:20,height:20}}/>
         Entrar com Google
       </button>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
-        <div style={{flex:1,height:1,background:'#e4ddd0'}}/>
-        <span style={{fontSize:11,color:'#8a887d',fontWeight:600}}>OU</span>
-        <div style={{flex:1,height:1,background:'#e4ddd0'}}/>
+        <div style={{flex:1,height:1,background:'var(--border)'}}/>
+        <span style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>OU</span>
+        <div style={{flex:1,height:1,background:'var(--border)'}}/>
       </div>
       <label style={S.label}>📧 E-MAIL</label>
       <input style={{...S.input,marginBottom:12}} type="email" placeholder="seu@email.com" value={email} onChange={e=>setEmail(e.target.value)}/>
       <label style={S.label}>🔒 SENHA</label>
       <input style={{...S.input,marginBottom:8}} type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>
-      <div style={{textAlign:'right',marginBottom:16}}><button style={{background:'none',border:'none',color:'#8a887d',cursor:'pointer',fontSize:12}} onClick={()=>{setForgotMode(true);setErr('');}}>Esqueci minha senha</button></div>
-      {err&&<div style={{color:'#ef4444',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
-      <button style={{...S.btn('#22c55e'),width:'100%',padding:13,marginBottom:16,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'⏳ Entrando...':'🚀 Entrar'}</button>
-      <div style={{textAlign:'center',fontSize:13,color:'#8a887d'}}>Não tem conta?{' '}<button style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontWeight:700}} onClick={onSwitch}>Cadastrar →</button></div>
+      <div style={{textAlign:'right',marginBottom:16}}><button style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:12}} onClick={()=>{setForgotMode(true);setErr('');}}>Esqueci minha senha</button></div>
+      {err&&<div style={{color:'var(--danger)',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
+      <button style={{...S.btn('var(--success)'),width:'100%',padding:13,marginBottom:16,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'⏳ Entrando...':'🚀 Entrar'}</button>
+      <div style={{textAlign:'center',fontSize:13,color:'var(--muted)'}}>Não tem conta?{' '}<button style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontWeight:700}} onClick={onSwitch}>Cadastrar →</button></div>
     </AuthWrap>
   );
 }
@@ -220,17 +220,17 @@ function ResetPasswordPage({onDone}){
   }
   return(
     <AuthWrap>
-      <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:48}}>🔑</div><div style={{fontSize:20,fontWeight:800,color:'#1c1c1a'}}>Defina sua nova senha</div></div>
+      <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:48}}>🔑</div><div style={{fontSize:20,fontWeight:800,color:'var(--text)'}}>Defina sua nova senha</div></div>
       {done?(
-        <div style={{textAlign:'center',fontSize:14,color:'#3f6b2f',fontWeight:700}}>✅ Senha alterada! Levando você pro app...</div>
+        <div style={{textAlign:'center',fontSize:14,color:'var(--accent-dark)',fontWeight:700}}>✅ Senha alterada! Levando você pro app...</div>
       ):(
         <>
           <label style={S.label}>🔒 NOVA SENHA</label>
           <input style={{...S.input,marginBottom:12}} type="password" placeholder="mínimo 6 caracteres" value={pass} onChange={e=>setPass(e.target.value)}/>
           <label style={S.label}>🔒 CONFIRME A NOVA SENHA</label>
           <input style={{...S.input,marginBottom:16}} type="password" placeholder="repita a senha" value={confirm} onChange={e=>setConfirm(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>
-          {err&&<div style={{color:'#ef4444',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
-          <button style={{...S.btn('#22c55e'),width:'100%',padding:13,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'⏳ Salvando...':'✅ Salvar nova senha'}</button>
+          {err&&<div style={{color:'var(--danger)',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
+          <button style={{...S.btn('var(--success)'),width:'100%',padding:13,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'⏳ Salvando...':'✅ Salvar nova senha'}</button>
         </>
       )}
     </AuthWrap>
@@ -258,31 +258,31 @@ function RegisterPage({onSwitch,onLogin}){
     <AuthWrap>
       <div style={{textAlign:'center'}}>
         <div style={{fontSize:48,marginBottom:12}}>📬</div>
-        <div style={{fontSize:20,fontWeight:800,color:'#1c1c1a',marginBottom:10}}>Confirme seu e-mail</div>
-        <div style={{fontSize:13,color:'#6b6a63',lineHeight:1.6,marginBottom:20}}>Enviamos um link de confirmação para <b>{form.email}</b>. Clique nele para ativar sua conta e depois volte para entrar.</div>
-        <button style={{...S.btn('#22c55e'),width:'100%',padding:13}} onClick={onSwitch}>Ir para o login</button>
+        <div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:10}}>Confirme seu e-mail</div>
+        <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:20}}>Enviamos um link de confirmação para <b>{form.email}</b>. Clique nele para ativar sua conta e depois volte para entrar.</div>
+        <button style={{...S.btn('var(--success)'),width:'100%',padding:13}} onClick={onSwitch}>Ir para o login</button>
       </div>
     </AuthWrap>
   );
   return(
     <AuthWrap>
-      <div style={{textAlign:'center',marginBottom:24}}><div style={{fontSize:48}}>🥗</div><div style={{fontSize:24,fontWeight:900,color:'#1c1c1a'}}>LifePlan</div></div>
-      <div style={{fontSize:20,fontWeight:800,color:'#1c1c1a',textAlign:'center',marginBottom:24}}>Criar conta</div>
-      <button style={{width:'100%',padding:13,marginBottom:16,borderRadius:10,border:'1px solid #ddd4c4',background:'#ffffff',color:'#1c1c1a',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}} onClick={handleGoogle} disabled={loading}>
+      <div style={{textAlign:'center',marginBottom:24}}><div style={{fontSize:48}}>🥗</div><div style={{fontSize:24,fontWeight:900,color:'var(--text)'}}>LifePlan</div></div>
+      <div style={{fontSize:20,fontWeight:800,color:'var(--text)',textAlign:'center',marginBottom:24}}>Criar conta</div>
+      <button style={{width:'100%',padding:13,marginBottom:16,borderRadius:10,border:'1px solid var(--border2)',background:'var(--surface)',color:'var(--text)',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}} onClick={handleGoogle} disabled={loading}>
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style={{width:20,height:20}}/>
         Cadastrar com Google
       </button>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
-        <div style={{flex:1,height:1,background:'#e4ddd0'}}/>
-        <span style={{fontSize:11,color:'#8a887d',fontWeight:600}}>OU</span>
-        <div style={{flex:1,height:1,background:'#e4ddd0'}}/>
+        <div style={{flex:1,height:1,background:'var(--border)'}}/>
+        <span style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>OU</span>
+        <div style={{flex:1,height:1,background:'var(--border)'}}/>
       </div>
       {[['name','👤','NOME','Seu nome'],['email','📧','E-MAIL','seu@email.com'],['password','🔒','SENHA','Mín. 6 caracteres'],['confirm','🔒','CONFIRMAR','Repita a senha']].map(([k,ic,lb,ph])=>(
         <div key={k} style={{marginBottom:12}}><label style={S.label}>{ic} {lb}</label><input style={S.input} type={k==='password'||k==='confirm'?'password':'text'} placeholder={ph} value={form[k]} onChange={set(k)}/></div>
       ))}
-      {err&&<div style={{color:'#ef4444',fontSize:12,margin:'8px 0',textAlign:'center'}}>{err}</div>}
-      <button style={{...S.btn('#22c55e'),width:'100%',padding:13,marginTop:8,marginBottom:16,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'⏳ Criando...':'✅ Criar Conta'}</button>
-      <div style={{textAlign:'center',fontSize:13,color:'#8a887d'}}>Já tem conta?{' '}<button style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontWeight:700}} onClick={onSwitch}>Entrar →</button></div>
+      {err&&<div style={{color:'var(--danger)',fontSize:12,margin:'8px 0',textAlign:'center'}}>{err}</div>}
+      <button style={{...S.btn('var(--success)'),width:'100%',padding:13,marginTop:8,marginBottom:16,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'⏳ Criando...':'✅ Criar Conta'}</button>
+      <div style={{textAlign:'center',fontSize:13,color:'var(--muted)'}}>Já tem conta?{' '}<button style={{background:'none',border:'none',color:'#60a5fa',cursor:'pointer',fontWeight:700}} onClick={onSwitch}>Entrar →</button></div>
     </AuthWrap>
   );
 }
@@ -334,12 +334,12 @@ function ProfilePage({userId,initialProfile,onSave,onBack}){
   return(
     <div style={S.wrap}>
       <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'#1c1c1a'}}>👤 Meu Perfil</div>
-        {onBack&&<button style={{background:'none',border:'1px solid #e4ddd0',borderRadius:8,color:'#6b6a63',padding:'6px 12px',fontSize:12,cursor:'pointer'}} onClick={onBack}>← Voltar</button>}
+        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>👤 Meu Perfil</div>
+        {onBack&&<button style={{background:'none',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'6px 12px',fontSize:12,cursor:'pointer'}} onClick={onBack}>← Voltar</button>}
       </div>
       <div style={{padding:'16px 16px 0'}}><div style={{background:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.25)',borderRadius:14,padding:14,marginBottom:4,fontSize:13,color:'#a5b4fc'}}>💡 Preencha seus dados para gerar um plano alimentar personalizado com alimentos da Tabela TACO.</div></div>
       <div style={S.card}>
-        <div style={{fontSize:12,fontWeight:700,color:'#6b6a63',marginBottom:14,letterSpacing:.8}}>📏 DADOS FÍSICOS</div>
+        <div style={{fontSize:12,fontWeight:700,color:'var(--muted2)',marginBottom:14,letterSpacing:.8}}>📏 DADOS FÍSICOS</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
           {[['weight','PESO (kg)','ex: 80'],['height','ALTURA (cm)','ex: 175'],['age','IDADE','ex: 25']].map(([k,lb,ph])=>(
             <div key={k}><label style={S.label}>{lb}</label><input style={S.input} type="number" placeholder={ph} value={form[k]} onChange={set(k)}/></div>
@@ -354,19 +354,19 @@ function ProfilePage({userId,initialProfile,onSave,onBack}){
           <div style={{fontSize:12,fontWeight:700,color:'#4ade80',marginBottom:12,letterSpacing:.8}}>📊 SEU PLANO CALCULADO</div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:10}}>
             {[['🔥','TDEE',tdee+' kcal'],['🍽️','Meta',targets.kcal+' kcal'],['🥩','Proteína',targets.prot+'g'],['🫒','Gordura',targets.fat+'g'],['🍚','Carbs',targets.carbs+'g'],['⚖️','IMC',(+form.weight/(((+form.height)/100)**2)).toFixed(1)]].map(([ic,lb,vl])=>(
-              <div key={lb} style={{background:'#ffffff',borderRadius:10,padding:'10px 8px',textAlign:'center'}}>
+              <div key={lb} style={{background:'var(--surface)',borderRadius:10,padding:'10px 8px',textAlign:'center'}}>
                 <div style={{fontSize:20,marginBottom:4}}>{ic}</div>
-                <div style={{fontSize:14,fontWeight:800,color:'#1c1c1a'}}>{vl}</div>
-                <div style={{fontSize:9,color:'#8a887d',marginTop:2}}>{lb}</div>
+                <div style={{fontSize:14,fontWeight:800,color:'var(--text)'}}>{vl}</div>
+                <div style={{fontSize:9,color:'var(--muted)',marginTop:2}}>{lb}</div>
               </div>
             ))}
           </div>
-          <div style={{fontSize:11,color:'#8a887d',textAlign:'center'}}>Fórmula Mifflin-St Jeor · 30% proteína · 25% gordura · 45% carboidrato</div>
+          <div style={{fontSize:11,color:'var(--muted)',textAlign:'center'}}>Fórmula Mifflin-St Jeor · 30% proteína · 25% gordura · 45% carboidrato</div>
         </div>
       )}
       {done
         ?<div style={{...S.card,textAlign:'center',background:'rgba(34,197,94,0.1)'}}><div style={{fontSize:40,marginBottom:8}}>🎉</div><div style={{color:'#4ade80',fontWeight:700,fontSize:16}}>Plano gerado com sucesso!</div></div>
-        :<div style={{padding:'0 16px 16px'}}><button style={{...S.btn('#22c55e'),width:'100%',padding:14,fontSize:15,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'⏳ Gerando plano...':'✅ Salvar e Gerar Plano Semanal'}</button></div>
+        :<div style={{padding:'0 16px 16px'}}><button style={{...S.btn('var(--success)'),width:'100%',padding:14,fontSize:15,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'⏳ Gerando plano...':'✅ Salvar e Gerar Plano Semanal'}</button></div>
       }
     </div>
   );
@@ -386,36 +386,36 @@ function WorkoutModal({day,onSelect,onClose,profiles=[]}){
   }
   return(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:300,display:'flex',alignItems:'flex-end'}} onClick={onClose}>
-      <div style={{background:'#ffffff',borderRadius:'20px 20px 0 0',width:'100%',padding:20,maxHeight:'90vh',overflow:'hidden',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:'var(--surface)',borderRadius:'20px 20px 0 0',width:'100%',padding:20,maxHeight:'90vh',overflow:'hidden',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-          <div style={{fontSize:16,fontWeight:800,color:'#1c1c1a'}}>🔄 Editar Treino — {day.fullName}</div>
-          <button style={S.btn('#ef4444')} onClick={onClose}>✕</button>
+          <div style={{fontSize:16,fontWeight:800,color:'var(--text)'}}>🔄 Editar Treino — {day.fullName}</div>
+          <button style={S.btn('var(--danger)')} onClick={onClose}>✕</button>
         </div>
         {/* Perfis do usuário */}
         {profiles.length>0&&(
           <>
-            <div style={{fontSize:11,color:'#8a887d',fontWeight:700,marginBottom:8}}>MEUS TREINOS</div>
+            <div style={{fontSize:11,color:'var(--muted)',fontWeight:700,marginBottom:8}}>MEUS TREINOS</div>
             <div style={{overflowY:'auto',flex:1,display:'flex',flexDirection:'column',gap:8}}>
               {profiles.map((p,i)=>{
-                const color=WORKOUT_TYPES.find(w=>w.type===p.type)?.color||'#22c55e';
+                const color=WORKOUT_TYPES.find(w=>w.type===p.type)?.color||'var(--success)';
                 const isActive=day.typeLabel===p.typeLabel;
                 return(
                   <div key={i} onClick={()=>onSelect({type:p.type,color,typeLabel:p.typeLabel,exercises:p.exercises||''})}
                     style={{padding:'12px 14px',borderRadius:12,cursor:'pointer',border:'1px solid',
-                      ...(isActive?{background:color+'18',borderColor:color}:{background:'#ffffff',borderColor:'#ffffff'})}}>
+                      ...(isActive?{background:color+'18',borderColor:color}:{background:'var(--surface)',borderColor:'var(--surface)'})}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                      <div style={{fontSize:13,fontWeight:700,color:isActive?color:'#1c1c1a'}}>{p.typeLabel}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:isActive?color:'var(--text)'}}>{p.typeLabel}</div>
                       {isActive&&<span style={S.badge(color)}>✓ Ativo</span>}
                     </div>
-                    {p.exercises&&<div style={{fontSize:11,color:'#8a887d',lineHeight:1.6,whiteSpace:'pre-line',marginTop:4}}>{p.exercises}</div>}
+                    {p.exercises&&<div style={{fontSize:11,color:'var(--muted)',lineHeight:1.6,whiteSpace:'pre-line',marginTop:4}}>{p.exercises}</div>}
                   </div>
                 );
               })}
               {/* Opção descanso */}
-              <div onClick={()=>onSelect({type:'rest',color:'#8a887d',typeLabel:'Descanso',exercises:'Nenhum treino – foco em sono e recuperação'})}
+              <div onClick={()=>onSelect({type:'rest',color:'var(--muted)',typeLabel:'Descanso',exercises:'Nenhum treino – foco em sono e recuperação'})}
                 style={{padding:'12px 14px',borderRadius:12,cursor:'pointer',border:'1px solid',
-                  ...(day.type==='rest'?{background:'#8a887d18',borderColor:'#8a887d'}:{background:'#ffffff',borderColor:'#ffffff'})}}>
-                <div style={{fontSize:13,fontWeight:700,color:day.type==='rest'?'#6b6a63':'#1c1c1a'}}>😴 Descanso</div>
+                  ...(day.type==='rest'?{background:'var(--muted)18',borderColor:'var(--muted)'}:{background:'var(--surface)',borderColor:'var(--surface)'})}}>
+                <div style={{fontSize:13,fontWeight:700,color:day.type==='rest'?'var(--muted2)':'var(--text)'}}>😴 Descanso</div>
               </div>
             </div>
           </>
@@ -423,9 +423,9 @@ function WorkoutModal({day,onSelect,onClose,profiles=[]}){
         {profiles.length===0&&(
           <div style={{textAlign:'center',padding:'32px 0',flex:1}}>
             <div style={{fontSize:40,marginBottom:10}}>💪</div>
-            <div style={{color:'#1c1c1a',fontWeight:700,marginBottom:6}}>Nenhum treino criado</div>
-            <div style={{color:'#8a887d',fontSize:12,marginBottom:16}}>Crie seus treinos na aba 💪 Treinos para poder selecioná-los aqui.</div>
-            <button style={{...S.btn('#22c55e'),padding:'10px 20px'}} onClick={onClose}>Ir para Treinos</button>
+            <div style={{color:'var(--text)',fontWeight:700,marginBottom:6}}>Nenhum treino criado</div>
+            <div style={{color:'var(--muted)',fontSize:12,marginBottom:16}}>Crie seus treinos na aba 💪 Treinos para poder selecioná-los aqui.</div>
+            <button style={{...S.btn('var(--success)'),padding:'10px 20px'}} onClick={onClose}>Ir para Treinos</button>
           </div>
         )}
       </div>
@@ -439,22 +439,22 @@ function FoodModal({onSelect,onClose}){
   const results=useMemo(()=>searchTACO(q),[q]);
   return(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',zIndex:200,display:'flex',alignItems:'flex-end'}} onClick={onClose}>
-      <div style={{background:'#ffffff',borderRadius:'20px 20px 0 0',width:'100%',padding:20,maxHeight:'80vh',overflow:'hidden',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:'var(--surface)',borderRadius:'20px 20px 0 0',width:'100%',padding:20,maxHeight:'80vh',overflow:'hidden',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
         <div style={{display:'flex',gap:10,marginBottom:16}}>
           <input autoFocus style={S.input} placeholder="🔍 Buscar alimento TACO..." value={q} onChange={e=>setQ(e.target.value)}/>
-          <button style={S.btn('#ef4444')} onClick={onClose}>✕</button>
+          <button style={S.btn('var(--danger)')} onClick={onClose}>✕</button>
         </div>
         <div style={{overflowY:'auto',flex:1}}>
-          {q.length<2&&<div style={{color:'#8a887d',textAlign:'center',padding:20,fontSize:13}}>Digite 2+ letras para buscar</div>}
+          {q.length<2&&<div style={{color:'var(--muted)',textAlign:'center',padding:20,fontSize:13}}>Digite 2+ letras para buscar</div>}
           {results.map(t=>(
-            <div key={t.id} style={{padding:'10px 12px',borderRadius:10,cursor:'pointer',marginBottom:6,background:'#ffffff',border:'1px solid #ffffff'}} onClick={()=>onSelect(t)}>
-              <div style={{fontSize:13,color:'#1c1c1a',fontWeight:600,marginBottom:4}}>{t.n}</div>
+            <div key={t.id} style={{padding:'10px 12px',borderRadius:10,cursor:'pointer',marginBottom:6,background:'var(--surface)',border:'1px solid var(--surface)'}} onClick={()=>onSelect(t)}>
+              <div style={{fontSize:13,color:'var(--text)',fontWeight:600,marginBottom:4}}>{t.n}</div>
               <div style={{display:'flex',gap:6,fontSize:11}}>
                 <span style={S.badge('#f59e0b')}>{t.e} kcal</span>
-                <span style={S.badge('#3b82f6')}>P {t.p}g</span>
+                <span style={S.badge('var(--info)')}>P {t.p}g</span>
                 <span style={S.badge('#f97316')}>G {t.l}g</span>
                 <span style={S.badge('#a78bfa')}>C {t.cb}g</span>
-                <span style={{color:'#8a887d'}}>por 100g</span>
+                <span style={{color:'var(--muted)'}}>por 100g</span>
               </div>
             </div>
           ))}
@@ -470,41 +470,41 @@ function ShoppingList({items,onToggle,onRemove,onClear}){
   return(
     <div style={S.wrap}>
       <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'#1c1c1a'}}>🛒 Lista de Compras</div>
-        {done.length>0&&<button style={{...S.btn('#8a887d'),padding:'6px 12px',fontSize:12}} onClick={onClear}>Limpar comprados</button>}
+        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>🛒 Lista de Compras</div>
+        {done.length>0&&<button style={{...S.btn('var(--muted)'),padding:'6px 12px',fontSize:12}} onClick={onClear}>Limpar comprados</button>}
       </div>
 
       {items.length===0?(
         <div style={{padding:48,textAlign:'center'}}>
           <div style={{fontSize:56,marginBottom:16}}>🛒</div>
-          <div style={{fontSize:18,fontWeight:700,color:'#1c1c1a',marginBottom:8}}>Lista vazia</div>
-          <div style={{color:'#8a887d',fontSize:14}}>Toque em 🛒 ao lado de qualquer alimento no plano para adicioná-lo aqui.</div>
+          <div style={{fontSize:18,fontWeight:700,color:'var(--text)',marginBottom:8}}>Lista vazia</div>
+          <div style={{color:'var(--muted)',fontSize:14}}>Toque em 🛒 ao lado de qualquer alimento no plano para adicioná-lo aqui.</div>
         </div>
       ):(
         <>
           {pending.length>0&&(
             <div style={{...S.card,marginTop:16}}>
-              <div style={{fontSize:11,fontWeight:700,color:'#6b6a63',marginBottom:12,letterSpacing:.8}}>A COMPRAR ({pending.length})</div>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--muted2)',marginBottom:12,letterSpacing:.8}}>A COMPRAR ({pending.length})</div>
               {pending.map(item=>(
-                <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:'1px solid #ffffff'}}>
+                <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:'1px solid var(--surface)'}}>
                   <button onClick={()=>onToggle(item.id)} style={{width:22,height:22,borderRadius:6,border:'2px solid #22c55e',background:'transparent',cursor:'pointer',flexShrink:0}}/>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:14,color:'#1c1c1a',fontWeight:600}}>{item.name}</div>
-                    <div style={{fontSize:11,color:'#8a887d',marginTop:2}}>{item.qty}g · {item.kcal} kcal</div>
+                    <div style={{fontSize:14,color:'var(--text)',fontWeight:600}}>{item.name}</div>
+                    <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{item.qty}g · {item.kcal} kcal</div>
                   </div>
-                  <button onClick={()=>onRemove(item.id)} style={{background:'none',border:'none',color:'#8a887d',cursor:'pointer',fontSize:16,padding:'0 4px'}}>✕</button>
+                  <button onClick={()=>onRemove(item.id)} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:16,padding:'0 4px'}}>✕</button>
                 </div>
               ))}
             </div>
           )}
           {done.length>0&&(
             <div style={{...S.card,opacity:.6}}>
-              <div style={{fontSize:11,fontWeight:700,color:'#6b6a63',marginBottom:12,letterSpacing:.8}}>COMPRADO ({done.length})</div>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--muted2)',marginBottom:12,letterSpacing:.8}}>COMPRADO ({done.length})</div>
               {done.map(item=>(
-                <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #ffffff'}}>
+                <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid var(--surface)'}}>
                   <button onClick={()=>onToggle(item.id)} style={{width:22,height:22,borderRadius:6,border:'2px solid #22c55e',background:'#22c55e22',cursor:'pointer',flexShrink:0,fontSize:13}}>✓</button>
-                  <div style={{flex:1,textDecoration:'line-through',color:'#8a887d',fontSize:13}}>{item.name}</div>
-                  <button onClick={()=>onRemove(item.id)} style={{background:'none',border:'none',color:'#8a887d',cursor:'pointer',fontSize:16,padding:'0 4px'}}>✕</button>
+                  <div style={{flex:1,textDecoration:'line-through',color:'var(--muted)',fontSize:13}}>{item.name}</div>
+                  <button onClick={()=>onRemove(item.id)} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:16,padding:'0 4px'}}>✕</button>
                 </div>
               ))}
             </div>
@@ -527,13 +527,13 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
     const set=k=>e=>setForm(f=>({...f,[k]:e.target.value}));
     const group=WORKOUT_TYPES.find(w=>w.type===form.type)||WORKOUT_TYPES[0];
     return(
-      <div style={{background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:16,padding:16,marginBottom:12}}>
+      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:12}}>
         <div style={{marginBottom:10}}>
           <label style={S.label}>🏷️ TIPO</label>
           <div style={{display:'flex',gap:8}}>
             {WORKOUT_TYPES.map(wt=>(
               <button key={wt.type} onClick={()=>setForm(f=>({...f,type:wt.type}))} style={{flex:1,padding:'8px 0',borderRadius:10,border:'1px solid',cursor:'pointer',fontSize:18,
-                ...(form.type===wt.type?{background:wt.color+'22',borderColor:wt.color}:{background:'#ffffff',borderColor:'#e4ddd0'})}}>
+                ...(form.type===wt.type?{background:wt.color+'22',borderColor:wt.color}:{background:'var(--surface)',borderColor:'var(--border)'})}}>
                 {wt.icon}
               </button>
             ))}
@@ -547,11 +547,11 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
           <label style={S.label}>💪 EXERCÍCIOS E SÉRIES</label>
           <textarea style={{...S.input,minHeight:130,resize:'vertical',lineHeight:1.8}} value={form.exercises} onChange={set('exercises')}
             placeholder={"Supino reto 4×8\nSupino inclinado 3×10\nCrucifixo 3×12\nTríceps polia 4×10\nTríceps francês 3×10"}/>
-          <div style={{fontSize:11,color:'#8a887d',marginTop:4}}>Um exercício por linha</div>
+          <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>Um exercício por linha</div>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <button style={{...S.btn('#22c55e'),flex:1,padding:11}} onClick={()=>{if(!form.typeLabel.trim())return;onSave({...form,color:WORKOUT_TYPES.find(w=>w.type===form.type)?.color||'#22c55e'});onDone();}}>✅ Salvar</button>
-          <button style={{...S.btn('#8a887d'),padding:11}} onClick={onDone}>Cancelar</button>
+          <button style={{...S.btn('var(--success)'),flex:1,padding:11}} onClick={()=>{if(!form.typeLabel.trim())return;onSave({...form,color:WORKOUT_TYPES.find(w=>w.type===form.type)?.color||'var(--success)'});onDone();}}>✅ Salvar</button>
+          <button style={{...S.btn('var(--muted)'),padding:11}} onClick={onDone}>Cancelar</button>
         </div>
       </div>
     );
@@ -562,18 +562,18 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
   return(
     <div style={S.wrap}>
       <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'#1c1c1a'}}>💪 Meus Treinos</div>
-        <button style={{...S.btn('#22c55e'),padding:'7px 14px',fontSize:13}} onClick={()=>setShowNew(true)}>+ Novo</button>
+        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>💪 Meus Treinos</div>
+        <button style={{...S.btn('var(--success)'),padding:'7px 14px',fontSize:13}} onClick={()=>setShowNew(true)}>+ Novo</button>
       </div>
 
       <div style={{padding:'16px 16px 100px'}}>
-        <div style={{background:'#eef2e7',border:'1px solid #e4ddd0',borderRadius:14,padding:'12px 14px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
+        <div style={{background:'var(--accent-soft)',border:'1px solid var(--border)',borderRadius:14,padding:'12px 14px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
           <div>
-            <div style={{fontSize:13,fontWeight:800,color:'#1c1c1a'}}>🎯 Meta de treinos por semana</div>
-            <div style={{fontSize:11,color:'#6b6a63',marginTop:2}}>Usada no marcador de Insights em Hábitos e Performance</div>
+            <div style={{fontSize:13,fontWeight:800,color:'var(--text)'}}>🎯 Meta de treinos por semana</div>
+            <div style={{fontSize:11,color:'var(--muted2)',marginTop:2}}>Usada no marcador de Insights em Hábitos e Performance</div>
           </div>
           <input type="number" min="1" max="14" value={workoutGoal} onChange={e=>setWorkoutGoal(Math.max(1,parseInt(e.target.value,10)||1))}
-            style={{width:56,textAlign:'center',border:'1px solid #e4ddd0',borderRadius:8,padding:'6px 4px',fontSize:14,fontWeight:800}}/>
+            style={{width:56,textAlign:'center',border:'1px solid var(--border)',borderRadius:8,padding:'6px 4px',fontSize:14,fontWeight:800}}/>
         </div>
 
         {showNew&&<EditForm initial={null} onDone={()=>setShowNew(false)}/>}
@@ -581,41 +581,41 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
         {profiles.length===0&&!showNew&&(
           <div style={{textAlign:'center',padding:'48px 0'}}>
             <div style={{fontSize:56,marginBottom:12}}>💪</div>
-            <div style={{fontSize:16,fontWeight:700,color:'#1c1c1a',marginBottom:8}}>Nenhum perfil criado</div>
-            <div style={{color:'#8a887d',fontSize:13,marginBottom:24}}>Crie perfis de treino e aplique a qualquer dia da semana.</div>
-            <button style={{...S.btn('#22c55e'),padding:'12px 28px'}} onClick={()=>setShowNew(true)}>+ Criar primeiro treino</button>
+            <div style={{fontSize:16,fontWeight:700,color:'var(--text)',marginBottom:8}}>Nenhum perfil criado</div>
+            <div style={{color:'var(--muted)',fontSize:13,marginBottom:24}}>Crie perfis de treino e aplique a qualquer dia da semana.</div>
+            <button style={{...S.btn('var(--success)'),padding:'12px 28px'}} onClick={()=>setShowNew(true)}>+ Criar primeiro treino</button>
           </div>
         )}
 
         {profiles.map(p=>{
-          const color=WORKOUT_TYPES.find(w=>w.type===p.type)?.color||'#22c55e';
+          const color=WORKOUT_TYPES.find(w=>w.type===p.type)?.color||'var(--success)';
           if(editing?.id===p.id) return <EditForm key={p.id} initial={p} onDone={()=>setEditing(null)}/>;
           return(
-            <div key={p.id} style={{background:'#ffffff',border:`1px solid ${color}33`,borderRadius:16,padding:16,marginBottom:12}}>
+            <div key={p.id} style={{background:'var(--surface)',border:`1px solid ${color}33`,borderRadius:16,padding:16,marginBottom:12}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
                 <div>
                   <div style={{fontSize:15,fontWeight:800,color:color}}>{p.typeLabel}</div>
-                  <div style={{fontSize:11,color:'#8a887d',marginTop:2}}>{WORKOUT_TYPES.find(w=>w.type===p.type)?.label}</div>
+                  <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{WORKOUT_TYPES.find(w=>w.type===p.type)?.label}</div>
                 </div>
                 <div style={{display:'flex',gap:6}}>
-                  <button style={{...S.btn('#7f9770'),padding:'5px 10px',fontSize:12}} onClick={()=>setEditing(p)}>✏️</button>
+                  <button style={{...S.btn('var(--accent)'),padding:'5px 10px',fontSize:12}} onClick={()=>setEditing(p)}>✏️</button>
                   <button style={{...S.btn('#3f1515'),padding:'5px 10px',fontSize:12}} onClick={()=>onDelete(p.id)}>🗑️</button>
                 </div>
               </div>
               {p.exercises&&(
-                <div style={{fontSize:12,color:'#6b6a63',lineHeight:1.8,whiteSpace:'pre-line',marginBottom:10,padding:'8px 10px',background:'rgba(0,0,0,0.2)',borderRadius:8}}>
+                <div style={{fontSize:12,color:'var(--muted2)',lineHeight:1.8,whiteSpace:'pre-line',marginBottom:10,padding:'8px 10px',background:'rgba(0,0,0,0.2)',borderRadius:8}}>
                   {p.exercises}
                 </div>
               )}
 
-              <div style={{fontSize:10,fontWeight:800,color:'#8a887d',marginBottom:6,textTransform:'uppercase'}}>Aplicar em quais dias?</div>
+              <div style={{fontSize:10,fontWeight:800,color:'var(--muted)',marginBottom:6,textTransform:'uppercase'}}>Aplicar em quais dias?</div>
               <div style={{display:'flex',gap:4}}>
                 {DAYS_SHORT.map((d,di)=>{
                   const isUsing=plan[di]?.typeLabel===p.typeLabel;
                   return(
                     <button key={di} onClick={()=>onApplyToDay(p.id,di,isUsing)}
-                      style={{flex:1,padding:'6px 0',borderRadius:8,border:`1px solid ${isUsing?color:'#e4ddd0'}`,
-                        background:isUsing?color:'#ffffff',color:isUsing?'#ffffff':'#6b6a63',
+                      style={{flex:1,padding:'6px 0',borderRadius:8,border:`1px solid ${isUsing?color:'var(--border)'}`,
+                        background:isUsing?color:'var(--surface)',color:isUsing?'var(--surface)':'var(--muted2)',
                         fontSize:11,fontWeight:800,cursor:'pointer'}}>
                       {d}
                     </button>
@@ -629,13 +629,13 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
       </div>
 
       <nav style={{...S.nav,justifyContent:'center',alignItems:'center',gap:14,padding:'10px 0',boxShadow:'0 -2px 10px rgba(0,0,0,0.05)'}}>
-        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}>
+        <button style={{flex:'0 0 auto',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}>
           <span style={{fontSize:22}}>🏠</span>
-          <span style={{fontSize:11,fontWeight:800,color:'#3f6b2f'}}>Início</span>
+          <span style={{fontSize:11,fontWeight:800,color:'var(--accent-dark)'}}>Início</span>
         </button>
-        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}>
+        <button style={{flex:'0 0 auto',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}>
           <span style={{fontSize:22}}>🚪</span>
-          <span style={{fontSize:11,fontWeight:800,color:'#8a887d'}}>Sair</span>
+          <span style={{fontSize:11,fontWeight:800,color:'var(--muted)'}}>Sair</span>
         </button>
       </nav>
     </div>
@@ -882,19 +882,19 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
 
   // ── early returns (after all hooks)
   if(!plan) return(
-    <div style={{minHeight:'100vh',background:'#efe8dd',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{textAlign:'center'}}><div style={{fontSize:48,marginBottom:12}}>💪</div><div style={{color:'#8a887d'}}>Carregando...</div></div>
+    <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{textAlign:'center'}}><div style={{fontSize:48,marginBottom:12}}>💪</div><div style={{color:'var(--muted)'}}>Carregando...</div></div>
     </div>
   );
   if(!plan.length) return(
     <div style={S.wrap}>
-      <div style={S.header}><div style={{fontSize:18,fontWeight:800,color:'#1c1c1a'}}>💪 LifePlan</div><button style={{background:'none',border:'1px solid #e4ddd0',borderRadius:8,color:'#6b6a63',padding:'6px 12px',fontSize:12,cursor:'pointer'}} onClick={onLogout}>Sair</button></div>
-      <div style={{padding:32,textAlign:'center'}}><div style={{fontSize:64,marginBottom:16}}>👤</div><div style={{fontSize:20,fontWeight:800,color:'#1c1c1a',marginBottom:8}}>Configure seu perfil</div><div style={{color:'#8a887d',fontSize:14,marginBottom:28}}>Informe seus dados para gerar um plano alimentar personalizado</div><button style={{...S.btn('#22c55e'),padding:'14px 32px',fontSize:15}} onClick={onOpenProfile}>🎯 Configurar Perfil</button></div>
+      <div style={S.header}><div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>💪 LifePlan</div><button style={{background:'none',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'6px 12px',fontSize:12,cursor:'pointer'}} onClick={onLogout}>Sair</button></div>
+      <div style={{padding:32,textAlign:'center'}}><div style={{fontSize:64,marginBottom:16}}>👤</div><div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:8}}>Configure seu perfil</div><div style={{color:'var(--muted)',fontSize:14,marginBottom:28}}>Informe seus dados para gerar um plano alimentar personalizado</div><button style={{...S.btn('var(--success)'),padding:'14px 32px',fontSize:15}} onClick={onOpenProfile}>🎯 Configurar Perfil</button></div>
     </div>
   );
 
   const day=plan[dayIdx];
-  const tc={strength:'#22c55e',cardio:'#3b82f6',rest:'#8a887d'}[day?.type]||'#8a887d';
+  const tc={strength:'var(--success)',cardio:'var(--info)',rest:'var(--muted)'}[day?.type]||'var(--muted)';
 
   // ── render aba treinos
   if(tab==='workout') return(
@@ -946,10 +946,10 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
     <div style={S.wrap}>
       {/* Header */}
       <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'#1c1c1a'}}>💪 LifePlan</div>
+        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>💪 LifePlan</div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          {saveMsg&&<span style={{fontSize:11,color:saveMsg.startsWith('✅')?'#4ade80':'#ef4444'}}>{saveMsg}</span>}
-          {saving&&<span style={{fontSize:11,color:'#6b6a63'}}>💾</span>}
+          {saveMsg&&<span style={{fontSize:11,color:saveMsg.startsWith('✅')?'#4ade80':'var(--danger)'}}>{saveMsg}</span>}
+          {saving&&<span style={{fontSize:11,color:'var(--muted2)'}}>💾</span>}
         </div>
       </div>
 
@@ -957,7 +957,7 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
       <div style={{display:'flex',overflowX:'auto',gap:8,padding:'16px 20px',scrollbarWidth:'none'}}>
         {plan.map((d,i)=>(
           <button key={d.id} onClick={()=>setDayIdx(i)} style={{flexShrink:0,padding:'8px 14px',borderRadius:12,border:'1px solid',cursor:'pointer',fontSize:12,fontWeight:700,
-            ...(i===dayIdx?{background:d.type==='rest'?'#8a887d33':d.type==='cardio'?'#dbeafe':'#1a2e1a',borderColor:d.type==='rest'?'#8a887d':d.type==='cardio'?'#3b82f6':'#22c55e',color:d.type==='rest'?'#6b6a63':d.type==='cardio'?'#60a5fa':'#4ade80'}:{background:'#ffffff',borderColor:'#e4ddd0',color:'#8a887d'})
+            ...(i===dayIdx?{background:d.type==='rest'?'var(--muted)33':d.type==='cardio'?'#dbeafe':'#1a2e1a',borderColor:d.type==='rest'?'var(--muted)':d.type==='cardio'?'var(--info)':'var(--success)',color:d.type==='rest'?'var(--muted2)':d.type==='cardio'?'#60a5fa':'#4ade80'}:{background:'var(--surface)',borderColor:'var(--border)',color:'var(--muted)'})
           }}>
             <div>{d.short}</div>
             {(d.type==='rest'||workoutProfiles.some(p=>p.typeLabel===d.typeLabel))&&<div style={{fontSize:9,marginTop:2,opacity:.7}}>{d.typeLabel.split('–')[0].trim()}</div>}
@@ -969,26 +969,26 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
       <div style={{...S.card,background:`linear-gradient(135deg,${tc}18,${tc}08)`,border:`1px solid ${tc}33`}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
           <div>
-            <div style={{fontSize:18,fontWeight:800,color:'#1c1c1a'}}>{day.fullName}</div>
+            <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>{day.fullName}</div>
             <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
               {(day.type==='rest'||workoutProfiles.some(p=>p.typeLabel===day.typeLabel))&&<div style={{fontSize:13,color:tc,fontWeight:700}}>{day.typeLabel}</div>}
               {/* Botão troca treino */}
-              <button onClick={()=>setShowWorkout(true)} style={{background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:8,color:'#6b6a63',padding:'2px 8px',fontSize:11,cursor:'pointer',fontWeight:600}}>🔄 Treino</button>
-              <button onClick={()=>setShowMealCount(true)} style={{background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:8,color:'#6b6a63',padding:'2px 8px',fontSize:11,cursor:'pointer',fontWeight:600}}>🍽️ Refeições</button>
+              <button onClick={()=>setShowWorkout(true)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'2px 8px',fontSize:11,cursor:'pointer',fontWeight:600}}>🔄 Treino</button>
+              <button onClick={()=>setShowMealCount(true)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'2px 8px',fontSize:11,cursor:'pointer',fontWeight:600}}>🍽️ Refeições</button>
             </div>
-            {day.exercises&&(day.type==='rest'||workoutProfiles.some(p=>p.typeLabel===day.typeLabel))&&<div style={{fontSize:12,color:'#6b6a63',marginTop:6,lineHeight:1.7,whiteSpace:'pre-line'}}>{day.exercises.replace(/·/g,'\n')}</div>}
+            {day.exercises&&(day.type==='rest'||workoutProfiles.some(p=>p.typeLabel===day.typeLabel))&&<div style={{fontSize:12,color:'var(--muted2)',marginTop:6,lineHeight:1.7,whiteSpace:'pre-line'}}>{day.exercises.replace(/·/g,'\n')}</div>}
           </div>
           <div style={{textAlign:'right'}}>
             <div style={{fontSize:20,fontWeight:900,color:tc}}>{dayTotals.kcal}</div>
-            <div style={{fontSize:10,color:'#8a887d',fontWeight:600}}>kcal totais</div>
+            <div style={{fontSize:10,color:'var(--muted)',fontWeight:600}}>kcal totais</div>
           </div>
         </div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-          {[['🥩',dayTotals.p+'g','proteína','#3b82f6'],['🫒',dayTotals.l+'g','gordura','#f97316'],['🍚',dayTotals.cb+'g','carbs','#a78bfa'],['🔥',day.burned+'kcal','queimado','#ef4444']].map(([ic,v,l,c])=>(
+          {[['🥩',dayTotals.p+'g','proteína','var(--info)'],['🫒',dayTotals.l+'g','gordura','#f97316'],['🍚',dayTotals.cb+'g','carbs','#a78bfa'],['🔥',day.burned+'kcal','queimado','var(--danger)']].map(([ic,v,l,c])=>(
             <div key={l} style={{background:c+'18',border:`1px solid ${c}33`,borderRadius:10,padding:'8px 12px',flex:1,minWidth:60,textAlign:'center'}}>
               <div style={{fontSize:14}}>{ic}</div>
               <div style={{fontSize:13,fontWeight:800,color:c}}>{v}</div>
-              <div style={{fontSize:9,color:'#8a887d',fontWeight:600}}>{l}</div>
+              <div style={{fontSize:9,color:'var(--muted)',fontWeight:600}}>{l}</div>
             </div>
           ))}
         </div>
@@ -1005,12 +1005,12 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
                 {editMeal?.mi===mi&&editMeal?.field==='name'
                   ?<input autoFocus style={{...S.input,padding:'4px 8px',fontSize:14,fontWeight:700,marginBottom:2}} value={meal.name}
                       onChange={e=>updateMeal(mi,'name',e.target.value)} onBlur={()=>setEditMeal(null)} onKeyDown={e=>e.key==='Enter'&&setEditMeal(null)}/>
-                  :<div style={{fontSize:14,fontWeight:700,color:'#1c1c1a',cursor:'pointer'}} onClick={()=>setEditMeal({mi,field:'name'})} title="Clique para editar">{meal.name} <span style={{fontSize:10,color:'#8a887d'}}>✏️</span></div>
+                  :<div style={{fontSize:14,fontWeight:700,color:'var(--text)',cursor:'pointer'}} onClick={()=>setEditMeal({mi,field:'name'})} title="Clique para editar">{meal.name} <span style={{fontSize:10,color:'var(--muted)'}}>✏️</span></div>
                 }
                 {editMeal?.mi===mi&&editMeal?.field==='time'
                   ?<input autoFocus style={{...S.input,padding:'2px 6px',fontSize:11,width:80,marginTop:2}} type="time" value={meal.time}
                       onChange={e=>updateMeal(mi,'time',e.target.value)} onBlur={()=>setEditMeal(null)}/>
-                  :<div style={{fontSize:11,color:'#8a887d',fontWeight:600,cursor:'pointer',marginTop:2}} onClick={()=>setEditMeal({mi,field:'time'})} title="Clique para editar">{meal.time} <span style={{fontSize:9}}>✏️</span></div>
+                  :<div style={{fontSize:11,color:'var(--muted)',fontWeight:600,cursor:'pointer',marginTop:2}} onClick={()=>setEditMeal({mi,field:'time'})} title="Clique para editar">{meal.time} <span style={{fontSize:9}}>✏️</span></div>
                 }
               </div>
               <span style={S.badge('#f59e0b')}>{mt.kcal} kcal</span>
@@ -1018,25 +1018,25 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
             {meal.foods.map(food=>{
               const inCart=shopping.some(i=>i.name===food.name&&!i.checked);
               return(
-                <div key={food.id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid #ffffff'}}>
+                <div key={food.id} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid var(--surface)'}}>
                   {editFood===food.id
                     ?<input style={{...S.input,width:70,padding:'4px 8px',fontSize:12}} type="number" value={food.qty} onChange={e=>updateQty(mi,food.id,+e.target.value)} onBlur={()=>setEditFood(null)} autoFocus/>
-                    :<span style={{fontSize:11,color:'#3b82f6',fontWeight:700,cursor:'pointer',minWidth:40}} onClick={()=>setEditFood(food.id)}>{food.qty}g</span>
+                    :<span style={{fontSize:11,color:'var(--info)',fontWeight:700,cursor:'pointer',minWidth:40}} onClick={()=>setEditFood(food.id)}>{food.qty}g</span>
                   }
                   <span style={{flex:1,fontSize:13,color:'#cbd5e1'}}>{food.name}</span>
                   <div style={{display:'flex',gap:4,alignItems:'center'}}>
                     <div style={{display:'flex',gap:3,fontSize:10}}>
                       <span style={S.badge('#f59e0b')}>{food.kcal}</span>
-                      <span style={S.badge('#3b82f6')}>P{food.p}</span>
+                      <span style={S.badge('var(--info)')}>P{food.p}</span>
                       <span style={S.badge('#f97316')}>G{food.l}</span>
                       <span style={S.badge('#a78bfa')}>C{food.cb}</span>
                     </div>
                     {/* Botão carrinho */}
                     <button onClick={()=>addToCart(food)} title="Adicionar à lista de compras"
-                      style={{background:inCart?'rgba(34,197,94,0.15)':'#ffffff',border:`1px solid ${inCart?'#22c55e':'#e4ddd0'}`,borderRadius:7,color:inCart?'#4ade80':'#8a887d',cursor:'pointer',fontSize:14,padding:'3px 6px',lineHeight:1}}>
+                      style={{background:inCart?'rgba(34,197,94,0.15)':'var(--surface)',border:`1px solid ${inCart?'var(--success)':'var(--border)'}`,borderRadius:7,color:inCart?'#4ade80':'var(--muted)',cursor:'pointer',fontSize:14,padding:'3px 6px',lineHeight:1}}>
                       🛒
                     </button>
-                    <button style={{background:'none',border:'none',color:'#8a887d',cursor:'pointer',fontSize:14,padding:'0 2px'}} onClick={()=>removeFood(mi,food.id)}>✕</button>
+                    <button style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:14,padding:'0 2px'}} onClick={()=>removeFood(mi,food.id)}>✕</button>
                   </div>
                 </div>
               );
@@ -1052,39 +1052,39 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
 
       {/* Bottom nav */}
       <nav style={{...S.nav,justifyContent:'center',alignItems:'center',gap:14,padding:'10px 0',boxShadow:'0 -2px 10px rgba(0,0,0,0.05)'}}>
-        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}>
+        <button style={{flex:'0 0 auto',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}>
           <span style={{fontSize:22}}>🏠</span>
-          <span style={{fontSize:11,fontWeight:800,color:'#3f6b2f'}}>Início</span>
+          <span style={{fontSize:11,fontWeight:800,color:'var(--accent-dark)'}}>Início</span>
         </button>
-        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}>
+        <button style={{flex:'0 0 auto',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}>
           <span style={{fontSize:22}}>🚪</span>
-          <span style={{fontSize:11,fontWeight:800,color:'#8a887d'}}>Sair</span>
+          <span style={{fontSize:11,fontWeight:800,color:'var(--muted)'}}>Sair</span>
         </button>
       </nav>
 
       {showSearch!==null&&<FoodModal onSelect={t=>addFood(showSearch,t)} onClose={()=>setShowSearch(null)}/>}
       {showMealCount&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:300,display:'flex',alignItems:'flex-end'}} onClick={()=>setShowMealCount(false)}>
-          <div style={{background:'#ffffff',borderRadius:'20px 20px 0 0',width:'100%',padding:24}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:'var(--surface)',borderRadius:'20px 20px 0 0',width:'100%',padding:24}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-              <div style={{fontSize:16,fontWeight:800,color:'#1c1c1a'}}>🍽️ Dividir Refeições — {day.fullName}</div>
-              <button style={S.btn('#ef4444')} onClick={()=>setShowMealCount(false)}>✕</button>
+              <div style={{fontSize:16,fontWeight:800,color:'var(--text)'}}>🍽️ Dividir Refeições — {day.fullName}</div>
+              <button style={S.btn('var(--danger)')} onClick={()=>setShowMealCount(false)}>✕</button>
             </div>
-            <div style={{fontSize:12,color:'#8a887d',marginBottom:16}}>Escolha em quantas refeições distribuir os macros do dia. Os alimentos serão redistribuídos automaticamente.</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Escolha em quantas refeições distribuir os macros do dia. Os alimentos serão redistribuídos automaticamente.</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10}}>
               {[2,3,4,5,6].map(n=>{
                 const active=day.meals.length===n;
                 return(
                   <button key={n} onClick={()=>redistributeMeals(n)}
                     style={{padding:'16px 0',borderRadius:12,border:'1px solid',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:6,
-                      ...(active?{background:'#22c55e22',borderColor:'#22c55e',color:'#4ade80'}:{background:'#ffffff',borderColor:'#e4ddd0',color:'#6b6a63'})}}>
+                      ...(active?{background:'#22c55e22',borderColor:'var(--success)',color:'#4ade80'}:{background:'var(--surface)',borderColor:'var(--border)',color:'var(--muted2)'})}}>
                     <span style={{fontSize:24,fontWeight:900}}>{n}</span>
                     <span style={{fontSize:10,fontWeight:700}}>{active?'✓ Atual':'refeições'}</span>
                   </button>
                 );
               })}
             </div>
-            <div style={{marginTop:16,fontSize:11,color:'#8a887d',textAlign:'center'}}>* Apenas o dia atual será alterado</div>
+            <div style={{marginTop:16,fontSize:11,color:'var(--muted)',textAlign:'center'}}>* Apenas o dia atual será alterado</div>
           </div>
         </div>
       )}
@@ -1569,7 +1569,7 @@ function WeatherIcon({code,isDay,iconUri,size=56}){
 
   const day=isDay===1||isDay===undefined;
   const sunGrad=<defs><radialGradient id="sunG" cx="35%" cy="30%" r="75%"><stop offset="0%" stopColor="#ffe98a"/><stop offset="100%" stopColor="#ffb703"/></radialGradient>
-    <linearGradient id="cloudG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffffff"/><stop offset="100%" stopColor="#dfe6ee"/></linearGradient>
+    <linearGradient id="cloudG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--surface)"/><stop offset="100%" stopColor="#dfe6ee"/></linearGradient>
     <linearGradient id="moonG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#8bb8ff"/><stop offset="100%" stopColor="#3d63c9"/></linearGradient>
     <linearGradient id="darkCloudG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c3ccd6"/><stop offset="100%" stopColor="#9aa5b3"/></linearGradient></defs>;
 
@@ -1770,10 +1770,22 @@ function cfComputeEntradasTotal(state){
   });
   return total;
 }
+function cfComputeGastoCategoria(state,profileIdx,categoria){
+  let total=0;
+  (state.faturas||[]).forEach(f=>{
+    (f.rows||[]).forEach(r=>{
+      if(r.profileIdx===profileIdx && (r.category||'')===categoria) total+=parseFloat(r.value)||0;
+    });
+  });
+  return total;
+}
 function cfGetTableTotal(state,t){
   if(t.type==='entradas') return cfComputeEntradasTotal(state);
   if(t.type==='lancamentos') return 0;
-  if(t.type==='planejamento') return 0;
+  if(t.type==='planejamento'){
+    return (t.rows||[]).filter(r=>r.categoria&&r.profileIdx!=null)
+      .reduce((s,r)=>s+((parseFloat(r.valor)||0)-cfComputeGastoCategoria(state,r.profileIdx,r.categoria)),0);
+  }
   const numCols=(t.columns||[]).filter(c=>c.type==='number');
   if(!numCols.length) return 0;
   const valCol=numCols[0];
@@ -1843,18 +1855,18 @@ function FocusTimer(){
   function reset(){setRunning(false);clearInterval(intervalRef.current);setMethod(null);}
   function fmt(s){const m=Math.floor(s/60).toString().padStart(2,'0');const ss=(s%60).toString().padStart(2,'0');return `${m}:${ss}`;}
 
-  const cardStyle={margin:'18px 16px 0',background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:20,padding:18,boxShadow:'0 2px 12px rgba(0,0,0,0.05)'};
+  const cardStyle={margin:'18px 16px 0',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:18,boxShadow:'0 2px 12px rgba(0,0,0,0.05)'};
 
   if(!method) return(
     <div style={cardStyle}>
-      <div style={{fontSize:15,fontWeight:800,color:'#1c1c1a',marginBottom:4}}>⏱️ Timer de Foco</div>
-      <div style={{fontSize:12,color:'#6b6a63',marginBottom:14}}>Escolha um dos 3 métodos de estudo com mais respaldo científico:</div>
+      <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:4}}>⏱️ Timer de Foco</div>
+      <div style={{fontSize:12,color:'var(--muted2)',marginBottom:14}}>Escolha um dos 3 métodos de estudo com mais respaldo científico:</div>
       {STUDY_METHODS.map(m=>(
-        <button key={m.id} onClick={()=>chooseMethod(m)} style={{display:'flex',alignItems:'center',gap:12,width:'100%',textAlign:'left',background:'#faf7f0',border:'1px solid #e4ddd0',borderRadius:14,padding:'12px 14px',marginBottom:10,cursor:'pointer'}}>
+        <button key={m.id} onClick={()=>chooseMethod(m)} style={{display:'flex',alignItems:'center',gap:12,width:'100%',textAlign:'left',background:'#faf7f0',border:'1px solid var(--border)',borderRadius:14,padding:'12px 14px',marginBottom:10,cursor:'pointer'}}>
           <span style={{fontSize:26,flexShrink:0}}>{STUDY_METHOD_ICONS[m.id]}</span>
           <span>
-            <div style={{fontSize:14,fontWeight:800,color:'#3f6b2f'}}>{m.name}</div>
-            <div style={{fontSize:12,color:'#6b6a63',marginTop:3,lineHeight:1.5}}>{m.desc}</div>
+            <div style={{fontSize:14,fontWeight:800,color:'var(--accent-dark)'}}>{m.name}</div>
+            <div style={{fontSize:12,color:'var(--muted2)',marginTop:3,lineHeight:1.5}}>{m.desc}</div>
           </span>
         </button>
       ))}
@@ -1863,17 +1875,17 @@ function FocusTimer(){
 
   return(
     <div style={{...cardStyle,textAlign:'center'}}>
-      <div style={{fontSize:13,fontWeight:700,color:'#6b6a63',marginBottom:10}}>{STUDY_METHOD_ICONS[method.id]} {method.name} — {phase==='focus'?'🧠 Foco':'☕ Pausa'}{cycles>0?` · ciclo ${cycles+1}`:''}</div>
+      <div style={{fontSize:13,fontWeight:700,color:'var(--muted2)',marginBottom:10}}>{STUDY_METHOD_ICONS[method.id]} {method.name} — {phase==='focus'?'🧠 Foco':'☕ Pausa'}{cycles>0?` · ciclo ${cycles+1}`:''}</div>
       <div style={{
         width:170,height:170,margin:'0 auto 16px',borderRadius:'50%',
         background:phase==='focus'?'radial-gradient(circle,#eaf7ea 0%,#dff0dc 100%)':'radial-gradient(circle,#eaf3fb 0%,#dcebf8 100%)',
-        border:`3px solid ${phase==='focus'?'#7f9770':'#5b9bd5'}`,
+        border:`3px solid ${phase==='focus'?'var(--accent)':'#5b9bd5'}`,
         display:'flex',alignItems:'center',justifyContent:'center'
       }}>
-        <div style={{fontSize:38,fontWeight:900,color:phase==='focus'?'#3f6b2f':'#2a5db0',fontVariantNumeric:'tabular-nums'}}>{fmt(seconds)}</div>
+        <div style={{fontSize:38,fontWeight:900,color:phase==='focus'?'var(--accent-dark)':'#2a5db0',fontVariantNumeric:'tabular-nums'}}>{fmt(seconds)}</div>
       </div>
       <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
-        <button onClick={()=>setRunning(r=>!r)} style={{...S.btn(running?'#8a887d':'#22c55e'),padding:'10px 22px'}}>{running?'⏸ Pausar':'▶️ Retomar'}</button>
+        <button onClick={()=>setRunning(r=>!r)} style={{...S.btn(running?'var(--muted)':'var(--success)'),padding:'10px 22px'}}>{running?'⏸ Pausar':'▶️ Retomar'}</button>
         {method.id==='flowtime'&&phase==='focus'&&<button onClick={endFlowFocus} style={{...S.btn('#38bdf8'),padding:'10px 22px'}}>☕ Ir para pausa</button>}
         <button onClick={reset} style={{...S.btn('#3f1515'),padding:'10px 22px'}}>✕ Encerrar</button>
       </div>
@@ -1886,19 +1898,19 @@ function StudyTab({onHome,onOpenProfile,onLogout}){
   return(
     <div style={S.wrap}>
       <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'#1c1c1a'}}>📚 Estudos</div>
+        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>📚 Estudos</div>
       </div>
       <div style={{paddingBottom:100}}>
         <div style={{padding:'16px 16px 0'}}>
-          <div style={{borderRadius:16,overflow:'hidden',border:'1px solid #e4ddd0',height:'65vh',minHeight:460,background:'#ffffff'}}>
+          <div style={{borderRadius:16,overflow:'hidden',border:'1px solid var(--border)',height:'65vh',minHeight:460,background:'var(--surface)'}}>
             <iframe title="Estudos" src={`/estudos.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}`} style={{width:'100%',height:'100%',border:'none'}}/>
           </div>
         </div>
         <FocusTimer/>
       </div>
       <nav style={{...S.nav,justifyContent:'center',alignItems:'center',gap:14,padding:'10px 0',boxShadow:'0 -2px 10px rgba(0,0,0,0.05)'}}>
-        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}><span style={{fontSize:22}}>🏠</span><span style={{fontSize:11,fontWeight:800,color:'#3f6b2f'}}>Início</span></button>
-        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}><span style={{fontSize:22}}>🚪</span><span style={{fontSize:11,fontWeight:800,color:'#8a887d'}}>Sair</span></button>
+        <button style={{flex:'0 0 auto',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}><span style={{fontSize:22}}>🏠</span><span style={{fontSize:11,fontWeight:800,color:'var(--accent-dark)'}}>Início</span></button>
+        <button style={{flex:'0 0 auto',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}><span style={{fontSize:22}}>🚪</span><span style={{fontSize:11,fontWeight:800,color:'var(--muted)'}}>Sair</span></button>
       </nav>
     </div>
   );
@@ -1908,14 +1920,14 @@ function StudyTab({onHome,onOpenProfile,onLogout}){
 function FinanceTab({onHome,onOpenProfile,onLogout}){
   return(
     <div style={S.wrap}>
-      <div style={{padding:'10px 12px 100px'}}>
-        <div style={{borderRadius:16,overflow:'hidden',border:'1px solid #e4ddd0',height:'92vh',minHeight:640,background:'#ffffff'}}>
+      <div style={{padding:'10px 20px 100px',maxWidth:1600,margin:'0 auto'}}>
+        <div style={{borderRadius:16,overflow:'hidden',border:'1px solid var(--border)',height:'92vh',minHeight:640,background:'var(--surface)'}}>
           <iframe title="Finanças" src={`/controle-financeiro.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}`} style={{width:'100%',height:'100%',border:'none'}}/>
         </div>
       </div>
       <nav style={{...S.nav,justifyContent:'center',alignItems:'center',gap:14,padding:'10px 0',boxShadow:'0 -2px 10px rgba(0,0,0,0.05)'}}>
-        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}><span style={{fontSize:22}}>🏠</span><span style={{fontSize:11,fontWeight:800,color:'#3f6b2f'}}>Início</span></button>
-        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}><span style={{fontSize:22}}>🚪</span><span style={{fontSize:11,fontWeight:800,color:'#8a887d'}}>Sair</span></button>
+        <button style={{flex:'0 0 auto',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}><span style={{fontSize:22}}>🏠</span><span style={{fontSize:11,fontWeight:800,color:'var(--accent-dark)'}}>Início</span></button>
+        <button style={{flex:'0 0 auto',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}><span style={{fontSize:22}}>🚪</span><span style={{fontSize:11,fontWeight:800,color:'var(--muted)'}}>Sair</span></button>
       </nav>
     </div>
   );
@@ -1926,16 +1938,16 @@ function HabitsTab({onHome,onOpenProfile,onLogout}){
   return(
     <div style={S.wrap}>
       <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'#1c1c1a'}}>⚡ Hábitos e Performance</div>
+        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>⚡ Hábitos e Performance</div>
       </div>
       <div style={{padding:16,paddingBottom:100}}>
-        <div style={{borderRadius:16,overflow:'hidden',border:'1px solid #e4ddd0',height:'82vh',minHeight:600,background:'#ffffff'}}>
+        <div style={{borderRadius:16,overflow:'hidden',border:'1px solid var(--border)',height:'82vh',minHeight:600,background:'var(--surface)'}}>
           <iframe title="Hábitos e Performance" src={`/my-fit-era.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}&hideHeader=1`} style={{width:'100%',height:'100%',border:'none'}}/>
         </div>
       </div>
       <nav style={{...S.nav,justifyContent:'center',alignItems:'center',gap:14,padding:'10px 0',boxShadow:'0 -2px 10px rgba(0,0,0,0.05)'}}>
-        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}><span style={{fontSize:22}}>🏠</span><span style={{fontSize:11,fontWeight:800,color:'#3f6b2f'}}>Início</span></button>
-        <button style={{flex:'0 0 auto',background:'#f2efe4',border:'1px solid #e4ddd0',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}><span style={{fontSize:22}}>🚪</span><span style={{fontSize:11,fontWeight:800,color:'#8a887d'}}>Sair</span></button>
+        <button style={{flex:'0 0 auto',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onHome}><span style={{fontSize:22}}>🏠</span><span style={{fontSize:11,fontWeight:800,color:'var(--accent-dark)'}}>Início</span></button>
+        <button style={{flex:'0 0 auto',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:16,padding:'8px 26px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}} onClick={onLogout}><span style={{fontSize:22}}>🚪</span><span style={{fontSize:11,fontWeight:800,color:'var(--muted)'}}>Sair</span></button>
       </nav>
     </div>
   );
@@ -1967,7 +1979,7 @@ function TimetableScreen({onHome,userId}){
             </thead>
             <tbody>
               {data.rows.map((r,ri)=>(
-                <tr key={r.id} style={{background:ri%2===0?'#eef2e7':'#f5f1e9'}}>
+                <tr key={r.id} style={{background:ri%2===0?'var(--accent-soft)':'#f5f1e9'}}>
                   <td style={{padding:2,borderTop:`1px solid ${T.line}`}}>
                     <input value={r.label} onChange={e=>renameRow(r.id,e.target.value)}
                       style={{width:'100%',border:'none',background:'transparent',fontWeight:800,color:T.ink,fontSize:12,padding:'8px 6px',outline:'none',boxSizing:'border-box'}}
@@ -2011,9 +2023,9 @@ function TimetableScreen({onHome,userId}){
 
 // ── TEMA VISUAL DA TELA INICIAL (paleta creme/verde-sálvia, conforme mockup) ──
 const HOME_THEME={
-  page:'#efe8dd', card:'#ffffff', outerCard:'#ffffff',
-  pillBg:'#efe8dd', sage:'#b9c8ab', sageDark:'#7f9770',
-  ink:'#1c1c1a', muted:'#6b6a63', line:'#e4ddd0',
+  page:'var(--bg)', card:'var(--surface)', outerCard:'var(--surface)',
+  pillBg:'var(--bg)', sage:'var(--accent-light)', sageDark:'var(--accent)',
+  ink:'var(--text)', muted:'var(--muted2)', line:'var(--border)',
 };
 
 function FullDayName(short){
@@ -2043,10 +2055,10 @@ function FoodSlot({label,slot,setSlot,accent}){
           onChange={e=>{setQuery(e.target.value);setOpen(true);if(!e.target.value)setSlot(s=>({...s,food:null}));}}
           onFocus={()=>setOpen(true)}
           placeholder="Buscar alimento..."
-          style={{width:'100%',border:'1px solid #e4ddd0',borderRadius:8,padding:'7px 10px',fontSize:12,outline:'none',boxSizing:'border-box'}}
+          style={{width:'100%',border:'1px solid var(--border)',borderRadius:8,padding:'7px 10px',fontSize:12,outline:'none',boxSizing:'border-box'}}
         />
         {open&&results.length>0&&(
-          <div style={{position:'absolute',top:'100%',left:0,right:0,background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:8,marginTop:2,zIndex:20,maxHeight:180,overflowY:'auto',boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
+          <div style={{position:'absolute',top:'100%',left:0,right:0,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,marginTop:2,zIndex:20,maxHeight:180,overflowY:'auto',boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
             {results.map(r=>(
               <div key={r.id} onClick={()=>pick(r)} style={{padding:'8px 10px',fontSize:12,cursor:'pointer',borderBottom:'1px solid #f0ece2'}}>
                 {r.n}
@@ -2057,17 +2069,17 @@ function FoodSlot({label,slot,setSlot,accent}){
       </div>
       <div style={{display:'flex',gap:6,marginTop:8}}>
         <div style={{flex:1}}>
-          <div style={{fontSize:9,color:'#8a887d',fontWeight:700,marginBottom:2}}>QUANTIDADE (g)</div>
+          <div style={{fontSize:9,color:'var(--muted)',fontWeight:700,marginBottom:2}}>QUANTIDADE (g)</div>
           <div style={{display:'flex',gap:4}}>
             <input type="number" value={slot.qty} onChange={e=>setSlot(s=>({...s,qty:parseFloat(e.target.value)||0}))}
-              style={{width:'100%',border:'1px solid #e4ddd0',borderRadius:8,padding:'6px 8px',fontSize:12,outline:'none',boxSizing:'border-box'}}/>
+              style={{width:'100%',border:'1px solid var(--border)',borderRadius:8,padding:'6px 8px',fontSize:12,outline:'none',boxSizing:'border-box'}}/>
             <button onClick={()=>setSlot(s=>({...s,qty:1000}))} style={{fontSize:9,fontWeight:800,color:accent,background:'none',border:`1px solid ${accent}55`,borderRadius:8,padding:'0 6px',cursor:'pointer',whiteSpace:'nowrap'}}>1kg</button>
           </div>
         </div>
         <div style={{flex:1}}>
-          <div style={{fontSize:9,color:'#8a887d',fontWeight:700,marginBottom:2}}>PREÇO (R$)</div>
+          <div style={{fontSize:9,color:'var(--muted)',fontWeight:700,marginBottom:2}}>PREÇO (R$)</div>
           <input type="number" step="0.01" value={slot.price} onChange={e=>setSlot(s=>({...s,price:e.target.value}))}
-            placeholder="0,00" style={{width:'100%',border:'1px solid #e4ddd0',borderRadius:8,padding:'6px 8px',fontSize:12,outline:'none',boxSizing:'border-box'}}/>
+            placeholder="0,00" style={{width:'100%',border:'1px solid var(--border)',borderRadius:8,padding:'6px 8px',fontSize:12,outline:'none',boxSizing:'border-box'}}/>
         </div>
       </div>
     </div>
@@ -2109,16 +2121,16 @@ function FoodComparator(){
   }
 
   return(
-    <div style={{background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:20,padding:16,marginBottom:16,boxShadow:'0 2px 12px rgba(0,0,0,0.05)'}}>
-      <div style={{fontSize:15,fontWeight:800,color:'#1c1c1a',marginBottom:2}}>⚖️ Comparador de Alimentos</div>
-      <div style={{fontSize:11,color:'#6b6a63',marginBottom:12}}>Qual alimento vale mais a pena levar pra casa?</div>
+    <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:16,marginBottom:16,boxShadow:'0 2px 12px rgba(0,0,0,0.05)'}}>
+      <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:2}}>⚖️ Comparador de Alimentos</div>
+      <div style={{fontSize:11,color:'var(--muted2)',marginBottom:12}}>Qual alimento vale mais a pena levar pra casa?</div>
 
       <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}}>
         {COMPARATOR_PRIORITIES.map(pr=>(
           <button key={pr.id} onClick={()=>setPriority(pr.id)}
             style={{fontSize:10,fontWeight:800,padding:'6px 10px',borderRadius:20,cursor:'pointer',
-              background:priority===pr.id?'#7f9770':'#faf7f0',color:priority===pr.id?'#ffffff':'#6b6a63',
-              border:`1px solid ${priority===pr.id?'#7f9770':'#e4ddd0'}`}}>
+              background:priority===pr.id?'var(--accent)':'#faf7f0',color:priority===pr.id?'var(--surface)':'var(--muted2)',
+              border:`1px solid ${priority===pr.id?'var(--accent)':'var(--border)'}`}}>
             {pr.label}
           </button>
         ))}
@@ -2130,17 +2142,17 @@ function FoodComparator(){
       </div>
 
       {mA&&mB&&(
-        <div style={{marginTop:14,background:winner?'#eef2e7':'#faf7f0',border:`1px solid ${winner?'#7f9770':'#e4ddd0'}`,borderRadius:14,padding:'12px 14px'}}>
+        <div style={{marginTop:14,background:winner?'var(--accent-soft)':'#faf7f0',border:`1px solid ${winner?'var(--accent)':'var(--border)'}`,borderRadius:14,padding:'12px 14px'}}>
           {winner?(
-            <div style={{fontSize:13,fontWeight:800,color:'#3f6b2f',marginBottom:8}}>
+            <div style={{fontSize:13,fontWeight:800,color:'var(--accent-dark)',marginBottom:8}}>
               🏆 {winner==='A'?slotA.food.n:slotB.food.n} vale mais a pena ({p.label.replace(/^\S+\s/,'')})
             </div>
           ):(
-            <div style={{fontSize:13,fontWeight:800,color:'#6b6a63',marginBottom:8}}>Empate nesse critério</div>
+            <div style={{fontSize:13,fontWeight:800,color:'var(--muted2)',marginBottom:8}}>Empate nesse critério</div>
           )}
           <div style={{display:'flex',gap:10}}>
             {[['A',slotA,mA,'#38bdf8'],['B',slotB,mB,'#f59e0b']].map(([key,slot,m,accent])=>(
-              <div key={key} style={{flex:1,fontSize:11,color:'#1c1c1a',lineHeight:1.7,
+              <div key={key} style={{flex:1,fontSize:11,color:'var(--text)',lineHeight:1.7,
                 border:winner===key?`2px solid ${accent}`:'1px solid transparent',borderRadius:10,padding:'6px 8px'}}>
                 <div style={{fontWeight:800,color:accent,marginBottom:2}}>{slot.food.n}</div>
                 <div>💪 Proteína: {m.proteinPerReal.toFixed(1)}g / R$</div>
@@ -2242,7 +2254,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   },[]);
 
   return(
-    <div style={{minHeight:'100vh',background:T.page,fontFamily:'system-ui,sans-serif',padding:'20px 12px 100px'}}>
+    <div className="narrow-tab" style={{minHeight:'100vh',background:T.page,fontFamily:'system-ui,sans-serif',padding:'20px 12px 100px'}}>
       <div style={{maxWidth:720,margin:'0 auto',background:T.outerCard,borderRadius:28,padding:'26px 18px',boxShadow:'0 2px 18px rgba(0,0,0,0.06)'}}>
 
         {/* Logo + emojis animados */}
@@ -2268,7 +2280,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
               <div style={{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
                 <WeatherIcon code={weather.code} isDay={weather.isDay} iconUri={weather.iconUri} size={68}/>
                 <div style={{flex:'1 1 120px'}}>
-                  <div style={{fontSize:36,fontWeight:900,color:'#ffffff',lineHeight:1,textShadow:'0 2px 6px rgba(0,0,0,0.15)'}}>{weather.temp}°</div>
+                  <div style={{fontSize:36,fontWeight:900,color:'var(--surface)',lineHeight:1,textShadow:'0 2px 6px rgba(0,0,0,0.15)'}}>{weather.temp}°</div>
                   <div style={{fontSize:16,fontWeight:800,color:'rgba(255,255,255,0.95)',display:'flex',alignItems:'center',gap:4,marginTop:2}}>📍 {weather.city}</div>
                 </div>
                 <div style={{display:'flex',flexDirection:'column',gap:4,fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.9)'}}>
@@ -2279,17 +2291,17 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
 
               <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:12}}>
                 {weather.tempTrend&&(
-                  <div style={{fontSize:12,fontWeight:700,color:'#1c1c1a',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'var(--text)',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
                     {weather.tempTrend.rising?'📈':'📉'} A temperatura deve {weather.tempTrend.rising?'subir':'cair'} {Math.abs(weather.tempTrend.delta)}° nas próximas 2h
                   </div>
                 )}
                 {weather.rain&&(
-                  <div style={{fontSize:12,fontWeight:700,color:'#1c1c1a',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'var(--text)',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
                     ☔ {weather.rain.active?`Chovendo agora — leve um guarda-chuva! Previsão de parar às ${weather.rain.stops}`:`Vai chover às ${weather.rain.starts} — não esqueça o guarda-chuva! Deve parar por volta das ${weather.rain.stops}`}
                   </div>
                 )}
                 {uvInfo(weather.uvMax)&&weather.uvMax>=6&&(
-                  <div style={{fontSize:12,fontWeight:700,color:'#1c1c1a',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'var(--text)',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
                     🧴 UV {uvInfo(weather.uvMax).label.toLowerCase()} hoje (máx. {weather.uvMax}) — não esqueça o protetor solar!
                   </div>
                 )}
@@ -2319,7 +2331,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
               <div style={{textAlign:'center',fontSize:14,fontWeight:900,color:T.ink,marginBottom:6}}>{water.data.current}/{water.data.goal}ml</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
                 {[100,200,500,1000].map(v=>(
-                  <button key={v} onClick={()=>water.add(v)} style={{background:'#ffffff',border:'none',borderRadius:8,fontSize:10,fontWeight:800,color:T.ink,padding:'4px 0',cursor:'pointer'}}>+{v}</button>
+                  <button key={v} onClick={()=>water.add(v)} style={{background:'var(--surface)',border:'none',borderRadius:8,fontSize:10,fontWeight:800,color:T.ink,padding:'4px 0',cursor:'pointer'}}>+{v}</button>
                 ))}
               </div>
             </div>
@@ -2337,7 +2349,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
           {/* Compromissos da agenda */}
           <div style={{flex:'1 1 220px',background:T.pillBg,borderRadius:16,padding:'12px 16px'}}>
             <div style={{display:'flex',justifyContent:'center',marginBottom:8}}>
-              <div style={{background:'linear-gradient(135deg,#8faf7a 0%,#7f9770 100%)',color:'#ffffff',fontSize:11,fontWeight:800,padding:'6px 14px',borderRadius:20,boxShadow:'0 2px 6px rgba(127,151,112,0.35)',display:'flex',alignItems:'center',gap:5}}>
+              <div style={{background:'linear-gradient(135deg,#8faf7a 0%,var(--accent) 100%)',color:'var(--surface)',fontSize:11,fontWeight:800,padding:'6px 14px',borderRadius:20,boxShadow:'0 2px 6px rgba(127,151,112,0.35)',display:'flex',alignItems:'center',gap:5}}>
                 📅 COMPROMISSOS DA AGENDA
               </div>
             </div>
@@ -2378,8 +2390,8 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
               <span>{planPreview?.typeLabel||'—'}</span>
               <span onClick={e=>{e.stopPropagation();toggleWorkoutDone();}}
                 style={{fontSize:10,fontWeight:800,padding:'4px 8px',borderRadius:10,cursor:'pointer',
-                  background:workoutDoneToday?'#7f9770':'#ffffff',color:workoutDoneToday?'#ffffff':'#6b6a63',
-                  border:`1px solid ${workoutDoneToday?'#7f9770':'#e4ddd0'}`}}>
+                  background:workoutDoneToday?'var(--accent)':'var(--surface)',color:workoutDoneToday?'var(--surface)':'var(--muted2)',
+                  border:`1px solid ${workoutDoneToday?'var(--accent)':'var(--border)'}`}}>
                 {workoutDoneToday?'✅ Feito':'☐ Feito'}
               </span>
             </div>
@@ -2431,7 +2443,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
                   <tr><td colSpan={8} style={{padding:'18px 10px',textAlign:'center',color:T.muted,background:'#f5f1e9'}}>Nenhum horário cadastrado ainda — clique em "✏️ Editar" para montar sua grade.</td></tr>
                 )}
                 {timetableData.rows.map((r,ri)=>(
-                  <tr key={r.id} style={{background:ri%2===0?'#eef2e7':'#f5f1e9'}}>
+                  <tr key={r.id} style={{background:ri%2===0?'var(--accent-soft)':'#f5f1e9'}}>
                     <td style={{padding:'6px 6px',fontWeight:800,color:T.ink,borderTop:`1px solid ${T.line}`,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.label}</td>
                     {WEEK_DAYS.map(d=>(
                       <td key={d} style={{padding:'6px 4px',borderTop:`1px solid ${T.line}`,borderLeft:`1px solid ${T.line}`,color:T.ink,textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
@@ -2447,7 +2459,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
       </div>
 
       {/* Rodapé de navegação (tema claro, só desta tela) */}
-      <div style={{position:'fixed',bottom:0,left:0,right:0,background:'#ffffff',borderTop:`1px solid ${T.line}`,display:'flex',zIndex:100}}>
+      <div style={{position:'fixed',bottom:0,left:0,right:0,background:'var(--surface)',borderTop:`1px solid ${T.line}`,display:'flex',zIndex:100}}>
         <button style={{flex:1,background:'none',border:'none',padding:'12px 0 10px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:3,color:T.sageDark}} onClick={()=>onNavigate('home')}>
           <span style={{fontSize:20}}>🏠</span><span style={{fontSize:10,fontWeight:700}}>Início</span>
         </button>
@@ -2465,6 +2477,39 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
 // Telas que fazem sentido "retomar" depois de um F5 — nunca restauramos para
 // estados transitórios como loading/login/register/profile.
 const RESUMABLE_SCREENS=['home','nutrition','shopping','treinos','estudos','financas','habitos','timetable'];
+
+// ── MODO ESCURO ────────────────────────────────────────────────────────────
+// Único botão do app inteiro — a mesma chave de localStorage é usada pelos
+// apps de Finanças, Estudos e Hábitos (todos do mesmo site, então o
+// navegador já compartilha isso sozinho). Além de mudar a tela do React na
+// hora, avisa qualquer iframe ABERTO no momento via postMessage, pra não
+// precisar recarregar pra ele acompanhar.
+function isDarkMode(){
+  try{ return document.documentElement.getAttribute('data-theme')==='dark'; }catch{ return false; }
+}
+function setDarkMode(dark){
+  try{
+    if(dark){ document.documentElement.setAttribute('data-theme','dark'); localStorage.setItem('lifeplan_theme','dark'); }
+    else{ document.documentElement.removeAttribute('data-theme'); localStorage.setItem('lifeplan_theme','light'); }
+  }catch{}
+  // Avisa qualquer iframe do LifePlan (Finanças/Estudos/Hábitos) que esteja
+  // aberto agora, pra ele mudar de tema instantaneamente também.
+  document.querySelectorAll('iframe').forEach(f=>{
+    try{ f.contentWindow.postMessage({lifeplanTheme:dark?'dark':'light'},window.location.origin); }catch{}
+  });
+}
+function GlobalDarkModeToggle(){
+  const [dark,setDark]=useState(isDarkMode);
+  return(
+    <button
+      onClick={()=>{const next=!dark;setDarkMode(next);setDark(next);}}
+      title="Alternar modo claro/escuro"
+      style={{position:'fixed',top:14,right:14,zIndex:9999,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:12,padding:'9px 12px',cursor:'pointer',fontSize:17,boxShadow:'0 2px 10px rgba(0,0,0,0.12)'}}
+    >
+      {dark?'☀️':'🌙'}
+    </button>
+  );
+}
 
 // ── ROOT ──────────────────────────────────────────────────────────────────────
 function AppInner(){
@@ -2490,6 +2535,11 @@ function AppInner(){
         setScreen(saved&&RESUMABLE_SCREENS.includes(saved)?saved:'home');
       }
       else setScreen('login');
+    }).catch(()=>{
+      // Se a checagem falhar (rede instável, etc.), não deixa a tela de
+      // carregamento travada pra sempre — manda pro login, que tenta de
+      // novo sozinho ao reconectar.
+      setScreen('login');
     });
     // Importante: este listener dispara em qualquer evento do Supabase
     // (ex: renovação automática de token), inclusive os que vêm do
@@ -2517,39 +2567,52 @@ function AppInner(){
     return()=>subscription.unsubscribe();
   },[]);
 
-  if(screen==='loading') return(
-    <div style={{minHeight:'100vh',background:'#efe8dd',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{textAlign:'center'}}><div style={{fontSize:48,marginBottom:12}}>💪</div><div style={{color:'#8a887d'}}>Carregando...</div></div>
+  let screenContent;
+  if(screen==='loading') screenContent=(
+    <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{textAlign:'center'}}><div style={{fontSize:48,marginBottom:12}}>💪</div><div style={{color:'var(--muted)'}}>Carregando...</div></div>
     </div>
   );
+  else{
+    const onLogout=async()=>{await signOut();setScreen('login');};
+    const onOpenProfile=()=>setScreen('profile');
 
-  const onLogout=async()=>{await signOut();setScreen('login');};
-  const onOpenProfile=()=>setScreen('profile');
+    if(screen==='profile') screenContent=(
+      <ProfilePage userId={userId} initialProfile={profile}
+        onSave={(newPlan,newProfile)=>{setProfile(newProfile);setScreen('home');}}
+        onBack={()=>setScreen('home')}/>
+    );
+    else if(screen==='home') screenContent=(
+      <HomeDashboard userId={userId} onNavigate={setScreen} onOpenProfile={onOpenProfile} onLogout={onLogout} onOpenTimetable={()=>setScreen('timetable')}/>
+    );
+    else if(screen==='timetable') screenContent=<TimetableScreen onHome={()=>setScreen('home')} userId={userId}/>;
+    else if(screen==='nutrition') screenContent=(
+      <MealPlanApp userId={userId} initialTab="plan" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
+    );
+    else if(screen==='shopping') screenContent=(
+      <MealPlanApp userId={userId} initialTab="shop" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
+    );
+    else if(screen==='treinos') screenContent=(
+      <MealPlanApp userId={userId} initialTab="workout" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
+    );
+    else if(screen==='estudos') screenContent=<StudyTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
+    else if(screen==='financas') screenContent=<FinanceTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
+    else if(screen==='habitos') screenContent=<HabitsTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
+    else if(screen==='reset-password') screenContent=<ResetPasswordPage onDone={()=>setScreen('home')}/>;
+    else if(screen==='register') screenContent=<RegisterPage onSwitch={()=>setScreen('login')} onLogin={()=>setScreen('home')}/>;
+    else screenContent=<LoginPage onSwitch={()=>setScreen('register')} onLogin={()=>setScreen('home')}/>;
+  }
 
-  if(screen==='profile') return(
-    <ProfilePage userId={userId} initialProfile={profile}
-      onSave={(newPlan,newProfile)=>{setProfile(newProfile);setScreen('home');}}
-      onBack={()=>setScreen('home')}/>
+  // Único botão de modo escuro do app inteiro — flutua por cima de
+  // qualquer tela, inclusive as que são iframes (Finanças/Estudos/
+  // Hábitos), avisando elas via postMessage pra mudarem na hora, sem
+  // precisar recarregar.
+  return(
+    <>
+      {screenContent}
+      <GlobalDarkModeToggle/>
+    </>
   );
-  if(screen==='home') return(
-    <HomeDashboard userId={userId} onNavigate={setScreen} onOpenProfile={onOpenProfile} onLogout={onLogout} onOpenTimetable={()=>setScreen('timetable')}/>
-  );
-  if(screen==='timetable') return <TimetableScreen onHome={()=>setScreen('home')} userId={userId}/>;
-  if(screen==='nutrition') return(
-    <MealPlanApp userId={userId} initialTab="plan" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
-  );
-  if(screen==='shopping') return(
-    <MealPlanApp userId={userId} initialTab="shop" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
-  );
-  if(screen==='treinos') return(
-    <MealPlanApp userId={userId} initialTab="workout" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
-  );
-  if(screen==='estudos') return <StudyTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
-  if(screen==='financas') return <FinanceTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
-  if(screen==='habitos') return <HabitsTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
-  if(screen==='reset-password') return <ResetPasswordPage onDone={()=>setScreen('home')}/>;
-  if(screen==='register') return <RegisterPage onSwitch={()=>setScreen('login')} onLogin={()=>setScreen('home')}/>;
-  return <LoginPage onSwitch={()=>setScreen('register')} onLogin={()=>setScreen('home')}/>;
 }
 
 // ── ERROR BOUNDARY ────────────────────────────────────────────────────────────
@@ -2562,14 +2625,14 @@ class ErrorBoundary extends Component {
   render(){
     if(this.state.hasError){
       return(
-        <div style={{minHeight:'100vh',background:'#efe8dd',display:'flex',alignItems:'center',justifyContent:'center',padding:24,fontFamily:'system-ui,sans-serif'}}>
-          <div style={{maxWidth:380,textAlign:'center',background:'#ffffff',border:'1px solid #e4ddd0',borderRadius:20,padding:'32px 24px',boxShadow:'0 4px 20px rgba(0,0,0,0.08)'}}>
+        <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center',padding:24,fontFamily:'system-ui,sans-serif'}}>
+          <div style={{maxWidth:380,textAlign:'center',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:'32px 24px',boxShadow:'0 4px 20px rgba(0,0,0,0.08)'}}>
             <div style={{fontSize:48,marginBottom:12}}>😵‍💫</div>
-            <div style={{fontSize:18,fontWeight:800,color:'#1c1c1a',marginBottom:8}}>Algo deu errado</div>
-            <div style={{fontSize:13,color:'#6b6a63',lineHeight:1.6,marginBottom:22}}>Essa tela travou de forma inesperada. Seus dados já salvos na nuvem não foram afetados — geralmente um recarregamento resolve.</div>
+            <div style={{fontSize:18,fontWeight:800,color:'var(--text)',marginBottom:8}}>Algo deu errado</div>
+            <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:22}}>Essa tela travou de forma inesperada. Seus dados já salvos na nuvem não foram afetados — geralmente um recarregamento resolve.</div>
             <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
-              <button onClick={this.handleReload} style={{background:'#7f9770',color:'#fff',border:'none',borderRadius:12,padding:'10px 20px',fontWeight:800,fontSize:13,cursor:'pointer'}}>🔄 Recarregar</button>
-              <button onClick={this.handleGoHome} style={{background:'#f2efe4',color:'#3f6b2f',border:'1px solid #e4ddd0',borderRadius:12,padding:'10px 20px',fontWeight:800,fontSize:13,cursor:'pointer'}}>🏠 Voltar para o Início</button>
+              <button onClick={this.handleReload} style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:12,padding:'10px 20px',fontWeight:800,fontSize:13,cursor:'pointer'}}>🔄 Recarregar</button>
+              <button onClick={this.handleGoHome} style={{background:'var(--surface2)',color:'var(--accent-dark)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 20px',fontWeight:800,fontSize:13,cursor:'pointer'}}>🏠 Voltar para o Início</button>
             </div>
           </div>
         </div>
