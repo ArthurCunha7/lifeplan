@@ -695,8 +695,21 @@
     <button onclick="showTab('resumo')">Resumo &amp; Perfis</button>
     <button onclick="showTab('balanco')">Balanço Mensal</button>
   </nav>
-  <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar um PDF com faturas, pagamentos, resumo por perfil e balanço" style="margin-left:auto">📄 Exportar PDF</button>
+  <button class="btn btn-ghost btn-sm" onclick="openSearchPanel()" title="Buscar em faturas, pagamentos e balanço" style="margin-left:auto">🔍 Buscar</button>
+  <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar um PDF com faturas, pagamentos, resumo por perfil e balanço">📄 Exportar PDF</button>
 </header>
+
+<!-- ── PAINEL DE BUSCA ── -->
+<div id="search-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:flex-start;justify-content:center;padding-top:60px" onclick="if(event.target===this)closeSearchPanel()">
+  <div style="background:var(--surface);border-radius:14px;width:92%;max-width:640px;max-height:78vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,0.25)">
+    <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:16px">🔍</span>
+      <input id="search-input" type="text" placeholder="Buscar por descrição, categoria, perfil ou valor..." oninput="performSearch(this.value)" style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text)">
+      <button class="btn btn-ghost btn-sm" onclick="closeSearchPanel()">✕</button>
+    </div>
+    <div id="search-results" style="overflow-y:auto;padding:8px 0"></div>
+  </div>
+</div>
 
 <!-- TAB 1 — FATURAS + PAGAMENTOS -->
 <div id="tab-faturas" class="tab active">
@@ -1071,6 +1084,120 @@ window.addEventListener('message', (e) => {
 // Monta um relatório com faturas, pagamentos, resumo por perfil e balanço
 // mensal, tudo num único documento, e usa o "Imprimir > Salvar como PDF" do
 // próprio navegador — não precisa de nenhuma biblioteca externa.
+// ── BUSCA ──────────────────────────────────────────────────────────────────
+// Varre faturas, pagamentos, categorias de planejamento e tabelas do
+// balanço de uma vez, e leva direto pra aba certa ao clicar num resultado.
+function openSearchPanel() {
+  document.getElementById('search-overlay').style.display = 'flex';
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-results').innerHTML = '<div class="empty">Digite algo pra buscar (descrição, categoria, perfil ou valor).</div>';
+  setTimeout(() => document.getElementById('search-input').focus(), 50);
+}
+function closeSearchPanel() {
+  document.getElementById('search-overlay').style.display = 'none';
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSearchPanel();
+});
+
+function performSearch(query) {
+  const q = query.trim().toLowerCase();
+  const resultsEl = document.getElementById('search-results');
+  if (!q) { resultsEl.innerHTML = '<div class="empty">Digite algo pra buscar (descrição, categoria, perfil ou valor).</div>'; return; }
+
+  const results = [];
+
+  state.faturas.forEach(f => {
+    f.rows.forEach(r => {
+      const profileName = r.profileIdx != null ? (state.profiles[r.profileIdx]||'') : '';
+      const haystack = `${r.name||''} ${r.category||''} ${profileName} ${r.value||''}`.toLowerCase();
+      if (haystack.includes(q)) {
+        results.push({
+          icon: '🧾', title: r.name || '(sem descrição)',
+          subtitle: `${f.name} · ${formatDateBR(r.date)||'—'} · ${profileName||'sem perfil'}${r.category?' · '+r.category:''}`,
+          value: fmt(r.value),
+          onClick: () => { closeSearchPanel(); showTab('faturas'); _collapsedFaturas[f.id]=false; renderFaturas(); }
+        });
+      }
+    });
+  });
+
+  state.payments.forEach(p => {
+    const profileName = p.profileIdx != null ? (state.profiles[p.profileIdx]||'') : '';
+    const haystack = `${p.desc||''} ${profileName} ${p.value||''}`.toLowerCase();
+    if (haystack.includes(q)) {
+      results.push({
+        icon: '💰', title: p.desc || '(sem descrição)',
+        subtitle: `Pagamento · ${formatDateBR(p.date)||'—'} · ${profileName||'sem perfil'}`,
+        value: fmt(p.value),
+        onClick: () => { closeSearchPanel(); showTab('resumo'); if (p.profileIdx!=null) _collapsedProfiles[p.profileIdx]=false; renderPerfis(); }
+      });
+    }
+  });
+
+  state.balancoTables.forEach(t => {
+    if (t.type === 'custom' && t.columns) {
+      (t.rows||[]).forEach(r => {
+        const textVals = t.columns.filter(c=>c.type==='text').map(c=>r.values?.[c.id]||'').join(' ');
+        const numVals = t.columns.filter(c=>c.type==='number').map(c=>r.values?.[c.id]||'').join(' ');
+        const haystack = `${textVals} ${numVals}`.toLowerCase();
+        if (haystack.includes(q)) {
+          const mainCol = t.columns.find(c=>c.type==='text');
+          const valCol = t.columns.find(c=>c.type==='number');
+          results.push({
+            icon: t.icon||'📋', title: (mainCol ? r.values?.[mainCol.id] : null) || '(sem nome)',
+            subtitle: t.name,
+            value: valCol ? fmt(r.values?.[valCol.id]||0) : '',
+            onClick: () => { closeSearchPanel(); showTab('balanco'); }
+          });
+        }
+      });
+    } else if (t.type === 'planejamento') {
+      (t.rows||[]).forEach(r => {
+        const profileName = r.profileIdx != null ? (state.profiles[r.profileIdx]||'') : '';
+        const haystack = `${r.categoria||''} ${profileName}`.toLowerCase();
+        if (haystack.includes(q)) {
+          results.push({
+            icon: '📊', title: r.categoria,
+            subtitle: `${t.name} · ${profileName}`,
+            value: fmt(r.valor),
+            onClick: () => { closeSearchPanel(); showTab('balanco'); }
+          });
+        }
+      });
+    }
+  });
+
+  if (!results.length) {
+    resultsEl.innerHTML = '<div class="empty">Nenhum resultado encontrado.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = '';
+  results.slice(0, 50).forEach(r => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border)';
+    item.onmouseenter = () => item.style.background = 'var(--surface2)';
+    item.onmouseleave = () => item.style.background = 'transparent';
+    item.innerHTML = `
+      <span style="font-size:18px">${r.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</div>
+        <div style="font-size:11px;color:var(--muted)">${r.subtitle}</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent2);white-space:nowrap">${r.value}</div>
+    `;
+    item.onclick = r.onClick;
+    resultsEl.appendChild(item);
+  });
+  if (results.length > 50) {
+    const more = document.createElement('div');
+    more.style.cssText = 'padding:10px 16px;font-size:11px;color:var(--muted);text-align:center';
+    more.textContent = `+ ${results.length-50} resultados a mais — refine a busca`;
+    resultsEl.appendChild(more);
+  }
+}
+
 function exportFinanceReportPDF() {
   const today = new Date().toLocaleDateString('pt-BR');
   let html = `<h1>Relatório Financeiro</h1><div class="pdf-subtitle">Gerado em ${today} — LifePlan</div>`;

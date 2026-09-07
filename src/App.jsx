@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect, Component } from "react";
 import { supabase, signUp, signIn, signOut, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 
 // ── TACO DB ───────────────────────────────────────────────────────────────────
-const TACO_DB = [{"id":1,"n":"Arroz, integral, cozido","c":"Cereais","e":124,"p":2.6,"l":1.0,"cb":25.8},{"id":3,"n":"Arroz, tipo 1, cozido","c":"Cereais","e":128,"p":2.5,"l":0.2,"cb":28.1},{"id":7,"n":"Aveia, flocos, crua","c":"Cereais","e":394,"p":13.9,"l":8.5,"cb":66.6},{"id":52,"n":"Pão, trigo, forma, integral","c":"Cereais","e":253,"p":9.4,"l":3.7,"cb":49.9},{"id":53,"n":"Pão, trigo, francês","c":"Cereais","e":300,"p":8.0,"l":3.1,"cb":58.6},{"id":88,"n":"Batata, doce, cozida","c":"Vegetais","e":77,"p":0.6,"l":0.1,"cb":18.4},{"id":91,"n":"Batata, inglesa, cozida","c":"Vegetais","e":52,"p":1.2,"l":0.0,"cb":11.9},{"id":100,"n":"Brócolis, cozido","c":"Vegetais","e":25,"p":2.1,"l":0.5,"cb":4.4},{"id":109,"n":"Cenoura, cozida","c":"Vegetais","e":30,"p":0.8,"l":0.2,"cb":6.7},{"id":116,"n":"Couve, manteiga, refogada","c":"Vegetais","e":90,"p":1.7,"l":6.6,"cb":8.7},{"id":129,"n":"Mandioca, cozida","c":"Vegetais","e":125,"p":0.6,"l":0.3,"cb":30.1},{"id":157,"n":"Tomate, com semente, cru","c":"Vegetais","e":15,"p":1.1,"l":0.2,"cb":3.1},{"id":179,"n":"Banana, nanica, crua","c":"Frutas","e":92,"p":1.4,"l":0.1,"cb":23.8},{"id":182,"n":"Banana, prata, crua","c":"Frutas","e":98,"p":1.3,"l":0.1,"cb":26.0},{"id":222,"n":"Maçã, Fuji, com casca, crua","c":"Frutas","e":56,"p":0.3,"l":0.0,"cb":15.2},{"id":226,"n":"Mamão, Papaia, cru","c":"Frutas","e":40,"p":0.5,"l":0.1,"cb":10.4},{"id":239,"n":"Morango, cru","c":"Frutas","e":30,"p":0.9,"l":0.3,"cb":6.8},{"id":277,"n":"Atum, conserva em óleo","c":"Pescados","e":166,"p":26.2,"l":6.0,"cb":0},{"id":315,"n":"Salmão, filé, grelhado","c":"Pescados","e":229,"p":23.9,"l":14.0,"cb":0},{"id":318,"n":"Sardinha, assada","c":"Pescados","e":164,"p":32.2,"l":3.0,"cb":0},{"id":326,"n":"Carne, bovina, acém, moído, cozido","c":"Carnes","e":212,"p":26.7,"l":10.9,"cb":0},{"id":381,"n":"Carne, bovina, picanha, grelhada","c":"Carnes","e":289,"p":26.4,"l":19.5,"cb":0},{"id":395,"n":"Frango, coração, grelhado","c":"Carnes","e":207,"p":22.4,"l":12.1,"cb":0.6},{"id":396,"n":"Frango, coxa, com pele, assada","c":"Carnes","e":215,"p":28.5,"l":10.4,"cb":0.1},{"id":408,"n":"Frango, peito, sem pele, cozido","c":"Carnes","e":163,"p":31.5,"l":3.2,"cb":0},{"id":410,"n":"Frango, peito, sem pele, grelhado","c":"Carnes","e":159,"p":32.0,"l":2.5,"cb":0},{"id":413,"n":"Frango, sobrecoxa, sem pele, assada","c":"Carnes","e":233,"p":29.2,"l":12.0,"cb":0},{"id":448,"n":"Iogurte, natural","c":"Laticínios","e":51,"p":4.1,"l":3.0,"cb":1.9},{"id":449,"n":"Iogurte, natural, desnatado","c":"Laticínios","e":41,"p":3.8,"l":0.3,"cb":5.8},{"id":461,"n":"Queijo, minas, frescal","c":"Laticínios","e":264,"p":17.4,"l":20.2,"cb":3.2},{"id":463,"n":"Queijo, mozarela","c":"Laticínios","e":330,"p":22.6,"l":25.2,"cb":3.0},{"id":469,"n":"Queijo, ricota","c":"Laticínios","e":140,"p":12.6,"l":8.1,"cb":3.8},{"id":486,"n":"Ovo, de galinha, clara, cozida","c":"Ovos","e":59,"p":13.4,"l":0.1,"cb":0},{"id":488,"n":"Ovo, de galinha, inteiro, cozido","c":"Ovos","e":146,"p":13.3,"l":9.5,"cb":0.6},{"id":489,"n":"Ovo, de galinha, inteiro, cru","c":"Ovos","e":143,"p":13.0,"l":8.9,"cb":1.6},{"id":557,"n":"Amendoim, grão, cru","c":"Leguminosas","e":544,"p":27.2,"l":43.9,"cb":20.3},{"id":561,"n":"Feijão, carioca, cozido","c":"Leguminosas","e":76,"p":4.8,"l":0.5,"cb":13.6},{"id":567,"n":"Feijão, preto, cozido","c":"Leguminosas","e":77,"p":4.5,"l":0.5,"cb":14.0},{"id":577,"n":"Lentilha, cozida","c":"Leguminosas","e":93,"p":6.3,"l":0.5,"cb":16.3},{"id":584,"n":"Soja, queijo (tofu)","c":"Leguminosas","e":64,"p":6.6,"l":4.0,"cb":2.1},{"id":589,"n":"Castanha-do-Brasil, crua","c":"Nozes","e":643,"p":14.5,"l":63.5,"cb":15.1},{"id":594,"n":"Linhaça, semente","c":"Nozes","e":495,"p":14.1,"l":32.3,"cb":43.3},{"id":507,"n":"Mel, de abelha","c":"Doces","e":309,"p":0,"l":0,"cb":84.0},{"id":1001,"n":"Frango, peito, sem pele, cru","c":"Carnes","e":119,"p":21.5,"l":3.0,"cb":0},{"id":1002,"n":"Frango, peito, com pele, cru","c":"Carnes","e":149,"p":20.8,"l":6.7,"cb":0},{"id":1003,"n":"Frango, coxa, sem pele, crua","c":"Carnes","e":120,"p":17.8,"l":4.9,"cb":0},{"id":1004,"n":"Carne, bovina, picanha, com gordura, crua","c":"Carnes","e":213,"p":18.8,"l":14.7,"cb":0},{"id":1005,"n":"Salmão, sem pele, fresco, cru","c":"Pescados","e":170,"p":19.3,"l":9.7,"cb":0}];
+const TACO_DB = [{"id":1,"n":"Arroz, integral, cozido","c":"Cereais","e":124,"p":2.6,"l":1.0,"cb":25.8},{"id":3,"n":"Arroz, tipo 1, cozido","c":"Cereais","e":128,"p":2.5,"l":0.2,"cb":28.1},{"id":7,"n":"Aveia, flocos, crua","c":"Cereais","e":394,"p":13.9,"l":8.5,"cb":66.6},{"id":52,"n":"Pão, trigo, forma, integral","c":"Cereais","e":253,"p":9.4,"l":3.7,"cb":49.9},{"id":53,"n":"Pão, trigo, francês","c":"Cereais","e":300,"p":8.0,"l":3.1,"cb":58.6},{"id":88,"n":"Batata, doce, cozida","c":"Vegetais","e":77,"p":0.6,"l":0.1,"cb":18.4},{"id":91,"n":"Batata, inglesa, cozida","c":"Vegetais","e":52,"p":1.2,"l":0.0,"cb":11.9},{"id":100,"n":"Brócolis, cozido","c":"Vegetais","e":25,"p":2.1,"l":0.5,"cb":4.4},{"id":109,"n":"Cenoura, cozida","c":"Vegetais","e":30,"p":0.8,"l":0.2,"cb":6.7},{"id":116,"n":"Couve, manteiga, refogada","c":"Vegetais","e":90,"p":1.7,"l":6.6,"cb":8.7},{"id":129,"n":"Mandioca, cozida","c":"Vegetais","e":125,"p":0.6,"l":0.3,"cb":30.1},{"id":157,"n":"Tomate, com semente, cru","c":"Vegetais","e":15,"p":1.1,"l":0.2,"cb":3.1},{"id":179,"n":"Banana, nanica, crua","c":"Frutas","e":92,"p":1.4,"l":0.1,"cb":23.8},{"id":182,"n":"Banana, prata, crua","c":"Frutas","e":98,"p":1.3,"l":0.1,"cb":26.0},{"id":222,"n":"Maçã, Fuji, com casca, crua","c":"Frutas","e":56,"p":0.3,"l":0.0,"cb":15.2},{"id":226,"n":"Mamão, Papaia, cru","c":"Frutas","e":40,"p":0.5,"l":0.1,"cb":10.4},{"id":239,"n":"Morango, cru","c":"Frutas","e":30,"p":0.9,"l":0.3,"cb":6.8},{"id":277,"n":"Atum, conserva em óleo","c":"Pescados","e":166,"p":26.2,"l":6.0,"cb":0},{"id":315,"n":"Salmão, filé, grelhado","c":"Pescados","e":229,"p":23.9,"l":14.0,"cb":0},{"id":318,"n":"Sardinha, assada","c":"Pescados","e":164,"p":32.2,"l":3.0,"cb":0},{"id":326,"n":"Carne, bovina, acém, moído, cozido","c":"Carnes","e":212,"p":26.7,"l":10.9,"cb":0},{"id":381,"n":"Carne, bovina, picanha, grelhada","c":"Carnes","e":289,"p":26.4,"l":19.5,"cb":0},{"id":395,"n":"Frango, coração, grelhado","c":"Carnes","e":207,"p":22.4,"l":12.1,"cb":0.6},{"id":396,"n":"Frango, coxa, com pele, assada","c":"Carnes","e":215,"p":28.5,"l":10.4,"cb":0.1},{"id":408,"n":"Frango, peito, sem pele, cozido","c":"Carnes","e":163,"p":31.5,"l":3.2,"cb":0},{"id":410,"n":"Frango, peito, sem pele, grelhado","c":"Carnes","e":159,"p":32.0,"l":2.5,"cb":0},{"id":413,"n":"Frango, sobrecoxa, sem pele, assada","c":"Carnes","e":233,"p":29.2,"l":12.0,"cb":0},{"id":448,"n":"Iogurte, natural","c":"Laticínios","e":51,"p":4.1,"l":3.0,"cb":1.9},{"id":449,"n":"Iogurte, natural, desnatado","c":"Laticínios","e":41,"p":3.8,"l":0.3,"cb":5.8},{"id":461,"n":"Queijo, minas, frescal","c":"Laticínios","e":264,"p":17.4,"l":20.2,"cb":3.2},{"id":463,"n":"Queijo, mozarela","c":"Laticínios","e":330,"p":22.6,"l":25.2,"cb":3.0},{"id":469,"n":"Queijo, ricota","c":"Laticínios","e":140,"p":12.6,"l":8.1,"cb":3.8},{"id":486,"n":"Ovo, de galinha, clara, cozida","c":"Ovos","e":59,"p":13.4,"l":0.1,"cb":0},{"id":488,"n":"Ovo, de galinha, inteiro, cozido","c":"Ovos","e":146,"p":13.3,"l":9.5,"cb":0.6},{"id":489,"n":"Ovo, de galinha, inteiro, cru","c":"Ovos","e":143,"p":13.0,"l":8.9,"cb":1.6},{"id":557,"n":"Amendoim, grão, cru","c":"Leguminosas","e":544,"p":27.2,"l":43.9,"cb":20.3},{"id":561,"n":"Feijão, carioca, cozido","c":"Leguminosas","e":76,"p":4.8,"l":0.5,"cb":13.6},{"id":567,"n":"Feijão, preto, cozido","c":"Leguminosas","e":77,"p":4.5,"l":0.5,"cb":14.0},{"id":577,"n":"Lentilha, cozida","c":"Leguminosas","e":93,"p":6.3,"l":0.5,"cb":16.3},{"id":584,"n":"Soja, queijo (tofu)","c":"Leguminosas","e":64,"p":6.6,"l":4.0,"cb":2.1},{"id":589,"n":"Castanha-do-Brasil, crua","c":"Nozes","e":643,"p":14.5,"l":63.5,"cb":15.1},{"id":594,"n":"Linhaça, semente","c":"Nozes","e":495,"p":14.1,"l":32.3,"cb":43.3},{"id":507,"n":"Mel, de abelha","c":"Doces","e":309,"p":0,"l":0,"cb":84.0},{"id":1001,"n":"Frango, peito, sem pele, cru","c":"Carnes","e":119,"p":21.5,"l":3.0,"cb":0},{"id":1002,"n":"Frango, peito, com pele, cru","c":"Carnes","e":149,"p":20.8,"l":6.7,"cb":0},{"id":1003,"n":"Frango, coxa, sem pele, crua","c":"Carnes","e":120,"p":17.8,"l":4.9,"cb":0},{"id":1004,"n":"Carne, bovina, picanha, com gordura, crua","c":"Carnes","e":213,"p":18.8,"l":14.7,"cb":0},{"id":1005,"n":"Salmão, sem pele, fresco, cru","c":"Pescados","e":170,"p":19.3,"l":9.7,"cb":0},{"id":1006,"n":"Macarrão, trigo, cozido","c":"Cereais","e":102,"p":3.3,"l":1.3,"cb":19.9},{"id":1007,"n":"Leite, de vaca, integral","c":"Laticínios","e":61,"p":2.9,"l":3.2,"cb":4.3},{"id":1008,"n":"Leite, de vaca, desnatado","c":"Laticínios","e":35,"p":3.4,"l":0.2,"cb":4.9},{"id":1009,"n":"Alface, crua","c":"Vegetais","e":11,"p":1.4,"l":0.2,"cb":1.7},{"id":1010,"n":"Laranja, pêra, crua","c":"Frutas","e":37,"p":1.0,"l":0.1,"cb":8.9},{"id":1011,"n":"Abacate, cru","c":"Frutas","e":96,"p":1.2,"l":8.4,"cb":6.0},{"id":1012,"n":"Uva, rosada, crua","c":"Frutas","e":53,"p":0.7,"l":0.2,"cb":13.3},{"id":1013,"n":"Pepino, cru","c":"Vegetais","e":10,"p":0.9,"l":0.1,"cb":2.0},{"id":1014,"n":"Pimentão, vermelho, cru","c":"Vegetais","e":26,"p":1.1,"l":0.2,"cb":6.0},{"id":1015,"n":"Abobrinha, cozida","c":"Vegetais","e":19,"p":1.2,"l":0.3,"cb":4.1}];
 const TACO_MAP = Object.fromEntries(TACO_DB.map(t => [t.id, t]));
 
 // ── TIPOS DE TREINO disponíveis para troca ────────────────────────────────────
@@ -1804,6 +1804,24 @@ function getSaldoPreview(){
   }catch{return null;}
 }
 
+// Lê a tabela "Planejamento Mensal" salva pelo Finanças, pra mostrar uma
+// cópia dinâmica do gráfico de orçamento (expectativa x gasto) na Início.
+function getPlanejamentoPreview(){
+  try{
+    const state=JSON.parse(localStorage.getItem('cf_state'));
+    if(!state?.balancoTables) return null;
+    const planTable=state.balancoTables.find(t=>t.type==='planejamento');
+    if(!planTable) return null;
+    const rows=(planTable.rows||[]).filter(r=>r.categoria&&r.profileIdx!=null).map(r=>({
+      categoria:r.categoria,
+      profileName:state.profiles?.[r.profileIdx]||'—',
+      valor:parseFloat(r.valor)||0,
+      gasto:cfComputeGastoCategoria(state,r.profileIdx,r.categoria),
+    }));
+    return rows.length?rows:null;
+  }catch{return null;}
+}
+
 // ── TIMER DE FOCO (aba Estudos) ───────────────────────────────────────────────
 const STUDY_METHODS=[
   {id:'pomodoro',name:'Pomodoro Clássico',focus:25*60,brk:5*60,
@@ -2104,6 +2122,47 @@ const COMPARATOR_PRIORITIES=[
   {id:'price',label:'💰 Mais barato por kg',key:'pricePerKg',fmt:v=>`R$${v.toFixed(2)}/kg`,lowerIsBetter:true},
   {id:'kcal',label:'🔥 Mais calorias por R$',key:'kcalPerReal',fmt:v=>`${v.toFixed(0)}kcal/R$`},
 ];
+
+// Cópia dinâmica do gráfico de orçamento (Planejamento Mensal, dentro de
+// Finanças) mostrada na Início — mesmos dados, sempre atualizada.
+function BudgetChartPreview(){
+  const rows=getPlanejamentoPreview();
+  if(!rows) return null;
+  const T=HOME_THEME;
+  const maxVal=Math.max(1,...rows.map(r=>Math.max(r.valor,r.gasto)));
+  const chartH=110;
+  return(
+    <div style={{border:`1px solid ${T.line}`,borderRadius:14,overflow:'hidden'}}>
+      <div style={{background:T.sage,padding:'10px 14px',textAlign:'center'}}>
+        <div style={{fontWeight:900,fontSize:13,color:T.ink,letterSpacing:.5}}>📊 ORÇAMENTO DO MÊS</div>
+      </div>
+      <div style={{padding:'16px 12px',background:T.card,overflowX:'auto'}}>
+        <div style={{display:'flex',gap:18,alignItems:'flex-end',minWidth:'min-content'}}>
+          {rows.map((r,i)=>{
+            const expH=Math.round(r.valor/maxVal*chartH);
+            const gasH=Math.round(r.gasto/maxVal*chartH);
+            const over=r.gasto>r.valor;
+            return(
+              <div key={i} style={{display:'flex',flexDirection:'column',alignItems:'center',minWidth:64}}>
+                <div style={{display:'flex',gap:5,alignItems:'flex-end',height:chartH}}>
+                  <div title={`Expectativa: R$ ${r.valor.toFixed(2)}`} style={{width:18,height:Math.max(2,expH),background:T.sageDark,opacity:.5,borderRadius:'4px 4px 0 0'}}/>
+                  <div title={`Gasto: R$ ${r.gasto.toFixed(2)}`} style={{width:18,height:Math.max(2,gasH),background:over?'var(--danger)':T.sageDark,borderRadius:'4px 4px 0 0'}}/>
+                </div>
+                <div style={{fontSize:10,fontWeight:700,color:T.ink,textAlign:'center',marginTop:6,maxWidth:70,overflowWrap:'break-word'}}>{r.categoria}</div>
+                <div style={{fontSize:9,color:T.muted,textAlign:'center'}}>{r.profileName}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{display:'flex',gap:14,fontSize:10,color:T.muted,marginTop:14,flexWrap:'wrap'}}>
+          <span><span style={{display:'inline-block',width:9,height:9,background:T.sageDark,opacity:.5,borderRadius:2,marginRight:4,verticalAlign:'middle'}}/>Expectativa</span>
+          <span><span style={{display:'inline-block',width:9,height:9,background:T.sageDark,borderRadius:2,marginRight:4,verticalAlign:'middle'}}/>Gasto</span>
+          <span><span style={{display:'inline-block',width:9,height:9,background:'var(--danger)',borderRadius:2,marginRight:4,verticalAlign:'middle'}}/>Estourou</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function FoodComparator(){
   const [priority,setPriority]=useState('protein');
@@ -2419,6 +2478,8 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
             </div>
           </button>
         </div>
+
+        <BudgetChartPreview/>
 
         <FoodComparator/>
 

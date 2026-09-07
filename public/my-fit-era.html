@@ -731,6 +731,7 @@ body.hide-chrome .page-header{display:none!important;}
 <button type="button" class="floating-settings-btn" onclick="openSettings()" title="Configurações">⚙️</button>
 <div class="app-topbar">
   <div class="app-brand">LifePlan</div>
+  <button type="button" onclick="openSearchPanel()" title="Buscar em hábitos, medições e dieta" style="background:var(--accent-soft);border:1px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;font-size:13px;margin-left:8px;color:var(--text)">🔍 Buscar</button>
   <div class="account-menu-wrap">
     <button type="button" class="account-trigger" onclick="toggleAccountMenu(event)" aria-haspopup="true" aria-expanded="false" id="accountTrigger">
       <span class="account-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
@@ -743,6 +744,17 @@ body.hide-chrome .page-header{display:none!important;}
       <button type="button" class="menu-link" onclick="logout()">Sair</button>
       <div class="sync-line" id="cloudStatus"><span class="dot"></span><span id="cloudStatusText">Conectado</span></div>
     </div>
+  </div>
+</div>
+
+<div id="search-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:flex-start;justify-content:center;padding-top:60px" onclick="if(event.target===this)closeSearchPanel()">
+  <div style="background:var(--surface);border-radius:14px;width:92%;max-width:640px;max-height:78vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,0.25)">
+    <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:16px">🔍</span>
+      <input id="search-input" type="text" placeholder="Buscar por hábito, medição ou alimento..." oninput="performSearch(this.value)" style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text)">
+      <button type="button" onclick="closeSearchPanel()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--text)">✕</button>
+    </div>
+    <div id="search-results" style="overflow-y:auto;padding:8px 0"></div>
   </div>
 </div>
 <header class="page-header">
@@ -1381,6 +1393,79 @@ window.addEventListener('message', (e) => {
   if (e.data.lifeplanTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   else document.documentElement.removeAttribute('data-theme');
 });
+
+// ── BUSCA ──────────────────────────────────────────────────────────────────
+function openSearchPanel() {
+  document.getElementById('search-overlay').style.display = 'flex';
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-results').innerHTML = '<div class="empty">Digite algo pra buscar.</div>';
+  setTimeout(() => document.getElementById('search-input').focus(), 50);
+}
+function closeSearchPanel() {
+  document.getElementById('search-overlay').style.display = 'none';
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSearchPanel();
+});
+
+function performSearch(query) {
+  const q = query.trim().toLowerCase();
+  const resultsEl = document.getElementById('search-results');
+  if (!q) { resultsEl.innerHTML = '<div class="empty">Digite algo pra buscar.</div>'; return; }
+
+  const results = [];
+
+  (db.habits||[]).forEach(h => {
+    if (h.name.toLowerCase().includes(q)) {
+      results.push({ icon: '✅', title: h.name, subtitle: 'Hábito', value: '', onClick: () => { closeSearchPanel(); switchPanel('today'); } });
+    }
+  });
+
+  (bodyMetrics||[]).forEach(m => {
+    const haystack = `${m.notes||''} ${m.recorded_at||''}`.toLowerCase();
+    if (haystack.includes(q)) {
+      const parts = [];
+      if (m.weight_kg!=null) parts.push(m.weight_kg+'kg');
+      if (m.muscle_pct!=null) parts.push(m.muscle_pct+'% músculo');
+      if (m.fat_pct!=null) parts.push(m.fat_pct+'% gordura');
+      results.push({ icon: '📏', title: m.notes || 'Medição', subtitle: `Corpo · ${fmtDate(m.recorded_at)}`, value: parts.join(' · '), onClick: () => { closeSearchPanel(); switchPanel('body'); } });
+    }
+  });
+
+  (db.dietPlan||[]).forEach(meal => {
+    (meal.options||[]).forEach(opt => {
+      (opt.foods||[]).forEach(food => {
+        const haystack = `${food.name||''} ${meal.name||''}`.toLowerCase();
+        if (haystack.includes(q)) {
+          results.push({ icon: meal.emoji||'🍽️', title: food.name, subtitle: `Dieta · ${meal.name}`, value: food.amount||'', onClick: () => { closeSearchPanel(); switchPanel('diet'); } });
+        }
+      });
+    });
+  });
+
+  if (!results.length) {
+    resultsEl.innerHTML = '<div class="empty">Nenhum resultado encontrado.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = '';
+  results.slice(0, 50).forEach(r => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border)';
+    item.onmouseenter = () => item.style.background = 'var(--cat-hover)';
+    item.onmouseleave = () => item.style.background = 'transparent';
+    item.innerHTML = `
+      <span style="font-size:18px">${r.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</div>
+        <div style="font-size:11px;color:var(--text-subtle)">${r.subtitle}</div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap">${r.value}</div>
+    `;
+    item.onclick = r.onClick;
+    resultsEl.appendChild(item);
+  });
+}
 
 function openSettings() {
   closeAccountMenu();

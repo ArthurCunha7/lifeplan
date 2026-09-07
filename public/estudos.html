@@ -89,6 +89,24 @@
   .badge.outro { background:#3498db; }
   .empty { text-align:center; color:var(--muted2); padding:2rem; font-style:italic; }
   small { color:var(--muted); }
+
+  /* ── Relatório em PDF (impressão) ────────────────────────────────────── */
+  #pdf-report { padding: 24px; color: #1a1a1a; background: #fff; }
+  #pdf-report h1 { font-size: 22px; margin-bottom: 2px; }
+  #pdf-report .pdf-subtitle { font-size: 12px; color: #666; margin-bottom: 20px; }
+  #pdf-report h2 { font-size: 16px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #333; }
+  #pdf-report h3 { font-size: 13px; margin: 14px 0 6px; color: #333; }
+  #pdf-report table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 11px; }
+  #pdf-report th, #pdf-report td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
+  #pdf-report th { background: #eee; }
+  #pdf-report .pdf-ok { color: #1e7e34; font-weight: bold; }
+  #pdf-report .pdf-bad { color: #b03a2e; font-weight: bold; }
+  #pdf-report .pdf-empty { font-size: 11px; color: #888; font-style: italic; margin-bottom: 10px; }
+  @media print {
+    body * { visibility: hidden; }
+    #pdf-report, #pdf-report * { visibility: visible; }
+    #pdf-report { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 10px 20px; }
+  }
 </style>
 <script>
   (function(){
@@ -101,6 +119,7 @@
 </script>
 </head>
 <body>
+<div id="pdf-report" style="display:none"></div>
 <header>
   <nav>
     <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
@@ -110,7 +129,20 @@
     <button class="tab-btn" data-tab="calendario">📅 Calendário</button>
   </nav>
   <span id="cloudStatus" style="font-size:0.75rem; color:rgba(255,255,255,0.85); white-space:nowrap;"></span>
+  <button class="btn" onclick="openSearchPanel()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);font-size:0.8rem;padding:0.4rem 0.7rem" title="Buscar em matérias, notas, estudos e eventos">🔍 Buscar</button>
+  <button class="btn" onclick="exportStudyReportPDF()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);font-size:0.8rem;padding:0.4rem 0.7rem" title="Baixar um PDF com matérias, notas, estudos e eventos">📄 Exportar PDF</button>
 </header>
+
+<div id="search-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:flex-start;justify-content:center;padding-top:60px" onclick="if(event.target===this)closeSearchPanel()">
+  <div style="background:var(--surface);border-radius:14px;width:92%;max-width:640px;max-height:78vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,0.25)">
+    <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:16px">🔍</span>
+      <input id="search-input" type="text" placeholder="Buscar por matéria, avaliação, tópico ou evento..." oninput="performSearch(this.value)" style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text)">
+      <button class="btn" onclick="closeSearchPanel()" style="padding:4px 10px">✕</button>
+    </div>
+    <div id="search-results" style="overflow-y:auto;padding:8px 0"></div>
+  </div>
+</div>
 
 <main>
   <!-- DASHBOARD -->
@@ -271,14 +303,17 @@ async function loadFromCloud() {
 loadFromCloud();
 
 // ===== Navegação =====
+function goToTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById(tabName);
+  if (panel) panel.classList.add('active');
+  renderAll();
+}
 document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(btn.dataset.tab).classList.add('active');
-    renderAll();
-  };
+  btn.onclick = () => goToTab(btn.dataset.tab);
 });
 
 // ===== Matérias =====
@@ -566,6 +601,152 @@ function renderDashboard() {
 // ===== Helpers =====
 function formatDate(s) { const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
 function todayStr() { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+// ── EXPORTAR RELATÓRIO EM PDF ──────────────────────────────────────────────
+// Junta matérias, notas, histórico de estudos e próximos eventos num único
+// documento, usando o "Imprimir > Salvar como PDF" do navegador.
+// ── BUSCA ──────────────────────────────────────────────────────────────────
+function openSearchPanel() {
+  document.getElementById('search-overlay').style.display = 'flex';
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-results').innerHTML = '<div class="empty">Digite algo pra buscar.</div>';
+  setTimeout(() => document.getElementById('search-input').focus(), 50);
+}
+function closeSearchPanel() {
+  document.getElementById('search-overlay').style.display = 'none';
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSearchPanel();
+});
+
+function performSearch(query) {
+  const q = query.trim().toLowerCase();
+  const resultsEl = document.getElementById('search-results');
+  if (!q) { resultsEl.innerHTML = '<div class="empty">Digite algo pra buscar.</div>'; return; }
+
+  const results = [];
+
+  data.subjects.forEach(s => {
+    if (s.name.toLowerCase().includes(q)) {
+      results.push({ icon: '📖', title: s.name, subtitle: 'Matéria', value: '', onClick: () => { closeSearchPanel(); goToTab('materias'); } });
+    }
+  });
+
+  data.grades.forEach(g => {
+    const subj = data.subjects.find(s => s.id === g.subjectId);
+    const haystack = `${g.name||''} ${subj?subj.name:''}`.toLowerCase();
+    if (haystack.includes(q)) {
+      results.push({ icon: '📝', title: g.name, subtitle: `Nota · ${subj?subj.name:'—'}`, value: String(g.value), onClick: () => { closeSearchPanel(); goToTab('notas'); } });
+    }
+  });
+
+  data.studies.forEach(e => {
+    const subj = data.subjects.find(s => s.id === e.subjectId);
+    const haystack = `${e.topic||''} ${subj?subj.name:''}`.toLowerCase();
+    if (haystack.includes(q)) {
+      results.push({ icon: '⏱️', title: e.topic || '(sem tópico)', subtitle: `Estudo · ${subj?subj.name:'—'} · ${formatDate(e.date)}`, value: `${e.hours}h`, onClick: () => { closeSearchPanel(); goToTab('estudos'); } });
+    }
+  });
+
+  data.events.forEach(e => {
+    const subj = data.subjects.find(s => s.id === e.subjectId);
+    const haystack = `${e.title||''} ${e.type||''} ${subj?subj.name:''}`.toLowerCase();
+    if (haystack.includes(q)) {
+      results.push({ icon: '📅', title: e.title, subtitle: `Evento (${e.type||'—'}) · ${subj?subj.name:'—'}`, value: formatDate(e.date), onClick: () => { closeSearchPanel(); goToTab('calendario'); } });
+    }
+  });
+
+  if (!results.length) {
+    resultsEl.innerHTML = '<div class="empty">Nenhum resultado encontrado.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = '';
+  results.slice(0, 50).forEach(r => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border)';
+    item.onmouseenter = () => item.style.background = 'var(--surface2)';
+    item.onmouseleave = () => item.style.background = 'transparent';
+    item.innerHTML = `
+      <span style="font-size:18px">${r.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</div>
+        <div style="font-size:11px;color:var(--muted)">${r.subtitle}</div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap">${r.value}</div>
+    `;
+    item.onclick = r.onClick;
+    resultsEl.appendChild(item);
+  });
+}
+
+function exportStudyReportPDF() {
+  const today = new Date().toLocaleDateString('pt-BR');
+  let html = `<h1>Relatório de Estudos</h1><div class="pdf-subtitle">Gerado em ${today} — LifePlan</div>`;
+
+  // ── MATÉRIAS ──
+  html += `<h2>📖 Matérias</h2>`;
+  if (!data.subjects.length) {
+    html += `<div class="pdf-empty">Nenhuma matéria cadastrada.</div>`;
+  } else {
+    html += `<table><thead><tr><th>Matéria</th><th>Nota mínima</th><th>Nota máxima</th><th>Etapas</th><th>Situação</th></tr></thead><tbody>`;
+    data.subjects.forEach(s => {
+      const st = getSubjectStatus(s.id);
+      const cls = st.cssClass === 'aprovado' ? 'pdf-ok' : (st.cssClass === 'reprovado' ? 'pdf-bad' : '');
+      html += `<tr><td>${s.name}</td><td>${s.pass}</td><td>${s.max}</td><td>${s.stages||'—'}</td><td class="${cls}">${st.text}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  // ── NOTAS POR MATÉRIA ──
+  html += `<h2>📝 Notas</h2>`;
+  if (!data.grades.length) {
+    html += `<div class="pdf-empty">Nenhuma nota lançada.</div>`;
+  } else {
+    data.subjects.forEach(s => {
+      const grades = data.grades.filter(g => g.subjectId === s.id);
+      if (!grades.length) return;
+      html += `<h3>${s.name}</h3>`;
+      html += `<table><thead><tr><th>Avaliação</th><th>Nota</th><th>Peso</th></tr></thead><tbody>`;
+      grades.forEach(g => {
+        html += `<tr><td>${g.name}</td><td>${g.value}</td><td>${g.weight}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+    });
+  }
+
+  // ── HISTÓRICO DE ESTUDOS ──
+  html += `<h2>⏱️ Histórico de Estudos</h2>`;
+  if (!data.studies.length) {
+    html += `<div class="pdf-empty">Nenhuma sessão de estudo registrada.</div>`;
+  } else {
+    const totalHoras = data.studies.reduce((s,e) => s + (parseFloat(e.hours)||0), 0);
+    html += `<table><thead><tr><th>Data</th><th>Matéria</th><th>Horas</th><th>Tópico</th></tr></thead><tbody>`;
+    [...data.studies].sort((a,b) => b.date.localeCompare(a.date)).forEach(e => {
+      const subj = data.subjects.find(s => s.id === e.subjectId);
+      html += `<tr><td>${formatDate(e.date)}</td><td>${subj?subj.name:'—'}</td><td>${e.hours}h</td><td>${e.topic||'—'}</td></tr>`;
+    });
+    html += `<tr><td colspan="2"><b>Total</b></td><td colspan="2"><b>${totalHoras}h</b></td></tr>`;
+    html += `</tbody></table>`;
+  }
+
+  // ── PRÓXIMOS EVENTOS ──
+  html += `<h2>📅 Próximos Eventos</h2>`;
+  const upcoming = data.events.filter(e => e.date >= todayStr()).sort((a,b) => a.date.localeCompare(b.date));
+  if (!upcoming.length) {
+    html += `<div class="pdf-empty">Nenhum evento futuro cadastrado.</div>`;
+  } else {
+    html += `<table><thead><tr><th>Data</th><th>Tipo</th><th>Título</th><th>Matéria</th></tr></thead><tbody>`;
+    upcoming.forEach(e => {
+      const subj = data.subjects.find(s => s.id === e.subjectId);
+      html += `<tr><td>${formatDate(e.date)}</td><td>${e.type||'—'}</td><td>${e.title}</td><td>${subj?subj.name:'—'}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  document.getElementById('pdf-report').innerHTML = html;
+  window.print();
+}
 
 function fillSubjectSelects() {
   const opts = data.subjects.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
