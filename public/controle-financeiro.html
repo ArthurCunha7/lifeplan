@@ -855,8 +855,13 @@ function generateInviteCode() {
 // vez, cria uma nova família pra ele sozinho e migra os dados antigos (se
 // existirem) pra dentro dela, sem perder nada. Retorna o id da família.
 async function ensureFamilyAndMigrate() {
-  const { data: membership } = await supa.from('family_members')
+  const { data: membership, error: memErr } = await supa.from('family_members')
     .select('family_id').eq('user_id', currentUser.id).limit(1).maybeSingle();
+
+  if (memErr) {
+    alert('Erro ao conferir sua família: ' + memErr.message + '\n\nVocê já rodou o migration-family-accounts.sql no Supabase?');
+    return null;
+  }
 
   if (membership?.family_id) return membership.family_id;
 
@@ -868,9 +873,10 @@ async function ensureFamilyAndMigrate() {
     try {
       const { data: fid, error } = await supa.rpc('join_family_by_code', { code: choice.code.trim().toUpperCase() });
       if (error) throw error;
+      alert('✅ Você entrou na família! Os dados financeiros compartilhados já vão carregar.');
       return fid;
     } catch (e) {
-      alert('Código inválido. Confira com quem te convidou e tente de novo.');
+      alert('Não foi possível entrar com esse código: ' + (e.message || e) + '\n\nConfira com quem te convidou e tente de novo.');
       return await ensureFamilyAndMigrate(); // deixa tentar de novo
     }
   }
@@ -880,16 +886,25 @@ async function ensureFamilyAndMigrate() {
   const { data: newFamily, error: famErr } = await supa.from('families')
     .insert({ owner_id: currentUser.id, invite_code: inviteCode, name: 'Minha Família' })
     .select().single();
-  if (famErr) { console.error('Erro ao criar família:', famErr); return null; }
+  if (famErr) {
+    alert('Não foi possível criar a família: ' + famErr.message + '\n\nVocê já rodou o migration-family-accounts.sql no SQL Editor do Supabase? Essa estrutura precisa existir antes de usar isso.');
+    return null;
+  }
 
-  await supa.from('family_members').insert({
+  const { error: memberErr } = await supa.from('family_members').insert({
     family_id: newFamily.id, user_id: currentUser.id, display_name: currentUser.email
   });
+  if (memberErr) {
+    alert('Família criada, mas houve um erro ao te adicionar como membro: ' + memberErr.message);
+    return null;
+  }
 
   const { data: oldRow } = await supa.from('finance_data').select('data').eq('user_id', currentUser.id).maybeSingle();
   await supa.from('finance_data_family').insert({
     family_id: newFamily.id, data: oldRow?.data || state
   });
+
+  alert(`✅ Sua família foi criada!\n\nCódigo de convite: ${inviteCode}\n\nCompartilhe esse código com quem você quer que entre — vai poder ver esse código de novo em "Resumo & Perfis" a qualquer momento.`);
 
   return newFamily.id;
 }
@@ -940,14 +955,16 @@ async function loadFinanceFromCloud() {
     currentUser = session.user;
 
     familyId = await ensureFamilyAndMigrate();
-    if (!familyId) return;
+    if (!familyId) return; // ensureFamilyAndMigrate já mostrou o erro pro usuário
 
-    const { data: famRow } = await supa.from('families').select('invite_code').eq('id', familyId).maybeSingle();
+    const { data: famRow, error: famRowErr } = await supa.from('families').select('invite_code').eq('id', familyId).maybeSingle();
+    if (famRowErr) console.error('Erro ao buscar código da família:', famRowErr);
     familyInviteCode = famRow?.invite_code || null;
     const codeEl = document.getElementById('family-invite-code');
     if (codeEl && familyInviteCode) codeEl.textContent = familyInviteCode;
 
-    const { data: row } = await supa.from('finance_data_family').select('data').eq('family_id', familyId).maybeSingle();
+    const { data: row, error: rowErr } = await supa.from('finance_data_family').select('data').eq('family_id', familyId).maybeSingle();
+    if (rowErr) { console.error('Erro ao carregar dados financeiros da família:', rowErr); return; }
     if (row?.data) {
       const cloudJson = JSON.stringify(row.data);
       const localJson = JSON.stringify(state);
@@ -960,7 +977,10 @@ async function loadFinanceFromCloud() {
         return;
       }
     }
-  } catch (e) { console.error('Erro ao carregar finanças da nuvem:', e); }
+  } catch (e) {
+    console.error('Erro ao carregar finanças da nuvem:', e);
+    alert('Ocorreu um erro ao carregar os dados financeiros: ' + (e.message || e));
+  }
 }
 loadFinanceFromCloud();
 
