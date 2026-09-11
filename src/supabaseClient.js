@@ -6,11 +6,18 @@ import { createClient } from '@supabase/supabase-js';
 // Cole aqui embaixo OU crie um arquivo .env na raiz do projeto com:
 //   VITE_SUPABASE_URL=https://xxxxx.supabase.co
 //   VITE_SUPABASE_ANON_KEY=xxxxxxxxxxxxxxxx
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'COLE_SUA_URL_AQUI';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'COLE_SUA_CHAVE_ANON_AQUI';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 
 export { SUPABASE_URL, SUPABASE_ANON_KEY };
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,       // guarda a sessão no localStorage deste dispositivo
+    autoRefreshToken: true,     // renova o token sozinho, em segundo plano
+    detectSessionInUrl: true,   // necessário pro redirect do login com Google funcionar
+    storage: window.localStorage,
+  },
+});
 
 // ── Autenticação ─────────────────────────────────────────────────────────────
 export async function signUp({ email, password, name }) {

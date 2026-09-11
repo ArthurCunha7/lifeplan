@@ -863,6 +863,11 @@ body.hide-chrome .page-header{display:none!important;}
       <label>Observação (opcional)</label>
       <textarea id="bodyNotes" placeholder="Ex: após treino, em jejum, balança da academia..."></textarea>
     </div>
+    <div style="margin-bottom:12px;">
+      <label>Foto de progresso (opcional)</label>
+      <input type="file" id="bodyPhotoInput" accept="image/*" onchange="previewBodyPhoto()">
+      <div id="bodyPhotoPreview" style="margin-top:8px;"></div>
+    </div>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="success" onclick="saveBodyMetric()" style="flex:2; min-width:160px;">Salvar medição</button>
       <button class="ghost" onclick="clearBodyForm()" style="flex:1; min-width:120px;">Limpar</button>
@@ -3517,6 +3522,39 @@ function clearBodyForm() {
   document.getElementById('bodyMuscle').value = '';
   document.getElementById('bodyFat').value = '';
   document.getElementById('bodyNotes').value = '';
+  document.getElementById('bodyPhotoInput').value = '';
+  document.getElementById('bodyPhotoPreview').innerHTML = '';
+  _pendingBodyPhoto = null;
+}
+
+// ── FOTO DE PROGRESSO ────────────────────────────────────────────────────
+let _pendingBodyPhoto = null;
+function previewBodyPhoto() {
+  const input = document.getElementById('bodyPhotoInput');
+  const preview = document.getElementById('bodyPhotoPreview');
+  const file = input.files[0];
+  if (!file) { _pendingBodyPhoto = null; preview.innerHTML = ''; return; }
+  _pendingBodyPhoto = file;
+  const url = URL.createObjectURL(file);
+  preview.innerHTML = `<img src="${url}" style="max-width:120px;max-height:120px;border-radius:10px;border:1px solid var(--border)">`;
+}
+async function uploadBodyPhoto(recordedAt) {
+  if (!_pendingBodyPhoto || !currentUser || !supa) return null;
+  const ext = (_pendingBodyPhoto.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${currentUser.id}/${recordedAt}-${Date.now()}.${ext}`;
+  const { error } = await supa.storage.from('progress-photos').upload(path, _pendingBodyPhoto, { upsert: true });
+  if (error) { alert('Não foi possível enviar a foto: ' + error.message); return null; }
+  return path;
+}
+async function viewProgressPhoto(path) {
+  if (!supa || !path) return;
+  try {
+    const { data, error } = await supa.storage.from('progress-photos').createSignedUrl(path, 300);
+    if (error) throw error;
+    window.open(data.signedUrl, '_blank');
+  } catch (e) {
+    alert('Não foi possível abrir a foto: ' + (e.message || e));
+  }
 }
 
 async function saveBodyMetric() {
@@ -3536,6 +3574,7 @@ async function saveBodyMetric() {
   }
 
   setCloudStatus('Salvando medição...', 'sync');
+  const photo_path = _pendingBodyPhoto ? await uploadBodyPhoto(recorded_at) : undefined;
   const row = {
     user_id: currentUser.id,
     recorded_at,
@@ -3544,6 +3583,7 @@ async function saveBodyMetric() {
     fat_pct: isNaN(fat_pct) ? null : fat_pct,
     notes
   };
+  if (photo_path) row.photo_path = photo_path;
 
   const { error } = await supa.from('body_metrics').upsert(row, { onConflict: 'user_id,recorded_at' });
   if (error) {
@@ -3562,8 +3602,12 @@ async function saveBodyMetric() {
 
 async function deleteBodyMetric(id) {
   if (!confirm('Excluir esta medição?')) return;
+  const entry = bodyMetrics.find(m => m.id === id);
   const { error } = await supa.from('body_metrics').delete().eq('id', id);
   if (error) { alert(error.message); return; }
+  if (entry?.photo_path && supa) {
+    try { await supa.storage.from('progress-photos').remove([entry.photo_path]); } catch(e) { console.error(e); }
+  }
   bodyMetrics = bodyMetrics.filter(m => m.id !== id);
   renderBodyPanel();
 }
@@ -3584,7 +3628,10 @@ function renderBodyPanel() {
       <div style="background:#f7fafc; padding:12px; border-radius:10px; margin-bottom:8px; border:1px solid #e2e8f0;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <strong>${new Date(m.recorded_at + 'T00:00').toLocaleDateString('pt-BR')}</strong>
-          <button class="small danger" onclick="deleteBodyMetric('${m.id}')">Excluir</button>
+          <div style="display:flex;gap:6px">
+            ${m.photo_path ? `<button class="small" onclick="viewProgressPhoto('${m.photo_path}')" title="Ver foto de progresso">📷</button>` : ''}
+            <button class="small danger" onclick="deleteBodyMetric('${m.id}')">Excluir</button>
+          </div>
         </div>
         <div style="margin-top:8px; display:flex; gap:12px; flex-wrap:wrap; font-size:0.95em;">
           ${m.weight_kg != null ? `<span>⚖️ <strong>${Number(m.weight_kg).toFixed(1)}</strong> kg</span>` : ''}

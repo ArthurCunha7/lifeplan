@@ -113,7 +113,7 @@ function generatePlan(profile) {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
-function searchTACO(query,limit=9){
+export function searchTACO(query,limit=9){
   if(!query||query.length<2) return [];
   const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ');
   const terms=norm(query).split(' ').filter(Boolean);
@@ -1749,7 +1749,7 @@ function getNextExam(){
 // que é o número de verdade que aparece lá — diferente do "Total Geral" da
 // aba Resumo & Perfis (outro cálculo). Fica sincronizado, sem inventar uma
 // terceira fórmula aproximada.
-function cfGetAllRowsByProfile(state,pIdx){
+export function cfGetAllRowsByProfile(state,pIdx){
   const rows=[];
   (state.faturas||[]).forEach(f=>{
     (f.rows||[]).forEach(r=>{ if(r.profileIdx===pIdx) rows.push(r); });
@@ -1757,7 +1757,7 @@ function cfGetAllRowsByProfile(state,pIdx){
   (state.pixRows||[]).forEach(p=>{ if(p.profileIdx===pIdx) rows.push(p); });
   return rows;
 }
-function cfComputeEntradasTotal(state){
+export function cfComputeEntradasTotal(state){
   let total=0;
   const profiles=state.profiles||[];
   profiles.forEach((name,idx)=>{
@@ -1770,7 +1770,7 @@ function cfComputeEntradasTotal(state){
   });
   return total;
 }
-function cfComputeGastoCategoria(state,profileIdx,categoria){
+export function cfComputeGastoCategoria(state,profileIdx,categoria){
   let total=0;
   (state.faturas||[]).forEach(f=>{
     (f.rows||[]).forEach(r=>{
@@ -1779,9 +1779,12 @@ function cfComputeGastoCategoria(state,profileIdx,categoria){
   });
   return total;
 }
-function cfGetTableTotal(state,t){
+export function cfGetTableTotal(state,t){
   if(t.type==='entradas') return cfComputeEntradasTotal(state);
   if(t.type==='lancamentos') return 0;
+  if(t.type==='faturas_auto'){
+    return (state.faturas||[]).reduce((s,f)=>s+(f.rows||[]).reduce((s2,r)=>s2+(parseFloat(r.value)||0),0),0);
+  }
   if(t.type==='planejamento'){
     return (t.rows||[]).filter(r=>r.categoria&&r.profileIdx!=null)
       .reduce((s,r)=>s+((parseFloat(r.valor)||0)-cfComputeGastoCategoria(state,r.profileIdx,r.categoria)),0);
@@ -1880,7 +1883,7 @@ function FocusTimer(){
       <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:4}}>⏱️ Timer de Foco</div>
       <div style={{fontSize:12,color:'var(--muted2)',marginBottom:14}}>Escolha um dos 3 métodos de estudo com mais respaldo científico:</div>
       {STUDY_METHODS.map(m=>(
-        <button key={m.id} onClick={()=>chooseMethod(m)} style={{display:'flex',alignItems:'center',gap:12,width:'100%',textAlign:'left',background:'#faf7f0',border:'1px solid var(--border)',borderRadius:14,padding:'12px 14px',marginBottom:10,cursor:'pointer'}}>
+        <button key={m.id} onClick={()=>chooseMethod(m)} style={{display:'flex',alignItems:'center',gap:12,width:'100%',textAlign:'left',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:14,padding:'12px 14px',marginBottom:10,cursor:'pointer'}}>
           <span style={{fontSize:26,flexShrink:0}}>{STUDY_METHOD_ICONS[m.id]}</span>
           <span>
             <div style={{fontSize:14,fontWeight:800,color:'var(--accent-dark)'}}>{m.name}</div>
@@ -1997,7 +2000,7 @@ function TimetableScreen({onHome,userId}){
             </thead>
             <tbody>
               {data.rows.map((r,ri)=>(
-                <tr key={r.id} style={{background:ri%2===0?'var(--accent-soft)':'#f5f1e9'}}>
+                <tr key={r.id} style={{background:ri%2===0?'var(--accent-soft)':'var(--surface)'}}>
                   <td style={{padding:2,borderTop:`1px solid ${T.line}`}}>
                     <input value={r.label} onChange={e=>renameRow(r.id,e.target.value)}
                       style={{width:'100%',border:'none',background:'transparent',fontWeight:800,color:T.ink,fontSize:12,padding:'8px 6px',outline:'none',boxSizing:'border-box'}}
@@ -2018,7 +2021,7 @@ function TimetableScreen({onHome,userId}){
                 </tr>
               ))}
               {!data.rows.length&&(
-                <tr><td colSpan={9} style={{padding:'24px 10px',textAlign:'center',color:T.muted,background:'#f5f1e9'}}>Nenhum horário ainda. Clique em "+ Adicionar linha" para começar a montar sua grade.</td></tr>
+                <tr><td colSpan={9} style={{padding:'24px 10px',textAlign:'center',color:T.muted,background:'var(--surface)'}}>Nenhum horário ainda. Clique em "+ Adicionar linha" para começar a montar sua grade.</td></tr>
               )}
             </tbody>
           </table>
@@ -2065,7 +2068,7 @@ function FoodSlot({label,slot,setSlot,accent}){
   }
 
   return(
-    <div style={{flex:1,minWidth:150,background:'#faf7f0',border:`1px solid ${accent}55`,borderRadius:14,padding:12}}>
+    <div style={{flex:1,minWidth:150,background:'var(--surface)',border:`1px solid ${accent}55`,borderRadius:14,padding:12}}>
       <div style={{fontSize:11,fontWeight:800,color:accent,marginBottom:6,textTransform:'uppercase'}}>{label}</div>
       <div style={{position:'relative'}}>
         <input
@@ -2078,7 +2081,7 @@ function FoodSlot({label,slot,setSlot,accent}){
         {open&&results.length>0&&(
           <div style={{position:'absolute',top:'100%',left:0,right:0,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,marginTop:2,zIndex:20,maxHeight:180,overflowY:'auto',boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
             {results.map(r=>(
-              <div key={r.id} onClick={()=>pick(r)} style={{padding:'8px 10px',fontSize:12,cursor:'pointer',borderBottom:'1px solid #f0ece2'}}>
+              <div key={r.id} onClick={()=>pick(r)} style={{padding:'8px 10px',fontSize:12,cursor:'pointer',borderBottom:'1px solid var(--border)'}}>
                 {r.n}
               </div>
             ))}
@@ -2104,7 +2107,7 @@ function FoodSlot({label,slot,setSlot,accent}){
   );
 }
 
-function computeFoodMetrics(slot){
+export function computeFoodMetrics(slot){
   const price=parseFloat(slot.price);
   if(!slot.food||!price||price<=0||!slot.qty) return null;
   const factor=slot.qty/100;
@@ -2188,7 +2191,7 @@ function FoodComparator(){
         {COMPARATOR_PRIORITIES.map(pr=>(
           <button key={pr.id} onClick={()=>setPriority(pr.id)}
             style={{fontSize:10,fontWeight:800,padding:'6px 10px',borderRadius:20,cursor:'pointer',
-              background:priority===pr.id?'var(--accent)':'#faf7f0',color:priority===pr.id?'var(--surface)':'var(--muted2)',
+              background:priority===pr.id?'var(--accent)':'var(--surface)',color:priority===pr.id?'var(--surface)':'var(--muted2)',
               border:`1px solid ${priority===pr.id?'var(--accent)':'var(--border)'}`}}>
             {pr.label}
           </button>
@@ -2201,7 +2204,7 @@ function FoodComparator(){
       </div>
 
       {mA&&mB&&(
-        <div style={{marginTop:14,background:winner?'var(--accent-soft)':'#faf7f0',border:`1px solid ${winner?'var(--accent)':'var(--border)'}`,borderRadius:14,padding:'12px 14px'}}>
+        <div style={{marginTop:14,background:winner?'var(--accent-soft)':'var(--surface)',border:`1px solid ${winner?'var(--accent)':'var(--border)'}`,borderRadius:14,padding:'12px 14px'}}>
           {winner?(
             <div style={{fontSize:13,fontWeight:800,color:'var(--accent-dark)',marginBottom:8}}>
               🏆 {winner==='A'?slotA.food.n:slotB.food.n} vale mais a pena ({p.label.replace(/^\S+\s/,'')})
@@ -2339,7 +2342,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
               <div style={{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
                 <WeatherIcon code={weather.code} isDay={weather.isDay} iconUri={weather.iconUri} size={68}/>
                 <div style={{flex:'1 1 120px'}}>
-                  <div style={{fontSize:36,fontWeight:900,color:'var(--surface)',lineHeight:1,textShadow:'0 2px 6px rgba(0,0,0,0.15)'}}>{weather.temp}°</div>
+                  <div style={{fontSize:36,fontWeight:900,color:'#ffffff',lineHeight:1,textShadow:'0 2px 6px rgba(0,0,0,0.15)'}}>{weather.temp}°</div>
                   <div style={{fontSize:16,fontWeight:800,color:'rgba(255,255,255,0.95)',display:'flex',alignItems:'center',gap:4,marginTop:2}}>📍 {weather.city}</div>
                 </div>
                 <div style={{display:'flex',flexDirection:'column',gap:4,fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.9)'}}>
@@ -2350,17 +2353,17 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
 
               <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:12}}>
                 {weather.tempTrend&&(
-                  <div style={{fontSize:12,fontWeight:700,color:'var(--text)',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#1c1c1a',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
                     {weather.tempTrend.rising?'📈':'📉'} A temperatura deve {weather.tempTrend.rising?'subir':'cair'} {Math.abs(weather.tempTrend.delta)}° nas próximas 2h
                   </div>
                 )}
                 {weather.rain&&(
-                  <div style={{fontSize:12,fontWeight:700,color:'var(--text)',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#1c1c1a',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
                     ☔ {weather.rain.active?`Chovendo agora — leve um guarda-chuva! Previsão de parar às ${weather.rain.stops}`:`Vai chover às ${weather.rain.starts} — não esqueça o guarda-chuva! Deve parar por volta das ${weather.rain.stops}`}
                   </div>
                 )}
                 {uvInfo(weather.uvMax)&&weather.uvMax>=6&&(
-                  <div style={{fontSize:12,fontWeight:700,color:'var(--text)',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#1c1c1a',background:'rgba(255,255,255,0.85)',borderRadius:12,padding:'6px 12px'}}>
                     🧴 UV {uvInfo(weather.uvMax).label.toLowerCase()} hoje (máx. {weather.uvMax}) — não esqueça o protetor solar!
                   </div>
                 )}
@@ -2400,7 +2403,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
           </div>
 
           {/* Horário */}
-          <div style={{flex:'0 0 auto',minWidth:110,background:'linear-gradient(160deg,#eef2e7 0%,#dfe8d4 100%)',border:'1px solid #cddabd',borderRadius:18,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'16px 20px',boxShadow:'0 3px 10px rgba(127,151,112,0.15)'}}>
+          <div style={{flex:'0 0 auto',minWidth:110,background:'var(--accent-soft)',border:'1px solid var(--border)',borderRadius:18,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'16px 20px',boxShadow:'0 3px 10px rgba(127,151,112,0.15)'}}>
             <div style={{fontSize:16,marginBottom:4}}>🕐</div>
             <div style={{fontSize:44,fontWeight:900,color:T.ink,letterSpacing:.5,lineHeight:1,textAlign:'center'}}>{timeStr}</div>
           </div>
@@ -2501,10 +2504,10 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
               </thead>
               <tbody>
                 {timetableData.rows.length===0&&(
-                  <tr><td colSpan={8} style={{padding:'18px 10px',textAlign:'center',color:T.muted,background:'#f5f1e9'}}>Nenhum horário cadastrado ainda — clique em "✏️ Editar" para montar sua grade.</td></tr>
+                  <tr><td colSpan={8} style={{padding:'18px 10px',textAlign:'center',color:T.muted,background:'var(--surface)'}}>Nenhum horário cadastrado ainda — clique em "✏️ Editar" para montar sua grade.</td></tr>
                 )}
                 {timetableData.rows.map((r,ri)=>(
-                  <tr key={r.id} style={{background:ri%2===0?'var(--accent-soft)':'#f5f1e9'}}>
+                  <tr key={r.id} style={{background:ri%2===0?'var(--accent-soft)':'var(--surface)'}}>
                     <td style={{padding:'6px 6px',fontWeight:800,color:T.ink,borderTop:`1px solid ${T.line}`,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.label}</td>
                     {WEEK_DAYS.map(d=>(
                       <td key={d} style={{padding:'6px 4px',borderTop:`1px solid ${T.line}`,borderLeft:`1px solid ${T.line}`,color:T.ink,textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>

@@ -744,6 +744,11 @@
   <div class="section-head" style="margin-top:16px">
     <div class="section-title">👤 Gerenciar Perfis</div>
   </div>
+  <div class="card" style="padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span style="font-size:12px;color:var(--muted)">Código pra convidar sua família:</span>
+    <span id="family-invite-code" style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;color:var(--accent)">—</span>
+    <button class="btn btn-ghost btn-sm" onclick="copyInviteCode()">📋 Copiar</button>
+  </div>
   <div class="card">
     <div class="card-header">
       <div class="card-title">Perfis ativos</div>
@@ -793,7 +798,7 @@ const CATEGORIES = ['Academia','Restaurantes','Salão','Uber','Dieta','Lista de 
 const __params = new URLSearchParams(window.location.search);
 const SUPABASE_URL = __params.get('sbUrl') || '';
 const SUPABASE_KEY = __params.get('sbKey') || '';
-let supa = null, currentUser = null;
+let supa = null, currentUser = null, familyId = null, familyInviteCode = null;
 if (SUPABASE_URL && SUPABASE_KEY) {
   supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 }
@@ -812,13 +817,13 @@ let _gastosVisiblePerProfile = {}; // censurado por padrão, individual por perf
 
 let __cfSaveTimer = null;
 function flushCloudSave() {
-  if (!supa || !currentUser) return;
-  supa.from('finance_data').upsert({
-    user_id: currentUser.id, data: state, updated_at: new Date().toISOString()
+  if (!supa || !currentUser || !familyId) return;
+  supa.from('finance_data_family').upsert({
+    family_id: familyId, data: state, updated_at: new Date().toISOString()
   }).then(({error}) => { if (error) console.error('Erro ao salvar finanças na nuvem:', error); });
 }
 function scheduleCloudSave() {
-  if (!supa || !currentUser) return;
+  if (!supa || !currentUser || !familyId) return;
   clearTimeout(__cfSaveTimer);
   __cfSaveTimer = setTimeout(flushCloudSave, 250);
 }
@@ -829,13 +834,120 @@ function scheduleCloudSave() {
 window.addEventListener('pagehide', () => { if (__cfSaveTimer) { clearTimeout(__cfSaveTimer); flushCloudSave(); } });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && __cfSaveTimer) { clearTimeout(__cfSaveTimer); flushCloudSave(); } });
 
+// ── FAMÍLIA ────────────────────────────────────────────────────────────────
+function copyInviteCode() {
+  if (!familyInviteCode) { alert('Código ainda não carregou — espera um instante e tenta de novo.'); return; }
+  navigator.clipboard.writeText(familyInviteCode).then(() => {
+    alert('Código copiado! Envie pra quem você quer convidar pra família.');
+  }).catch(() => {
+    prompt('Copie o código abaixo:', familyInviteCode);
+  });
+}
+
+function generateInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O/1/I, evita confusão
+  let code = 'FAM-';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+// Garante que o usuário logado pertence a uma família — se for a primeira
+// vez, cria uma nova família pra ele sozinho e migra os dados antigos (se
+// existirem) pra dentro dela, sem perder nada. Retorna o id da família.
+async function ensureFamilyAndMigrate() {
+  const { data: membership } = await supa.from('family_members')
+    .select('family_id').eq('user_id', currentUser.id).limit(1).maybeSingle();
+
+  if (membership?.family_id) return membership.family_id;
+
+  // Primeira vez desta conta: pergunta se quer criar uma família nova ou
+  // entrar numa que já existe com um código de convite.
+  const choice = await showFamilyChoiceModal();
+
+  if (choice.action === 'join') {
+    try {
+      const { data: fid, error } = await supa.rpc('join_family_by_code', { code: choice.code.trim().toUpperCase() });
+      if (error) throw error;
+      return fid;
+    } catch (e) {
+      alert('Código inválido. Confira com quem te convidou e tente de novo.');
+      return await ensureFamilyAndMigrate(); // deixa tentar de novo
+    }
+  }
+
+  // Cria a família, entra como dono, e migra dados antigos (se existirem)
+  const inviteCode = generateInviteCode();
+  const { data: newFamily, error: famErr } = await supa.from('families')
+    .insert({ owner_id: currentUser.id, invite_code: inviteCode, name: 'Minha Família' })
+    .select().single();
+  if (famErr) { console.error('Erro ao criar família:', famErr); return null; }
+
+  await supa.from('family_members').insert({
+    family_id: newFamily.id, user_id: currentUser.id, display_name: currentUser.email
+  });
+
+  const { data: oldRow } = await supa.from('finance_data').select('data').eq('user_id', currentUser.id).maybeSingle();
+  await supa.from('finance_data_family').insert({
+    family_id: newFamily.id, data: oldRow?.data || state
+  });
+
+  return newFamily.id;
+}
+
+// Modal bloqueante (só continua quando o usuário escolhe) perguntando se é
+// pra criar uma família nova ou entrar numa existente com código.
+function showFamilyChoiceModal() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = `
+      <div style="background:var(--surface);border-radius:16px;max-width:400px;width:100%;padding:24px;text-align:center">
+        <div style="font-size:36px;margin-bottom:8px">👨‍👩‍👧‍👦</div>
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Bem-vindo ao Finanças</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Alguém da sua família já usa o LifePlan?</div>
+        <button id="fam-create-btn" class="btn btn-primary" style="width:100%;margin-bottom:10px;padding:12px">✨ Não, criar minha família</button>
+        <button id="fam-join-toggle-btn" class="btn btn-ghost" style="width:100%;padding:12px">🔑 Sim, tenho um código de convite</button>
+        <div id="fam-join-form" style="display:none;margin-top:14px">
+          <input id="fam-code-input" type="text" placeholder="FAM-XXXXXX" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:14px;text-transform:uppercase;box-sizing:border-box;margin-bottom:10px">
+          <button id="fam-join-btn" class="btn btn-primary" style="width:100%;padding:12px">Entrar na família</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#fam-create-btn').onclick = () => {
+      document.body.removeChild(overlay);
+      resolve({ action: 'create' });
+    };
+    overlay.querySelector('#fam-join-toggle-btn').onclick = () => {
+      overlay.querySelector('#fam-join-form').style.display = 'block';
+      overlay.querySelector('#fam-code-input').focus();
+    };
+    overlay.querySelector('#fam-join-btn').onclick = () => {
+      const code = overlay.querySelector('#fam-code-input').value.trim();
+      if (!code) return;
+      document.body.removeChild(overlay);
+      resolve({ action: 'join', code });
+    };
+  });
+}
+
 async function loadFinanceFromCloud() {
   if (!supa) return;
   try {
     const { data: { session } } = await supa.auth.getSession();
     if (!session?.user) return;
     currentUser = session.user;
-    const { data: row } = await supa.from('finance_data').select('data').eq('user_id', currentUser.id).maybeSingle();
+
+    familyId = await ensureFamilyAndMigrate();
+    if (!familyId) return;
+
+    const { data: famRow } = await supa.from('families').select('invite_code').eq('id', familyId).maybeSingle();
+    familyInviteCode = famRow?.invite_code || null;
+    const codeEl = document.getElementById('family-invite-code');
+    if (codeEl && familyInviteCode) codeEl.textContent = familyInviteCode;
+
+    const { data: row } = await supa.from('finance_data_family').select('data').eq('family_id', familyId).maybeSingle();
     if (row?.data) {
       const cloudJson = JSON.stringify(row.data);
       const localJson = JSON.stringify(state);
@@ -883,13 +995,7 @@ function getDefaultState() {
         sign: 1, includeInSaldo: true
       },
       {
-        id: 'faturas', name: 'Faturas', icon: '🗂️', type: 'custom',
-        columns: [
-          { id: 'nome', name: 'Nome da Fatura', type: 'text' },
-          { id: 'val', name: 'Valor (R$)', type: 'number' },
-          { id: 'fechamento', name: 'Fechamento', type: 'text' },
-          { id: 'vencimento', name: 'Vencimento', type: 'text' }
-        ],
+        id: 'faturas', name: 'Faturas', icon: '🗂️', type: 'faturas_auto',
         rows: [],
         sign: -1, includeInSaldo: true
       },
@@ -952,20 +1058,11 @@ if (!state.balancoTables) {
     sign: -1, includeInSaldo: true
   });
 
-  // Migrate Faturas (balanço)
-  const oldFaturas = (state.balanco && state.balanco.faturas) || [];
+  // Migrate Faturas (balanço) — agora é um resumo automático, não precisa
+  // mais migrar linhas manuais antigas
   state.balancoTables.push({
-    id: 'faturas', name: 'Faturas', icon: '🗂️', type: 'custom',
-    columns: [
-      { id: 'nome', name: 'Nome da Fatura', type: 'text' },
-      { id: 'val', name: 'Valor (R$)', type: 'number' },
-      { id: 'fechamento', name: 'Fechamento', type: 'text' },
-      { id: 'vencimento', name: 'Vencimento', type: 'text' }
-    ],
-    rows: oldFaturas.map(f => ({
-      id: f.id || genId(),
-      values: { nome: f.name, val: parseFloat(f.value) || 0, fechamento: f.fechamento || '', vencimento: f.vencimento || '' }
-    })),
+    id: 'faturas', name: 'Faturas', icon: '🗂️', type: 'faturas_auto',
+    rows: [],
     sign: -1, includeInSaldo: true
   });
 
@@ -1030,13 +1127,33 @@ state.profiles.forEach((name, idx) => {
   }
 });
 
-// Migrate entradasProfiles (default: all profiles included)
+// Migra entradasProfiles (default: all profiles included)
 if (!state.entradasProfiles) state.entradasProfiles = {};
 state.profiles.forEach((name, idx) => {
   if (state.entradasProfiles[idx] === undefined) {
     state.entradasProfiles[idx] = true;
   }
 });
+
+// Migração: cada perfil agora é um objeto {name, linkedUserId} em vez de
+// string pura — permite vincular um perfil a uma conta de login de
+// verdade (família com múltiplas pessoas). Roda por último, depois de
+// todas as migrações antigas acima (que ainda mexem com strings).
+state.profiles = state.profiles.map(p => typeof p === 'string' ? { name: p, linkedUserId: null } : p);
+
+// Migração: a tabela "Faturas" do Balanço Mensal deixou de ser preenchida
+// manualmente — agora ela sempre reflete o valor de verdade de cada fatura
+// automaticamente. Quem já tinha essa tabela no formato antigo (manual)
+// tem ela convertida aqui, uma única vez (os valores manuais antigos são
+// descartados, já que a partir de agora o valor vem sempre calculado).
+if (state.balancoTables) {
+  const faturasTable = state.balancoTables.find(t => t.id === 'faturas');
+  if (faturasTable && faturasTable.type !== 'faturas_auto') {
+    faturasTable.type = 'faturas_auto';
+    delete faturasTable.columns;
+    faturasTable.rows = [];
+  }
+}
 
 // Migrate saidas
 if (!state.saidas) state.saidas = [];
@@ -1109,7 +1226,7 @@ function performSearch(query) {
 
   state.faturas.forEach(f => {
     f.rows.forEach(r => {
-      const profileName = r.profileIdx != null ? (state.profiles[r.profileIdx]||'') : '';
+      const profileName = r.profileIdx != null ? (state.profiles[r.profileIdx]?.name||'') : '';
       const haystack = `${r.name||''} ${r.category||''} ${profileName} ${r.value||''}`.toLowerCase();
       if (haystack.includes(q)) {
         results.push({
@@ -1123,7 +1240,7 @@ function performSearch(query) {
   });
 
   state.payments.forEach(p => {
-    const profileName = p.profileIdx != null ? (state.profiles[p.profileIdx]||'') : '';
+    const profileName = p.profileIdx != null ? (state.profiles[p.profileIdx]?.name||'') : '';
     const haystack = `${p.desc||''} ${profileName} ${p.value||''}`.toLowerCase();
     if (haystack.includes(q)) {
       results.push({
@@ -1154,7 +1271,7 @@ function performSearch(query) {
       });
     } else if (t.type === 'planejamento') {
       (t.rows||[]).forEach(r => {
-        const profileName = r.profileIdx != null ? (state.profiles[r.profileIdx]||'') : '';
+        const profileName = r.profileIdx != null ? (state.profiles[r.profileIdx]?.name||'') : '';
         const haystack = `${r.categoria||''} ${profileName}`.toLowerCase();
         if (haystack.includes(q)) {
           results.push({
@@ -1215,7 +1332,7 @@ function exportFinanceReportPDF() {
     } else {
       html += `<table><thead><tr><th>Data</th><th>Descrição</th><th>Parcelas</th><th>Perfil</th><th>Categoria</th><th>Valor</th></tr></thead><tbody>`;
       f.rows.forEach(r => {
-        const profileName = r.profileIdx != null ? (state.profiles[r.profileIdx]||'—') : '—';
+        const profileName = r.profileIdx != null ? (state.profiles[r.profileIdx]?.name||'—') : '—';
         html += `<tr><td>${formatDateBR(r.date)||'—'}</td><td>${r.name||'—'}</td><td>${r.parcelas||'—'}</td><td>${profileName}</td><td>${r.category||'—'}</td><td>${fmt(r.value)}</td></tr>`;
       });
       html += `<tr class="pdf-total-row"><td colspan="5">Total</td><td>${fmt(total)}</td></tr>`;
@@ -1231,7 +1348,7 @@ function exportFinanceReportPDF() {
   } else {
     html += `<table><thead><tr><th>Data</th><th>Descrição</th><th>Perfil</th><th>Valor</th></tr></thead><tbody>`;
     [...state.payments].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(p => {
-      const profileName = p.profileIdx != null ? (state.profiles[p.profileIdx]||'—') : '—';
+      const profileName = p.profileIdx != null ? (state.profiles[p.profileIdx]?.name||'—') : '—';
       html += `<tr><td>${formatDateBR(p.date)||'—'}</td><td>${p.desc||'—'}</td><td>${profileName}</td><td class="pdf-pos">${fmt(p.value)}</td></tr>`;
     });
     html += `<tr class="pdf-total-row"><td colspan="3">Total pago</td><td>${fmt(totalPagoGeral)}</td></tr>`;
@@ -1268,7 +1385,7 @@ function exportFinanceReportPDF() {
         rows.forEach(r => {
           const gasto = computeGastoCategoria(r.profileIdx, r.categoria);
           const restante = (parseFloat(r.valor)||0) - gasto;
-          html += `<tr><td>${r.categoria}</td><td>${state.profiles[r.profileIdx]||'—'}</td><td>${fmt(r.valor)}</td><td class="pdf-neg">${fmt(gasto)}</td><td class="${restante>=0?'pdf-pos':'pdf-neg'}">${fmt(restante)}</td></tr>`;
+          html += `<tr><td>${r.categoria}</td><td>${state.profiles[r.profileIdx]?.name||'—'}</td><td>${fmt(r.valor)}</td><td class="pdf-neg">${fmt(gasto)}</td><td class="${restante>=0?'pdf-pos':'pdf-neg'}">${fmt(restante)}</td></tr>`;
         });
         html += `</tbody></table>`;
       }
@@ -1362,7 +1479,7 @@ function formatDateBR(iso) {
 
 function getActiveProfiles() {
   // All profiles in state.profiles are active. Order preserved.
-  return state.profiles.map((name, idx) => ({ name, idx }));
+  return state.profiles.map((p, idx) => ({ name: p.name, idx, linkedUserId: p.linkedUserId || null }));
 }
 
 function profileChips(selectedIdx, onChange) {
@@ -1388,6 +1505,81 @@ function profileChips(selectedIdx, onChange) {
 function getProfileCategories(pIdx) {
   const cats = state.profileCategories && state.profileCategories[pIdx];
   return (cats && cats.length > 0) ? cats : null;
+}
+
+// ── FOTO DO RECIBO ─────────────────────────────────────────────────────────
+// Guarda a foto no Supabase Storage (bucket "receipts", dentro da pasta do
+// próprio usuário) e só guarda o CAMINHO no lançamento — a URL de
+// visualização é gerada na hora (assinada, expira sozinha).
+function buildReceiptCell(r, fId) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;align-items:center;gap:4px';
+
+  if (r.receiptPath) {
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'btn btn-ghost btn-sm';
+    viewBtn.innerHTML = '🖼️';
+    viewBtn.title = 'Ver recibo';
+    viewBtn.onclick = () => viewReceipt(r.receiptPath);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-ghost btn-sm';
+    delBtn.innerHTML = '✕';
+    delBtn.title = 'Remover recibo';
+    delBtn.onclick = () => removeReceipt(fId, r.id, r.receiptPath);
+    wrap.append(viewBtn, delBtn);
+  } else {
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn btn-ghost btn-sm';
+    addBtn.innerHTML = '📷';
+    addBtn.title = 'Anexar foto do recibo';
+    addBtn.onclick = () => triggerReceiptUpload(fId, r.id);
+    wrap.appendChild(addBtn);
+  }
+  return wrap;
+}
+
+function triggerReceiptUpload(fId, rId) {
+  if (!currentUser || !supa) { alert('Faça login pra anexar fotos.'); return; }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${currentUser.id}/${rId}-${Date.now()}.${ext}`;
+    try {
+      const { error } = await supa.storage.from('receipts').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const fatura = state.faturas.find(f => f.id === fId);
+      const row = fatura?.rows.find(r => r.id === rId);
+      if (row) { row.receiptPath = path; saveState(); renderFaturas(); }
+    } catch (e) {
+      alert('Não foi possível enviar a foto: ' + (e.message || e));
+    }
+  };
+  input.click();
+}
+
+async function viewReceipt(path) {
+  if (!supa) return;
+  try {
+    const { data, error } = await supa.storage.from('receipts').createSignedUrl(path, 300);
+    if (error) throw error;
+    window.open(data.signedUrl, '_blank');
+  } catch (e) {
+    alert('Não foi possível abrir a foto: ' + (e.message || e));
+  }
+}
+
+async function removeReceipt(fId, rId, path) {
+  if (!confirm('Remover a foto deste recibo?')) return;
+  try {
+    if (supa && path) await supa.storage.from('receipts').remove([path]);
+  } catch (e) { console.error(e); }
+  const fatura = state.faturas.find(f => f.id === fId);
+  const row = fatura?.rows.find(r => r.id === rId);
+  if (row) { delete row.receiptPath; saveState(); renderFaturas(); }
 }
 
 function buildCategoryCell(r, fId) {
@@ -1450,7 +1642,7 @@ function addProfile() {
   // Insert new profile right before the last one (last profile stays last,
   // keeping its special categories)
   const insertAt = state.profiles.length - 1;
-  state.profiles.splice(insertAt, 0, 'Perfil ' + state.profiles.length);
+  state.profiles.splice(insertAt, 0, { name: 'Perfil ' + state.profiles.length, linkedUserId: null });
   // Shift profileIdx for any row/payment pointing at the old last profile
   const oldLastIdx = insertAt; // old last index before insertion
   state.faturas.forEach(f => {
@@ -1517,6 +1709,16 @@ function removeCategoryFromProfile(pIdx, catIdx) {
   renderFaturas();
 }
 
+// Vincula a conta atualmente logada a um perfil — garante que cada conta só
+// fica vinculada a UM perfil por vez (desvincula de qualquer outro antes).
+function linkMyAccountToProfile(idx) {
+  if (!currentUser) { alert('Você precisa estar logado.'); return; }
+  state.profiles.forEach(p => { if (p.linkedUserId === currentUser.id) p.linkedUserId = null; });
+  state.profiles[idx].linkedUserId = currentUser.id;
+  saveState();
+  renderProfilesManager();
+}
+
 function renderProfilesManager() {
   const body = document.getElementById('profiles-manager-body');
   body.innerHTML = '';
@@ -1539,10 +1741,10 @@ function renderProfilesManager() {
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.className = 'profile-manager-name';
-    nameInput.value = state.profiles[idx];
+    nameInput.value = state.profiles[idx].name;
     nameInput.placeholder = 'Nome do perfil';
     nameInput.oninput = e => {
-      state.profiles[idx] = e.target.value;
+      state.profiles[idx].name = e.target.value;
       saveState();
     };
 
@@ -1593,6 +1795,28 @@ function renderProfilesManager() {
     }
 
     card.appendChild(row);
+
+    // ── Vincular a uma conta de login de verdade ──
+    const linkRow = document.createElement('div');
+    linkRow.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:8px;font-size:11px';
+    const linkedUserId = state.profiles[idx].linkedUserId;
+    if (linkedUserId && currentUser && linkedUserId === currentUser.id) {
+      linkRow.innerHTML = `<span style="color:var(--accent2);font-weight:700">✅ Esta é a sua conta</span>`;
+    } else if (linkedUserId) {
+      linkRow.innerHTML = `<span style="color:var(--muted)">🔗 Vinculado a outro membro da família</span>`;
+      const unlinkBtn = document.createElement('button');
+      unlinkBtn.className = 'btn btn-ghost btn-sm';
+      unlinkBtn.textContent = 'Desvincular';
+      unlinkBtn.onclick = () => { state.profiles[idx].linkedUserId = null; saveState(); renderProfilesManager(); };
+      linkRow.appendChild(unlinkBtn);
+    } else {
+      const linkBtn = document.createElement('button');
+      linkBtn.className = 'btn btn-ghost btn-sm';
+      linkBtn.textContent = '🔗 Vincular minha conta a este perfil';
+      linkBtn.onclick = () => linkMyAccountToProfile(idx);
+      linkRow.appendChild(linkBtn);
+    }
+    card.appendChild(linkRow);
 
     // ── Categories editor ──
     const catSection = document.createElement('div');
@@ -1697,6 +1921,9 @@ function getTableTotal(t) {
   // Returns computed numeric total for a table (for SALDO use)
   if (t.type === 'entradas') return computeEntradas().total;
   if (t.type === 'lancamentos') return 0; // informational, not summed unless sign != 0
+  if (t.type === 'faturas_auto') {
+    return state.faturas.reduce((s,f) => s + f.rows.reduce((s2,r) => s2 + (parseFloat(r.value)||0), 0), 0);
+  }
   if (t.type === 'planejamento') {
     // Soma do "Restante" de todas as categorias válidas — é isso que entra
     // no Saldo do Mês (com sinal negativo, configurado por padrão), porque
@@ -1966,6 +2193,8 @@ function buildBalancoTableCard(t, tIdx, totalTables) {
       renderLancamentosCard(card, t);
     } else if (t.type === 'planejamento') {
       renderPlanejamentoCard(card, t);
+    } else if (t.type === 'faturas_auto') {
+      renderFaturasAutoCard(card, t);
     } else if (t.id === 'banco') {
       renderBancoCard(card, t);
     } else {
@@ -2178,6 +2407,48 @@ function removePlanejamentoRow(t, rowId) {
   t.rows = t.rows.filter(r => r.id !== rowId);
   saveState();
   renderBalancoTables();
+}
+
+// Resumo automático das faturas de verdade (aba Faturas) — não tem nada
+// editável aqui, é só um espelho sempre atualizado. Editar nome, valor,
+// fechamento ou vencimento se faz na aba Faturas mesmo, e reflete aqui na
+// hora, sem precisar digitar de novo em dois lugares.
+function renderFaturasAutoCard(card, t) {
+  const header = document.createElement('div');
+  header.className = 'card-header';
+  header.innerHTML = `<div class="card-title">${t.icon||'🗂️'} ${t.name}</div>`;
+  card.appendChild(header);
+
+  const note = document.createElement('div');
+  note.style.cssText = 'padding:6px 16px;font-size:11px;color:var(--muted);font-style:italic';
+  note.textContent = 'Atualizado automaticamente a partir da aba Faturas — edite os valores lá.';
+  card.appendChild(note);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+  const table = document.createElement('table');
+  table.innerHTML = `<thead><tr><th>Fatura</th><th>Fechamento</th><th>Vencimento</th><th>Valor</th></tr></thead>`;
+  const tbody = document.createElement('tbody');
+
+  if (!state.faturas.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty">Nenhuma fatura cadastrada ainda na aba Faturas.</div></td></tr>`;
+  } else {
+    let total = 0;
+    state.faturas.forEach(f => {
+      const val = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+      total += val;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${f.name}</td><td>${f.fechamento||'—'}</td><td>${f.vencimento||'—'}</td><td class="val-cell negative">${fmt(val)}</td>`;
+      tbody.appendChild(tr);
+    });
+    const tfoot = document.createElement('tfoot');
+    tfoot.innerHTML = `<tr><td colspan="3">Total</td><td class="val-cell negative">${fmt(total)}</td></tr>`;
+    table.appendChild(tfoot);
+  }
+
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  card.appendChild(wrap);
 }
 
 function renderPlanejamentoCard(card, t) {
@@ -2798,6 +3069,22 @@ function renderFaturas() {
     header.appendChild(rightHeader);
     card.appendChild(header);
 
+    // Fechamento/vencimento vivem aqui (na fatura de verdade) — é isso que
+    // permite o resumo em Balanço Mensal puxar tudo automaticamente, sem
+    // precisar digitar de novo em outro lugar.
+    const metaRow = document.createElement('div');
+    metaRow.style.cssText = 'display:flex;gap:16px;padding:8px 14px;font-size:12px;color:var(--muted);flex-wrap:wrap;border-bottom:1px solid var(--border)';
+    const fechInput = document.createElement('input');
+    fechInput.type = 'text'; fechInput.placeholder = 'Fechamento (ex: dia 5)'; fechInput.value = f.fechamento || '';
+    fechInput.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:12px;color:var(--text);width:150px';
+    fechInput.oninput = e => { f.fechamento = e.target.value; saveState(); };
+    const vencInput = document.createElement('input');
+    vencInput.type = 'text'; vencInput.placeholder = 'Vencimento (ex: dia 12)'; vencInput.value = f.vencimento || '';
+    vencInput.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:12px;color:var(--text);width:150px';
+    vencInput.oninput = e => { f.vencimento = e.target.value; saveState(); };
+    metaRow.append('📅 Fechamento:', fechInput, '⏰ Vencimento:', vencInput);
+    card.appendChild(metaRow);
+
     const wrap = document.createElement('div');
     wrap.className = 'table-wrap';
 
@@ -2809,6 +3096,7 @@ function renderFaturas() {
       <th>Valor</th>
       <th>Perfil responsável</th>
       <th>Categoria</th>
+      <th>Foto</th>
       <th></th>
     </tr></thead>`;
 
@@ -2873,6 +3161,9 @@ function renderFaturas() {
         const tdCat = document.createElement('td');
         tdCat.appendChild(buildCategoryCell(r, f.id));
 
+        const tdPhoto = document.createElement('td');
+        tdPhoto.appendChild(buildReceiptCell(r, f.id));
+
         const tdDel = document.createElement('td');
         const delBtn = document.createElement('button');
         delBtn.className = 'btn btn-danger btn-sm';
@@ -2881,7 +3172,7 @@ function renderFaturas() {
         delBtn.onclick = () => removeRow(f.id, r.id);
         tdDel.appendChild(delBtn);
 
-        tr.append(tdDate, tdName, tdParc, tdVal, tdProfile, tdCat, tdDel);
+        tr.append(tdDate, tdName, tdParc, tdVal, tdProfile, tdCat, tdPhoto, tdDel);
         tbody.appendChild(tr);
       });
     }
@@ -2985,7 +3276,7 @@ function renderPerfis() {
     nameInput.type = 'text'; nameInput.className = 'profile-name-input';
     nameInput.style.cssText = 'font-size:14px;font-weight:600';
     nameInput.value = pName;
-    nameInput.oninput = e => { state.profiles[pIdx] = e.target.value; saveState(); };
+    nameInput.oninput = e => { state.profiles[pIdx].name = e.target.value; saveState(); };
     nameEl.append(dot, nameInput);
 
     const totalEl = document.createElement('div');
