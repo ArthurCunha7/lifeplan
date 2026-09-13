@@ -1817,7 +1817,7 @@ function getPlanejamentoPreview(){
     if(!planTable) return null;
     const rows=(planTable.rows||[]).filter(r=>r.categoria&&r.profileIdx!=null).map(r=>({
       categoria:r.categoria,
-      profileName:state.profiles?.[r.profileIdx]||'—',
+      profileName:(typeof state.profiles?.[r.profileIdx]==='object'?state.profiles[r.profileIdx]?.name:state.profiles?.[r.profileIdx])||'—',
       valor:parseFloat(r.valor)||0,
       gasto:cfComputeGastoCategoria(state,r.profileIdx,r.categoria),
     }));

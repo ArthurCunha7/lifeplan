@@ -50,13 +50,22 @@
   header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 0 24px;
+    padding: 10px 16px;
+    padding-right: 64px; /* espaço reservado pro botão flutuante de tema do app principal, pra nunca sobrepor */
     display: flex;
     align-items: center;
-    gap: 32px;
+    gap: 10px;
+    flex-wrap: wrap;
     position: sticky;
     top: 0;
     z-index: 100;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    flex-wrap: wrap;
   }
 
   .logo {
@@ -73,7 +82,12 @@
 
   .logo span { color: var(--text); }
 
-  nav { display: flex; gap: 4px; flex: 1; overflow-x: auto; }
+  nav { display: flex; gap: 4px; flex: 1 1 100%; overflow-x: auto; order: 1; }
+  .header-actions { order: 2; }
+  @media (min-width: 640px) {
+    nav { flex: 1 1 auto; order: 0; }
+    .header-actions { order: 0; }
+  }
 
   nav button {
     background: none;
@@ -695,8 +709,10 @@
     <button onclick="showTab('resumo')">Resumo &amp; Perfis</button>
     <button onclick="showTab('balanco')">Balanço Mensal</button>
   </nav>
-  <button class="btn btn-ghost btn-sm" onclick="openSearchPanel()" title="Buscar em faturas, pagamentos e balanço" style="margin-left:auto">🔍 Buscar</button>
-  <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar um PDF com faturas, pagamentos, resumo por perfil e balanço">📄 Exportar PDF</button>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-sm" onclick="openSearchPanel()" title="Buscar em faturas, pagamentos e balanço">🔍 Buscar</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar um PDF com faturas, pagamentos, resumo por perfil e balanço">📄 Exportar PDF</button>
+  </div>
 </header>
 
 <!-- ── PAINEL DE BUSCA ── -->
@@ -844,13 +860,6 @@ function copyInviteCode() {
   });
 }
 
-function generateInviteCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O/1/I, evita confusão
-  let code = 'FAM-';
-  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
-}
-
 // Garante que o usuário logado pertence a uma família — se for a primeira
 // vez, cria uma nova família pra ele sozinho e migra os dados antigos (se
 // existirem) pra dentro dela, sem perder nada. Retorna o id da família.
@@ -881,23 +890,15 @@ async function ensureFamilyAndMigrate() {
     }
   }
 
-  // Cria a família, entra como dono, e migra dados antigos (se existirem)
-  const inviteCode = generateInviteCode();
-  const { data: newFamily, error: famErr } = await supa.from('families')
-    .insert({ owner_id: currentUser.id, invite_code: inviteCode, name: 'Minha Família' })
-    .select().single();
+  // Cria a família e já entra como dono, tudo numa função só no banco (sem
+  // o paradoxo de precisar ler de volta algo que você ainda não tem acesso)
+  const { data: famResult, error: famErr } = await supa.rpc('create_family', { new_name: 'Minha Família' });
   if (famErr) {
-    alert('Não foi possível criar a família: ' + famErr.message + '\n\nVocê já rodou o migration-family-accounts.sql no SQL Editor do Supabase? Essa estrutura precisa existir antes de usar isso.');
+    alert('Não foi possível criar a família: ' + famErr.message + '\n\nVocê já rodou o migration-family-accounts.sql, migration-family-join.sql E migration-family-fix.sql no SQL Editor do Supabase? Todos os três precisam existir antes de usar isso.');
     return null;
   }
-
-  const { error: memberErr } = await supa.from('family_members').insert({
-    family_id: newFamily.id, user_id: currentUser.id, display_name: currentUser.email
-  });
-  if (memberErr) {
-    alert('Família criada, mas houve um erro ao te adicionar como membro: ' + memberErr.message);
-    return null;
-  }
+  const newFamily = Array.isArray(famResult) ? famResult[0] : famResult;
+  const inviteCode = newFamily.invite_code;
 
   const { data: oldRow } = await supa.from('finance_data').select('data').eq('user_id', currentUser.id).maybeSingle();
   await supa.from('finance_data_family').insert({
@@ -986,14 +987,13 @@ loadFinanceFromCloud();
 
 function getDefaultState() {
   return {
-    profiles: ['Perfil 1','Perfil 2','Perfil 3','Perfil 4','Perfil 5','Perfil 6'],
-    activeProfiles: 1,  // how many profiles are active (starts with 1 = only last profile)
+    _isFreshDefault: true, // marca "acabou de ser criado do zero" — impede migrações antigas de completar até 6 perfis
+    profiles: [{ name: 'Perfil 1', linkedUserId: null }],
+    activeProfiles: 1,
     // profileCategories[idx] = array of category name strings for that profile.
     // Empty array / missing = profile has no categories (shows "—").
     profileCategories: {
-      3: [...DEFAULT_PROFILE_CATEGORIES[3]],
-      4: [...DEFAULT_PROFILE_CATEGORIES[4]],
-      5: [...DEFAULT_PROFILE_CATEGORIES[5]]
+      0: ['Academia', 'Restaurante', 'Uber', 'Lista de desejos']
     },
     // Which profiles appear in the ENTRADAS table (idx -> boolean). Default: all true.
     entradasProfiles: {},
@@ -1002,7 +1002,7 @@ function getDefaultState() {
     ],
     payments: [],
     pixRows: [], // [{id, date, desc, value}]
-    saldoSectionIndex: 999, // position among balancoTables (999 = bottom)
+    saldoSectionIndex: 1, // logo abaixo de "Saldo em Conta" (2ª posição)
     // ── BALANÇO MENSAL: unified customizable table system ──
     balancoTables: [
       {
@@ -1025,28 +1025,14 @@ function getDefaultState() {
         sign: 1, includeInSaldo: true
       },
       {
-        id: 'referencia', name: 'Referência', icon: '📌', type: 'custom',
-        columns: [
-          { id: 'cat', name: 'Categoria', type: 'text' },
-          { id: 'val', name: 'Valor de Referência (R$)', type: 'number' }
-        ],
+        id: genId(), name: 'Planejamento Mensal', icon: '📊', type: 'planejamento',
         rows: [
-          { id: genId(), values: { cat: 'Academia', val: 0 } },
-          { id: genId(), values: { cat: 'Restaurantes', val: 0 } },
-          { id: genId(), values: { cat: 'Salão', val: 0 } },
-          { id: genId(), values: { cat: 'Uber', val: 0 } },
-          { id: genId(), values: { cat: 'Dieta', val: 0 } },
-          { id: genId(), values: { cat: 'Lista de desejos', val: 0 } },
-          { id: genId(), values: { cat: 'Parcelado', val: 0 } },
-          { id: genId(), values: { cat: 'Outros', val: 0 } },
+          { id: genId(), categoria: 'Academia', profileIdx: 0, valor: 0 },
+          { id: genId(), categoria: 'Restaurante', profileIdx: 0, valor: 0 },
+          { id: genId(), categoria: 'Uber', profileIdx: 0, valor: 0 },
+          { id: genId(), categoria: 'Lista de desejos', profileIdx: 0, valor: 0 },
         ],
-        sign: 0, includeInSaldo: false
-      },
-      {
-        id: 'lancamentos', name: 'Lançamentos', icon: '🔮', type: 'lancamentos',
-        columns: [], rows: [],
-        refTableId: 'referencia',
-        sign: 0, includeInSaldo: false
+        sign: -1, includeInSaldo: true
       }
     ]
   };
@@ -1130,9 +1116,12 @@ if (state.profiles.length === 5) {
     else if (p.profileIdx === 3) p.profileIdx = 4;
   });
 }
-while (state.profiles.length < 6) {
-  state.profiles.push('Perfil ' + (state.profiles.length + 1));
+if (!state._isFreshDefault) {
+  while (state.profiles.length < 6) {
+    state.profiles.push('Perfil ' + (state.profiles.length + 1));
+  }
 }
+delete state._isFreshDefault; // já cumpriu o papel, não precisa mais ficar salvo
 // activeProfiles is now just an alias for profiles.length (kept for compatibility)
 state.activeProfiles = state.profiles.length;
 
@@ -1235,6 +1224,17 @@ function closeSearchPanel() {
 }
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeSearchPanel();
+});
+
+// Assim que você clica num campo de valor com "0" ou "0,00", ele já vem
+// selecionado — basta começar a digitar que o zero some sozinho, sem
+// precisar apagar antes. Vale pra qualquer campo numérico do app, sem
+// precisar mexer em cada um individualmente.
+document.addEventListener('focusin', (e) => {
+  const el = e.target;
+  if (el.tagName === 'INPUT' && el.type === 'number' && (el.value === '0' || el.value === '0.00' || el.value === '')) {
+    el.select();
+  }
 });
 
 function performSearch(query) {
