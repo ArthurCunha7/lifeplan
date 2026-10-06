@@ -1749,59 +1749,20 @@ function getNextExam(){
 // que é o número de verdade que aparece lá — diferente do "Total Geral" da
 // aba Resumo & Perfis (outro cálculo). Fica sincronizado, sem inventar uma
 // terceira fórmula aproximada.
-export function cfGetAllRowsByProfile(state,pIdx){
-  const rows=[];
-  (state.faturas||[]).forEach(f=>{
-    (f.rows||[]).forEach(r=>{ if(r.profileIdx===pIdx) rows.push(r); });
-  });
-  (state.pixRows||[]).forEach(p=>{ if(p.profileIdx===pIdx) rows.push(p); });
-  return rows;
-}
-export function cfComputeEntradasTotal(state){
-  let total=0;
-  const profiles=state.profiles||[];
-  profiles.forEach((name,idx)=>{
-    if(state.entradasProfiles && state.entradasProfiles[idx]===false) return;
-    const rows=cfGetAllRowsByProfile(state,idx);
-    const tg=rows.reduce((s,r)=>s+(parseFloat(r.value)||0),0);
-    const pays=(state.payments||[]).filter(p=>p.profileIdx===idx);
-    const tp=pays.reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-    total += (tp-tg)*-1;
-  });
-  return total;
-}
-export function cfComputeGastoCategoria(state,profileIdx,categoria){
-  let total=0;
-  (state.faturas||[]).forEach(f=>{
-    (f.rows||[]).forEach(r=>{
-      if(r.profileIdx===profileIdx && (r.category||'')===categoria) total+=parseFloat(r.value)||0;
-    });
-  });
-  return total;
-}
-export function cfGetTableTotal(state,t){
-  if(t.type==='entradas') return cfComputeEntradasTotal(state);
-  if(t.type==='lancamentos') return 0;
-  if(t.type==='faturas_auto'){
-    return (state.faturas||[]).reduce((s,f)=>s+(f.rows||[]).reduce((s2,r)=>s2+(parseFloat(r.value)||0),0),0);
-  }
-  if(t.type==='planejamento'){
-    return (t.rows||[]).filter(r=>r.categoria&&r.profileIdx!=null)
-      .reduce((s,r)=>s+((parseFloat(r.valor)||0)-cfComputeGastoCategoria(state,r.profileIdx,r.categoria)),0);
-  }
-  const numCols=(t.columns||[]).filter(c=>c.type==='number');
-  if(!numCols.length) return 0;
-  const valCol=numCols[0];
-  return (t.rows||[]).reduce((s,r)=>s+(parseFloat(r.values?.[valCol.id])||0),0);
-}
+// As fórmulas de verdade (cfGetAllRowsByProfile, cfComputeEntradasTotal,
+// cfComputeGastoCategoria, cfGetTableTotal) não vivem mais aqui — foram
+// extraídas pra public/finance-formulas.js, carregado via <script> antes
+// deste app (veja index.html). É a MESMA cópia usada dentro do Finanças de
+// verdade, então as duas telas nunca mais podem divergir por acidente.
 function getSaldoPreview(){
   try{
     const state=JSON.parse(localStorage.getItem('cf_state'));
     if(!state?.balancoTables) return null;
+    if(!window.FinanceFormulas) return null; // script compartilhado ainda não carregou
     let saldoFinal=0;
     state.balancoTables.forEach(t=>{
       if(!t.includeInSaldo||t.sign===0) return;
-      saldoFinal += cfGetTableTotal(state,t)*t.sign;
+      saldoFinal += window.FinanceFormulas.cfGetTableTotal(state,t)*t.sign;
     });
     return saldoFinal;
   }catch{return null;}
@@ -1813,13 +1774,14 @@ function getPlanejamentoPreview(){
   try{
     const state=JSON.parse(localStorage.getItem('cf_state'));
     if(!state?.balancoTables) return null;
+    if(!window.FinanceFormulas) return null;
     const planTable=state.balancoTables.find(t=>t.type==='planejamento');
     if(!planTable) return null;
     const rows=(planTable.rows||[]).filter(r=>r.categoria&&r.profileIdx!=null).map(r=>({
       categoria:r.categoria,
       profileName:(typeof state.profiles?.[r.profileIdx]==='object'?state.profiles[r.profileIdx]?.name:state.profiles?.[r.profileIdx])||'—',
       valor:parseFloat(r.valor)||0,
-      gasto:cfComputeGastoCategoria(state,r.profileIdx,r.categoria),
+      gasto:window.FinanceFormulas.cfComputeGastoCategoria(state,r.profileIdx,r.categoria),
     }));
     return rows.length?rows:null;
   }catch{return null;}

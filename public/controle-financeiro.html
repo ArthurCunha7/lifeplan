@@ -788,6 +788,7 @@
   </div>
 </div>
 
+<script src="/finance-formulas.js"></script>
 <script>
 // ══════════════════════════════════════════════════════
 //  CONSTANTS
@@ -828,7 +829,7 @@ let state = loadState() || getDefaultState();
 // e cards de perfil estão recolhidos, e se o saldo por perfil está visível.
 let _collapsedFaturas = {};
 let _collapsedProfiles = {};
-let _saldoVisible = true;
+let _saldoVisiblePerProfile = {}; // censurado por padrão, individual por perfil
 let _gastosVisiblePerProfile = {}; // censurado por padrão, individual por perfil
 
 let __cfSaveTimer = null;
@@ -1938,29 +1939,16 @@ function getBTById(id) {
 }
 
 function getTableTotal(t) {
-  // Returns computed numeric total for a table (for SALDO use)
-  if (t.type === 'entradas') return computeEntradas().total;
-  if (t.type === 'lancamentos') return 0; // informational, not summed unless sign != 0
-  if (t.type === 'faturas_auto') {
-    return state.faturas.reduce((s,f) => s + f.rows.reduce((s2,r) => s2 + (parseFloat(r.value)||0), 0), 0);
-  }
-  if (t.type === 'planejamento') {
-    // Soma do "Restante" de todas as categorias válidas — é isso que entra
-    // no Saldo do Mês (com sinal negativo, configurado por padrão), porque
-    // representa dinheiro que ainda vai ser gasto este mês.
-    return (t.rows||[]).filter(r => r.categoria && r.profileIdx != null)
-      .reduce((s,r) => s + ((parseFloat(r.valor)||0) - computeGastoCategoria(r.profileIdx, r.categoria)), 0);
-  }
-  // custom: sum all columns of type 'number'
-  const numCols = t.columns.filter(c => c.type === 'number');
-  if (numCols.length === 0) return 0;
-  // use first number column as "value"
-  const valCol = numCols[0];
-  return t.rows.reduce((s, r) => s + (parseFloat(r.values[valCol.id]) || 0), 0);
+  // A conta de verdade agora mora em public/finance-formulas.js (fonte
+  // única, compartilhada com a prévia da Início) — aqui só repassamos.
+  return FinanceFormulas.cfGetTableTotal(state, t);
 }
 
 function computeEntradas() {
-  let total = 0;
+  // O total vem da fórmula compartilhada (garantida igual à da Início);
+  // o detalhamento por perfil (rows) continua sendo montado aqui, só pra
+  // exibição na tela.
+  const total = FinanceFormulas.cfComputeEntradasTotal(state);
   const rows = [];
   getActiveProfiles()
     .filter(({ idx }) => state.entradasProfiles[idx] !== false)
@@ -1970,7 +1958,6 @@ function computeEntradas() {
       const pays = state.payments.filter(p => p.profileIdx === idx);
       const tp = pays.reduce((s, p) => s + p.value, 0);
       const saldo = (tp - tg) * -1;
-      total += saldo;
       rows.push({ name, idx, saldo });
     });
   return { total, rows };
@@ -2090,7 +2077,14 @@ function renderBalancoTables() {
     if (tIdx === saldoIdx) {
       container.appendChild(buildSaldoSection(tIdx, totalTables));
     }
-    container.appendChild(buildBalancoTableCard(t, tIdx, totalTables));
+    // Faturas, Entradas e Saldo em Conta não aparecem mais como blocos
+    // separados aqui — ficam acessíveis clicando na linha correspondente
+    // dentro do detalhamento do "Saldo do Mês", pra não duplicar a mesma
+    // informação em dois lugares na tela.
+    const isHiddenElsewhere = t.id === 'banco' || t.id === 'faturas' || t.type === 'entradas';
+    if (!isHiddenElsewhere) {
+      container.appendChild(buildBalancoTableCard(t, tIdx, totalTables));
+    }
   });
 
   // If saldo is at the bottom (index >= totalTables)
@@ -2407,15 +2401,7 @@ function renderEntradasCard(card, t) {
 // faturas e o pix — é isso que faz o "Gasto" da tabela de Planejamento e o
 // gráfico ficarem dinâmicos, sem precisar editar nada manualmente.
 function computeGastoCategoria(profileIdx, categoria) {
-  let total = 0;
-  state.faturas.forEach(f => {
-    f.rows.forEach(r => {
-      if (r.profileIdx === profileIdx && (r.category || '') === categoria) {
-        total += parseFloat(r.value) || 0;
-      }
-    });
-  });
-  return total;
+  return FinanceFormulas.cfComputeGastoCategoria(state, profileIdx, categoria);
 }
 
 function addPlanejamentoRow(t) {
@@ -2450,7 +2436,7 @@ function renderFaturasAutoCard(card, t) {
   table.innerHTML = `<thead><tr><th>Fatura</th><th>Fechamento</th><th>Vencimento</th><th>Valor</th></tr></thead>`;
   const tbody = document.createElement('tbody');
 
-  if (!state.faturas.length) {
+  if (!state.faturas.length && !(state.pixRows||[]).length) {
     tbody.innerHTML = `<tr><td colspan="4"><div class="empty">Nenhuma fatura cadastrada ainda na aba Faturas.</div></td></tr>`;
   } else {
     let total = 0;
@@ -2461,6 +2447,13 @@ function renderFaturasAutoCard(card, t) {
       tr.innerHTML = `<td>${f.name}</td><td>${f.fechamento||'—'}</td><td>${f.vencimento||'—'}</td><td class="val-cell negative">${fmt(val)}</td>`;
       tbody.appendChild(tr);
     });
+    const pixTotal = (state.pixRows||[]).reduce((s,p) => s + (parseFloat(p.value)||0), 0);
+    if (pixTotal !== 0) {
+      total += pixTotal;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>🔵 Pix</td><td>—</td><td>—</td><td class="val-cell negative">${fmt(pixTotal)}</td>`;
+      tbody.appendChild(tr);
+    }
     const tfoot = document.createElement('tfoot');
     tfoot.innerHTML = `<tr><td colspan="3">Total</td><td class="val-cell negative">${fmt(total)}</td></tr>`;
     table.appendChild(tfoot);
@@ -2904,6 +2897,33 @@ function renderSaldoBuilder() {
           body.appendChild(row);
         });
 
+      } else if (t.type === 'faturas_auto') {
+        // Resumo só-leitura (edite de verdade na aba Faturas)
+        if (!state.faturas.length && !(state.pixRows||[]).length) {
+          const empty = document.createElement('div');
+          empty.style.cssText = 'padding:12px 22px;font-size:12px;color:var(--muted)';
+          empty.textContent = 'Nenhuma fatura cadastrada ainda na aba Faturas.';
+          body.appendChild(empty);
+        } else {
+          state.faturas.forEach(f => {
+            const val = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
+            const rowEl = document.createElement('div');
+            rowEl.style.cssText = 'display:flex;justify-content:space-between;padding:7px 18px;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px';
+            rowEl.innerHTML = `<span>${f.name}</span><span class="val-cell negative">${fmt(val)}</span>`;
+            body.appendChild(rowEl);
+          });
+          const pixTotal = (state.pixRows||[]).reduce((s,p) => s + (parseFloat(p.value)||0), 0);
+          if (pixTotal !== 0) {
+            const rowEl = document.createElement('div');
+            rowEl.style.cssText = 'display:flex;justify-content:space-between;padding:7px 18px;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px';
+            rowEl.innerHTML = `<span>🔵 Pix</span><span class="val-cell negative">${fmt(pixTotal)}</span>`;
+            body.appendChild(rowEl);
+          }
+        }
+        const hint = document.createElement('div');
+        hint.style.cssText = 'padding:8px 18px;font-size:11px;color:var(--muted);font-style:italic';
+        hint.textContent = 'Edite valores, fechamento e vencimento direto na aba Faturas.';
+        body.appendChild(hint);
       } else if (t.type === 'custom') {
         // Editable table inline
         const numCol = t.columns.find(c => c.type === 'number');
@@ -3510,22 +3530,13 @@ function renderPagamentos() {
 // ══════════════════════════════════════════════════════
 //  SALDO FINAL
 // ══════════════════════════════════════════════════════
-function fmtSaldo(val) {
-  return _saldoVisible ? fmt(val) : '••••';
+function fmtSaldo(val, pIdx) {
+  return _saldoVisiblePerProfile[pIdx] ? fmt(val) : '••••';
 }
 
 function renderSaldo() {
   const container = document.getElementById('saldo-container');
   container.innerHTML = '';
-
-  const toggleWrap = document.createElement('div');
-  toggleWrap.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:8px;';
-  const toggleBtn = document.createElement('button');
-  toggleBtn.className = 'btn btn-ghost btn-sm';
-  toggleBtn.textContent = _saldoVisible ? '👁️ Ocultar valores' : '🙈 Mostrar valores';
-  toggleBtn.onclick = () => { _saldoVisible = !_saldoVisible; renderSaldo(); };
-  toggleWrap.appendChild(toggleBtn);
-  container.appendChild(toggleWrap);
 
   const grid = document.createElement('div');
   grid.className = 'profile-grid';
@@ -3536,28 +3547,37 @@ function renderSaldo() {
     const pays = state.payments.filter(p => p.profileIdx === pIdx);
     const totalPago = pays.reduce((s,p) => s + p.value, 0);
     const saldo = totalPago - totalGastos;
+    const visible = !!_saldoVisiblePerProfile[pIdx];
 
     const pCard = document.createElement('div');
     pCard.className = 'profile-card';
     pCard.dataset.p = pIdx;
 
+    const nameRow = document.createElement('div');
+    nameRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px';
     const nameDiv = document.createElement('div');
     nameDiv.className = 'profile-card-name';
     nameDiv.textContent = pName;
+    const eyeBtn = document.createElement('button');
+    eyeBtn.className = 'btn btn-ghost btn-sm';
+    eyeBtn.textContent = visible ? '👁️' : '🙈';
+    eyeBtn.title = 'Mostrar/ocultar o saldo deste perfil';
+    eyeBtn.onclick = () => { _saldoVisiblePerProfile[pIdx] = !visible; renderSaldo(); };
+    nameRow.append(nameDiv, eyeBtn);
 
     const r1 = document.createElement('div'); r1.className = 'profile-card-row';
-    r1.innerHTML = `<span class="label">Total de gastos</span><span class="val-cell negative">${_saldoVisible?'−':''}${fmtSaldo(totalGastos)}</span>`;
+    r1.innerHTML = `<span class="label">Total de gastos</span><span class="val-cell negative">${visible?'−':''}${fmtSaldo(totalGastos,pIdx)}</span>`;
 
     const r2 = document.createElement('div'); r2.className = 'profile-card-row';
-    r2.innerHTML = `<span class="label">Total pago</span><span class="val-cell positive">${_saldoVisible?'+':''}${fmtSaldo(totalPago)}</span>`;
+    r2.innerHTML = `<span class="label">Total pago</span><span class="val-cell positive">${visible?'+':''}${fmtSaldo(totalPago,pIdx)}</span>`;
 
     const r3 = document.createElement('div'); r3.className = 'profile-card-row';
     const saldoClass = saldo >= 0 ? 'positive' : 'negative';
-    const saldoSign = (_saldoVisible && saldo >= 0) ? '+' : '';
+    const saldoSign = (visible && saldo >= 0) ? '+' : '';
     r3.innerHTML = `<span class="label" style="font-weight:600">Saldo</span>
-      <span class="profile-card-final ${saldoClass}">${saldoSign}${fmtSaldo(saldo)}</span>`;
+      <span class="profile-card-final ${saldoClass}">${saldoSign}${fmtSaldo(saldo,pIdx)}</span>`;
 
-    pCard.append(nameDiv, r1, r2, r3);
+    pCard.append(nameRow, r1, r2, r3);
     grid.appendChild(pCard);
   });
 
@@ -3577,6 +3597,7 @@ function renderSaldo() {
 
   const tbody = document.createElement('tbody');
   let gtGastos = 0, gtPago = 0;
+  let allVisible = true;
 
   getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
     const rows = getAllRowsByProfile(pIdx);
@@ -3585,29 +3606,34 @@ function renderSaldo() {
     const tp = pays.reduce((s,p) => s + p.value, 0);
     const sl = tp - tg;
     gtGastos += tg; gtPago += tp;
+    const visible = !!_saldoVisiblePerProfile[pIdx];
+    if (!visible) allVisible = false;
 
     const tr = document.createElement('tr');
     const dot = `<span style="width:8px;height:8px;border-radius:50%;background:${getProfileColor(pIdx)};display:inline-block;margin-right:8px;"></span>`;
     const sc = sl >= 0 ? 'positive' : 'negative';
-    const ss = (_saldoVisible && sl >= 0) ? '+' : '';
+    const ss = (visible && sl >= 0) ? '+' : '';
     tr.innerHTML = `
       <td>${dot}${pName}</td>
-      <td class="val-cell negative">${_saldoVisible?'−':''}${fmtSaldo(tg)}</td>
-      <td class="val-cell positive">${_saldoVisible?'+':''}${fmtSaldo(tp)}</td>
-      <td class="val-cell ${sc}">${ss}${fmtSaldo(sl)}</td>
+      <td class="val-cell negative">${visible?'−':''}${fmtSaldo(tg,pIdx)}</td>
+      <td class="val-cell positive">${visible?'+':''}${fmtSaldo(tp,pIdx)}</td>
+      <td class="val-cell ${sc}">${ss}${fmtSaldo(sl,pIdx)}</td>
     `;
     tbody.appendChild(tr);
   });
 
+  // Total Geral só mostra em claro se TODOS os perfis estiverem visíveis —
+  // senão daria pra "descobrir" um perfil escondido fazendo a subtração.
   const tfoot = document.createElement('tfoot');
   const gtSaldo = gtPago - gtGastos;
   const gtClass = gtSaldo >= 0 ? 'positive' : 'negative';
-  const gtSign = (_saldoVisible && gtSaldo >= 0) ? '+' : '';
+  const gtSign = (allVisible && gtSaldo >= 0) ? '+' : '';
+  const gtFmt = v => allVisible ? fmt(v) : '••••';
   tfoot.innerHTML = `<tr>
     <td>Total Geral</td>
-    <td class="val-cell negative">${_saldoVisible?'−':''}${fmtSaldo(gtGastos)}</td>
-    <td class="val-cell positive">${_saldoVisible?'+':''}${fmtSaldo(gtPago)}</td>
-    <td class="val-cell ${gtClass}">${gtSign}${fmtSaldo(gtSaldo)}</td>
+    <td class="val-cell negative">${allVisible?'−':''}${gtFmt(gtGastos)}</td>
+    <td class="val-cell positive">${allVisible?'+':''}${gtFmt(gtPago)}</td>
+    <td class="val-cell ${gtClass}">${gtSign}${gtFmt(gtSaldo)}</td>
   </tr>`;
 
   table.appendChild(tbody);
