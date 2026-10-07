@@ -1,14 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import {
+
+// Importa o MESMO arquivo usado de verdade pelo app (public/finance-formulas.js)
+// — não uma cópia. Ele se anexa a window.FinanceFormulas quando carregado.
+import '../../public/finance-formulas.js';
+const {
   cfGetAllRowsByProfile,
   cfComputeEntradasTotal,
   cfComputeGastoCategoria,
   cfGetTableTotal,
-} from '../App.jsx';
+} = window.FinanceFormulas;
 
-// Estas funções replicam, no app React (tela Início), as mesmas fórmulas
-// usadas de verdade dentro do app de Finanças. Já tivemos um bug real onde
-// as duas fórmulas divergiam — estes testes existem pra isso nunca mais
+// Estas funções são a fonte única de verdade tanto da prévia na Início
+// quanto do app de Finanças de verdade. Já tivemos um bug real onde duas
+// cópias divergentes existiam — estes testes existem pra isso nunca mais
 // passar despercebido.
 
 function makeState(overrides = {}) {
