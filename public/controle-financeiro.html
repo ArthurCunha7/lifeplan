@@ -831,6 +831,8 @@ let _collapsedFaturas = {};
 let _collapsedProfiles = {};
 let _saldoVisiblePerProfile = {}; // censurado por padrão, individual por perfil
 let _gastosVisiblePerProfile = {}; // censurado por padrão, individual por perfil
+let _collapsedPagamentosPerProfile = {}; // recolhido por padrão, individual por perfil
+let _pagamentosVisiblePerProfile = {}; // censurado por padrão, individual por perfil
 
 let __cfSaveTimer = null;
 function flushCloudSave() {
@@ -2436,7 +2438,7 @@ function renderFaturasAutoCard(card, t) {
   table.innerHTML = `<thead><tr><th>Fatura</th><th>Fechamento</th><th>Vencimento</th><th>Valor</th></tr></thead>`;
   const tbody = document.createElement('tbody');
 
-  if (!state.faturas.length && !(state.pixRows||[]).length) {
+  if (!state.faturas.length) {
     tbody.innerHTML = `<tr><td colspan="4"><div class="empty">Nenhuma fatura cadastrada ainda na aba Faturas.</div></td></tr>`;
   } else {
     let total = 0;
@@ -2447,13 +2449,6 @@ function renderFaturasAutoCard(card, t) {
       tr.innerHTML = `<td>${f.name}</td><td>${f.fechamento||'—'}</td><td>${f.vencimento||'—'}</td><td class="val-cell negative">${fmt(val)}</td>`;
       tbody.appendChild(tr);
     });
-    const pixTotal = (state.pixRows||[]).reduce((s,p) => s + (parseFloat(p.value)||0), 0);
-    if (pixTotal !== 0) {
-      total += pixTotal;
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>🔵 Pix</td><td>—</td><td>—</td><td class="val-cell negative">${fmt(pixTotal)}</td>`;
-      tbody.appendChild(tr);
-    }
     const tfoot = document.createElement('tfoot');
     tfoot.innerHTML = `<tr><td colspan="3">Total</td><td class="val-cell negative">${fmt(total)}</td></tr>`;
     table.appendChild(tfoot);
@@ -2899,7 +2894,7 @@ function renderSaldoBuilder() {
 
       } else if (t.type === 'faturas_auto') {
         // Resumo só-leitura (edite de verdade na aba Faturas)
-        if (!state.faturas.length && !(state.pixRows||[]).length) {
+        if (!state.faturas.length) {
           const empty = document.createElement('div');
           empty.style.cssText = 'padding:12px 22px;font-size:12px;color:var(--muted)';
           empty.textContent = 'Nenhuma fatura cadastrada ainda na aba Faturas.';
@@ -2912,13 +2907,6 @@ function renderSaldoBuilder() {
             rowEl.innerHTML = `<span>${f.name}</span><span class="val-cell negative">${fmt(val)}</span>`;
             body.appendChild(rowEl);
           });
-          const pixTotal = (state.pixRows||[]).reduce((s,p) => s + (parseFloat(p.value)||0), 0);
-          if (pixTotal !== 0) {
-            const rowEl = document.createElement('div');
-            rowEl.style.cssText = 'display:flex;justify-content:space-between;padding:7px 18px;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px';
-            rowEl.innerHTML = `<span>🔵 Pix</span><span class="val-cell negative">${fmt(pixTotal)}</span>`;
-            body.appendChild(rowEl);
-          }
         }
         const hint = document.createElement('div');
         hint.style.cssText = 'padding:8px 18px;font-size:11px;color:var(--muted);font-style:italic';
@@ -3037,6 +3025,48 @@ function removeFatura(fId) {
   renderFaturas();
 }
 
+// ── ORDEM DAS LINHAS DA FATURA (só na tela — os dados salvos não mudam) ──────
+// Mais recente primeiro. Linha SEM data vai pro topo (é a que acabou de ser
+// adicionada e você ainda vai preencher — se fosse pro fim, ela sumiria da
+// vista). Empate (mesma data, ou ambas sem data): a adicionada por último
+// fica em cima.
+function sortedRowsForDisplay(rows) {
+  return rows
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => {
+      const da = a.r.date || '', db = b.r.date || '';
+      if (!da && !db) return b.i - a.i;
+      if (!da) return -1;
+      if (!db) return 1;
+      if (da !== db) return da < db ? 1 : -1;
+      return b.i - a.i;
+    })
+    .map(x => x.r);
+}
+
+// Linhas cuja data acabou de mudar e ainda precisam ir pra posição certa.
+// Elas só se mexem quando o foco sai da linha — mover enquanto você ainda
+// está digitando a data faria o campo perder o foco no meio.
+let _rowNeedsReposition = {};
+
+// Move SÓ a linha afetada pra posição correta, sem reconstruir a tabela
+// (reconstruir faria um clique seu em outro campo se perder).
+function repositionFaturaRow(tbody, fId, rId) {
+  const f = state.faturas.find(x => x.id === fId);
+  if (!f) return;
+  const order = sortedRowsForDisplay(f.rows).map(r => r.id);
+  const trMap = {};
+  [...tbody.children].forEach(tr => { if (tr.dataset.rid) trMap[tr.dataset.rid] = tr; });
+  const tr = trMap[rId];
+  if (!tr) return;
+  const targetIdx = order.indexOf(rId);
+  let nextTr = null;
+  for (let i = targetIdx + 1; i < order.length; i++) {
+    if (trMap[order[i]]) { nextTr = trMap[order[i]]; break; }
+  }
+  if (tr.nextElementSibling !== nextTr) tbody.insertBefore(tr, nextTr);
+}
+
 function addRow(fId) {
   const f = state.faturas.find(f => f.id === fId);
   f.rows.push({ id: genId(), date:'', name:'', parcelas:'', value:'', profileIdx: null, category: null });
@@ -3069,6 +3099,7 @@ function updateFaturaTotal(fId) {
 function renderFaturas() {
   const container = document.getElementById('faturas-container');
   container.innerHTML = '';
+  _rowNeedsReposition = {}; // uma renderização completa já ordena tudo do zero
 
   state.faturas.forEach(f => {
     const total = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
@@ -3144,17 +3175,34 @@ function renderFaturas() {
 
     if (f.rows.length === 0) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="7"><div class="empty">Nenhum gasto ainda. Clique em "Adicionar linha".</div></td>`;
+      tr.innerHTML = `<td colspan="8"><div class="empty">Nenhum gasto ainda. Clique em "Adicionar linha".</div></td>`;
       tbody.appendChild(tr);
     } else {
-      f.rows.forEach(r => {
+      sortedRowsForDisplay(f.rows).forEach(r => {
         const tr = document.createElement('tr');
         tr.dataset.rid = r.id;
+
+        // Quando o foco sai desta linha (e a data dela mudou), move só ela
+        // pra posição certa. Espera um instante (setTimeout) pro navegador
+        // "assentar" qual elemento recebeu o foco: se ainda estiver nesta
+        // linha (ex: digitando o ano da data), não mexe em nada.
+        tr.addEventListener('focusout', () => {
+          if (!_rowNeedsReposition[r.id]) return;
+          setTimeout(() => {
+            if (!_rowNeedsReposition[r.id]) return;
+            if (tr.contains(document.activeElement)) return;
+            delete _rowNeedsReposition[r.id];
+            repositionFaturaRow(tbody, f.id, r.id);
+          }, 0);
+        });
 
         const tdDate = document.createElement('td');
         const inDate = document.createElement('input');
         inDate.type = 'date'; inDate.value = r.date;
-        inDate.onchange = e => updateRow(f.id, r.id, 'date', e.target.value);
+        inDate.onchange = e => {
+          updateRow(f.id, r.id, 'date', e.target.value);
+          _rowNeedsReposition[r.id] = true; // reordena quando você sair desta linha
+        };
         tdDate.appendChild(inDate);
 
         const tdName = document.createElement('td');
@@ -3462,6 +3510,8 @@ function renderPagamentos() {
   getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
     const pays = state.payments.filter(p => p.profileIdx === pIdx);
     const totalPaid = pays.reduce((s,p) => s + p.value, 0);
+    const visible = !!_pagamentosVisiblePerProfile[pIdx];
+    const collapsed = _collapsedPagamentosPerProfile[pIdx] !== false; // recolhido por padrão
 
     const card = document.createElement('div');
     card.className = 'card';
@@ -3469,9 +3519,32 @@ function renderPagamentos() {
     const header = document.createElement('div');
     header.className = 'card-header';
     const dot = `<span style="width:10px;height:10px;border-radius:50%;background:${getProfileColor(pIdx)};display:inline-block;"></span>`;
-    header.innerHTML = `<div class="card-title">${dot} ${pName}</div>
-      <div class="card-total positive">${fmt(totalPaid)} pagos</div>`;
+
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'btn btn-ghost btn-sm';
+    toggleBtn.textContent = collapsed ? '▸' : '▾';
+    toggleBtn.title = 'Recolher/expandir';
+    toggleBtn.onclick = () => { _collapsedPagamentosPerProfile[pIdx] = !collapsed; renderPagamentos(); };
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'card-title';
+    titleEl.innerHTML = `${dot} ${pName}`;
+
+    const eyeBtn = document.createElement('button');
+    eyeBtn.className = 'btn btn-ghost btn-sm';
+    eyeBtn.textContent = visible ? '👁️' : '🙈';
+    eyeBtn.title = 'Mostrar/ocultar os valores deste perfil';
+    eyeBtn.onclick = () => { _pagamentosVisiblePerProfile[pIdx] = !visible; renderPagamentos(); };
+
+    const totalEl = document.createElement('div');
+    totalEl.className = 'card-total positive';
+    totalEl.textContent = visible ? `${fmt(totalPaid)} pagos` : '•••• pagos';
+
+    header.append(toggleBtn, titleEl, eyeBtn, totalEl);
     card.appendChild(header);
+
+    const body = document.createElement('div');
+    body.style.display = collapsed ? 'none' : '';
 
     const wrap = document.createElement('div');
     wrap.className = 'table-wrap';
@@ -3493,7 +3566,7 @@ function renderPagamentos() {
         const tdDel = document.createElement('td');
         tdDel.appendChild(delBtn);
 
-        tr.innerHTML = `<td>${formatDateBR(p.date)||'—'}</td><td>${p.desc}</td><td class="val-cell positive">${fmt(p.value)}</td>`;
+        tr.innerHTML = `<td>${formatDateBR(p.date)||'—'}</td><td>${p.desc}</td><td class="val-cell positive">${visible?fmt(p.value):'••••'}</td>`;
         tr.appendChild(tdDel);
         tbody.appendChild(tr);
       });
@@ -3501,7 +3574,7 @@ function renderPagamentos() {
 
     table.appendChild(tbody);
     wrap.appendChild(table);
-    card.appendChild(wrap);
+    body.appendChild(wrap);
 
     const addBar = document.createElement('div');
     addBar.className = 'payment-add-row';
@@ -3522,7 +3595,8 @@ function renderPagamentos() {
     addBtn.onclick = () => addPayment(pIdx);
 
     addBar.append(inDate, inDesc, inVal, addBtn);
-    card.appendChild(addBar);
+    body.appendChild(addBar);
+    card.appendChild(body);
     container.appendChild(card);
   });
 }
