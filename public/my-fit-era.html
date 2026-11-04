@@ -4,92 +4,46 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#2563EB">
+<meta name="theme-color" content="#3F5A38">
 <title>LifePlan</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/lifeplan-theme.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
-    --bg: #efe8dd;
-    --surface: #FFFFFF;
-    --border: #e4ddd0;
-    --text: #1c1c1a;
-    --text-muted: #6b6a63;
-    --text-subtle: #8a887d;
-    --accent: #7f9770;
-    --accent-soft: #eef2e7;
-    --success: #16A34A;
-    --success-soft: #F0FDF4;
-    --warning: #D97706;
-    --warning-soft: #FFFBEB;
-    --danger: #DC2626;
-    --danger-soft: #FEF2F2;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
-    --shadow-md: 0 4px 12px rgba(0,0,0,.06);
-    --radius: 16px;
-    --radius-sm: 10px;
-    --cat-hover: #eef2e7;
-    --cat-success: #D1F7D6;
-    --cat-success-text: #166534;
-    --cat-success-border: #A7F3B0;
-    --cat-danger: #FEE2E2;
-    --cat-danger-text: #991B1B;
-    --cat-danger-border: #FECACA;
-    --cat-partial: #FEF3C7;
-    --cat-partial-text: #92400E;
-    --cat-partial-border: #FDE68A;
-    --cat-selected-bg: #eef2e7;
-    --cat-selected-border: #b9c8ab;
-    --cat-selected-text: #3f6b2f;
   }
-  [data-theme="dark"] {
-    --bg: #17181a;
-    --surface: #232527;
-    --border: #3c3e41;
-    --text: #ecebe8;
-    --text-muted: #b9b7b1;
-    --text-subtle: #928f88;
-    --accent: #93ab84;
-    --accent-soft: #2a3226;
-    --success: #4ade80;
-    --success-soft: #1c2e1f;
-    --warning: #f0ad4e;
-    --warning-soft: #332918;
-    --danger: #f87171;
-    --danger-soft: #331e1e;
-    --cat-hover: #2a3226;
-    --cat-success: #204426;
-    --cat-success-text: #86efac;
-    --cat-success-border: #2f6b3a;
-    --cat-danger: #442222;
-    --cat-danger-text: #fca5a5;
-    --cat-danger-border: #6b2f2f;
-    --cat-partial: #453a1c;
-    --cat-partial-text: #fde68a;
-    --cat-partial-border: #6b5a2f;
-    --cat-selected-bg: #2a3226;
-    --cat-selected-border: #4a6b3a;
-    --cat-selected-text: #93ab84;
+  /* nomes legados desta página, mapeados para o tema compartilhado */
+  html:root {
+    --cat-hover: var(--accent-soft);
+    --cat-success: var(--success-soft);
+    --cat-success-text: var(--success);
+    --cat-success-border: var(--success);
+    --cat-danger: var(--danger-soft);
+    --cat-danger-text: var(--danger);
+    --cat-danger-border: var(--danger);
+    --cat-partial: var(--warning-soft);
+    --cat-partial-text: var(--warning);
+    --cat-partial-border: var(--warning);
+    --cat-selected-bg: var(--accent-soft);
+    --cat-selected-border: var(--accent);
+    --cat-selected-text: var(--accent-dark);
   }
   body { transition: background-color .2s, color .2s; }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { overflow-x: hidden; }
   body {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-body);
     background: var(--bg);
     min-height: 100vh; color: var(--text);
-    padding: calc(var(--safe-top) + 12px) 12px calc(var(--safe-bottom) + 80px) 12px;
+    padding: calc(var(--safe-top) + 12px) 12px calc(var(--safe-bottom) + 96px) 12px;
     font-size: 15px; line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
   .container { max-width: 1200px; margin: 0 auto; }
   .page-header { margin-bottom: 20px; }
-  .page-title { font-size: 1.125rem; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+  .page-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; color: var(--text); letter-spacing: -0.02em; }
   .page-subtitle { font-size: 0.875rem; color: var(--text-muted); margin-top: 4px; font-weight: 400; }
   .section-title {
     font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
@@ -104,21 +58,21 @@
   .bottom-nav .ico { margin-bottom: 2px; }
 
   .tabs {
-    display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap;
-    background: var(--surface); padding: 4px; border-radius: var(--radius-sm);
-    border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+    display: flex; gap: 4px; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
   }
+  .tabs::-webkit-scrollbar { display: none; }
   .tab {
-    flex: 1; min-width: 88px; padding: 10px 12px; border: none;
-    background: transparent; color: var(--text-muted); border-radius: 8px;
-    cursor: pointer; font-size: 0.8125rem; font-weight: 500;
-    transition: background 0.15s, color 0.15s; min-height: 40px; position: relative;
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    flex: 0 0 auto; padding: 0 16px; border: none; border-bottom: 3px solid transparent;
+    background: transparent; color: var(--text-muted); border-radius: 0;
+    cursor: pointer; font-size: 0.9375rem; font-weight: 500;
+    transition: color 0.15s; min-height: 48px; position: relative;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
   }
-  .tab:hover { background: var(--bg); color: var(--text); }
-  .tab.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .tab:hover { background: transparent; color: var(--text); }
+  .tab.active { background: transparent; color: var(--text); font-weight: 700; border-bottom-color: var(--accent); }
   .tab .alert-badge {
-    position: absolute; top: 4px; right: 8px; background: var(--danger); color: white;
+    position: absolute; top: 4px; right: 8px; background: var(--danger); color: var(--on-accent);
     border-radius: 10px; padding: 1px 6px; font-size: 0.65em; font-weight: 600;
   }
 
@@ -142,15 +96,11 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 16px; text-align: left; box-shadow: var(--shadow-sm);
   }
-  .stat .v { font-size: 1.75rem; font-weight: 600; color: var(--text); line-height: 1.2; letter-spacing: -0.02em; }
+  .stat .v { font-family: var(--font-display); font-variant-numeric: tabular-nums; font-size: 1.75rem; font-weight: 500; color: var(--text); line-height: 1.2; letter-spacing: -0.02em; }
   .stat .l { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; font-weight: 500; }
-  .stat.accent { border-left: 3px solid var(--accent); }
   .stat.accent .v { color: var(--accent); }
-  .stat.stat-success { border-left: 3px solid var(--success); }
   .stat.stat-success .v { color: var(--success); }
-  .stat.stat-warning { border-left: 3px solid var(--warning); }
   .stat.stat-warning .v { color: var(--warning); }
-  .stat.stat-danger { border-left: 3px solid var(--danger); }
   .stat.stat-danger .v { color: var(--danger); }
   .stat.neutral .v { color: var(--text); }
 
@@ -162,23 +112,23 @@
   }
   textarea { resize: vertical; min-height: 60px; }
   input[type="checkbox"] { -webkit-appearance: checkbox; width:auto; padding:0; }
-  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236B7280' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px;
   }
   button {
-    background: var(--accent); color: white; border: none; cursor: pointer;
-    font-weight: 500; padding: 10px 16px; min-height: 42px; border-radius: var(--radius-sm);
+    background: var(--accent); color: var(--on-accent); border: none; cursor: pointer;
+    font-weight: 500; padding: 10px 16px; min-height: 44px; border-radius: var(--radius-sm);
   }
   button:hover { filter: brightness(0.97); }
   button:active { transform: scale(0.99); }
   button.danger { background: var(--danger); }
   button.success { background: var(--success); }
   button.ghost { background: var(--surface); color: var(--accent); border: 1px solid var(--border); }
-  button.small { padding: 6px 10px; font-size: 0.8125rem; min-height: 32px; }
+  button.small { padding: 6px 12px; font-size: 0.8125rem; min-height: 36px; }
   button.diet { background: var(--text); }
-  button.icon-only { padding: 10px; min-width: 42px; }
+  button.icon-only { padding: 10px; min-width: 44px; }
 
   .form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
   .form-row > * { flex: 1; min-width: 140px; }
@@ -188,8 +138,8 @@
     border: 1px solid var(--border); border-radius: var(--radius-sm);
     padding: 14px; margin-bottom: 10px; background: var(--surface);
   }
-  .habit-entry.done { border-color: #BBF7D0; background: var(--success-soft); }
-  .habit-entry.failed { border-color: #FECACA; background: var(--danger-soft); }
+  .habit-entry.done { border-color: var(--success); background: var(--success-soft); }
+  .habit-entry.failed { border-color: var(--danger); background: var(--danger-soft); }
   .habit-entry.optional { border-style: dashed; opacity: 0.85; }
   .habit-entry.collapsed { padding: 10px 14px; cursor: pointer; }
   .habit-entry.collapsed .habit-full { display: none; }
@@ -231,7 +181,7 @@
     border-color: var(--cat-partial-border); font-weight: 600;
   }
   .toggle-btn.toggle-skip:hover {
-    background: var(--cat-hover); color: var(--text); border-color: #C7D2FE;
+    background: var(--cat-hover); color: var(--text); border-color: var(--accent);
   }
   .toggle-btn.toggle-skip.active-skip {
     background: var(--bg); color: var(--text-muted); border-color: var(--border); font-weight: 600;
@@ -242,9 +192,9 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 16px; margin-bottom: 12px; transition: border-color 0.15s;
   }
-  .meal-card.full { border-color: #BBF7D0; background: var(--success-soft); }
-  .meal-card.partial { border-color: #FDE68A; background: var(--warning-soft); }
-  .meal-card.no { border-color: #FECACA; background: var(--danger-soft); }
+  .meal-card.full { border-color: var(--success); background: var(--success-soft); }
+  .meal-card.partial { border-color: var(--warning); background: var(--warning-soft); }
+  .meal-card.no { border-color: var(--danger); background: var(--danger-soft); }
   .meal-card.skip { border-color: var(--border); background: var(--bg); }
   .meal-card.collapsed { padding: 10px 14px; cursor: pointer; }
   .meal-card.collapsed .meal-full { display: none; }
@@ -273,38 +223,38 @@
     margin: 10px 0; font-size: 0.92em;
   }
   .food-list-header {
-    font-size: 0.78em; color: #718096; font-weight: 600;
+    font-size: 0.78em; color: var(--muted); font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
   }
   .food-item {
     display: flex; align-items: center; gap: 10px; padding: 6px 0;
-    border-bottom: 1px dashed #cbd5e0;
+    border-bottom: 1px dashed var(--border);
   }
   .food-item:last-child { border-bottom: none; }
   .food-checkbox {
-    width: 22px; height: 22px; border: 2px solid #cbd5e0; border-radius: 6px;
+    width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 6px;
     cursor: pointer; flex-shrink: 0; display: flex; align-items: center;
-    justify-content: center; background: white; font-weight: 700;
+    justify-content: center; background: var(--surface); font-weight: 700;
     color: transparent; transition: all 0.15s; user-select: none;
   }
   .food-checkbox.checked {
-    background: var(--success); border-color: var(--success); color: white;
+    background: var(--success); border-color: var(--success); color: var(--on-accent);
   }
   .food-name { flex: 1; font-weight: 500; }
   .food-amount {
-    background: #edf2f7; padding: 2px 10px; border-radius: 12px;
-    font-size: 0.8em; color: #4a5568; font-weight: 600; flex-shrink: 0;
+    background: var(--surface3); padding: 2px 10px; border-radius: 12px;
+    font-size: 0.8em; color: var(--text-2); font-weight: 600; flex-shrink: 0;
   }
-  .meal-card.full .food-amount { background: #c6f6d5; color: #22543d; }
+  .meal-card.full .food-amount { background: var(--success-soft); color: var(--success); }
 
   .meal-toggles { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
   .meal-toggles .toggle-btn { flex: 1 1 calc(50% - 3px); min-width: 110px; }
 
   .meal-note-area {
-    background: #f7fafc; border-radius: 8px; padding: 10px; margin-top: 10px;
+    background: var(--surface2); border-radius: 8px; padding: 10px; margin-top: 10px;
   }
   .meal-note-area textarea {
-    width: 100%; background: white; font-size: 0.9em; padding: 10px;
+    width: 100%; background: var(--surface); font-size: 0.9em; padding: 10px;
   }
 
   .diet-summary {
@@ -324,7 +274,7 @@
   }
 
   .diet-overall-note {
-    background: white; border: 2px solid #e2e8f0; border-radius: 12px;
+    background: var(--surface); border: 2px solid var(--border); border-radius: 12px;
     padding: 14px; margin-top: 12px;
   }
   .diet-overall-note label { margin-bottom: 8px; }
@@ -339,15 +289,15 @@
   }
   .meal-cfg-header .nm { font-weight: 700; font-size: 1.05em; }
   .meal-cfg-foods {
-    background: white; border-radius: 8px; padding: 8px; margin-top: 8px;
+    background: var(--surface); border-radius: 8px; padding: 8px; margin-top: 8px;
   }
   .food-cfg-row {
     display: flex; gap: 8px; align-items: center; padding: 6px 0;
-    border-bottom: 1px solid #edf2f7;
+    border-bottom: 1px solid var(--border2);
   }
   .food-cfg-row:last-child { border: none; }
   .food-cfg-row .nm { flex: 1; font-size: 0.9em; }
-  .food-cfg-row .amt { color: #718096; font-size: 0.85em; }
+  .food-cfg-row .amt { color: var(--muted); font-size: 0.85em; }
   .food-cfg-row button { padding: 4px 8px; min-height: 28px; font-size: 0.85em; }
 
   .heatmap { display: grid; gap: 3px; }
@@ -356,53 +306,53 @@
   .item-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 
   .habit-card-cfg {
-    background: #f7fafc; border-radius: 10px; padding: 12px;
+    background: var(--surface2); border-radius: 10px; padding: 12px;
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
   }
   .habit-card-cfg .info { flex: 1; min-width: 180px; }
   .habit-card-cfg .info .nm { font-weight: 700; font-size: 1em; }
-  .habit-card-cfg .info .freq { font-size: 0.82em; color: #718096; margin-top: 3px; }
+  .habit-card-cfg .info .freq { font-size: 0.82em; color: var(--muted); margin-top: 3px; }
 
   .chip {
-    background: #edf2f7; padding: 8px 12px; border-radius: 20px;
+    background: var(--surface3); padding: 8px 12px; border-radius: 20px;
     display: inline-flex; gap: 8px; align-items: center; font-size: 0.88em;
     cursor: pointer; user-select: none; border: 2px solid transparent;
   }
   .chip.selectable {
     color: var(--text); transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
-  .chip.selectable:hover { background: var(--cat-hover); border-color: #C7D2FE; color: var(--text); }
+  .chip.selectable:hover { background: var(--cat-hover); border-color: var(--accent); color: var(--text); }
   .chip.active {
     background: var(--cat-selected-bg); color: var(--cat-selected-text);
     border-color: var(--cat-selected-border); font-weight: 600;
   }
   .chips-line { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip button { padding: 4px 8px; font-size: 0.8em; background: #e53e3e; min-height: 28px; }
+  .chip button { padding: 4px 8px; font-size: 0.8em; background: var(--danger); min-height: 28px; }
 
-  .empty { text-align: center; padding: 30px 20px; color: #a0aec0; }
+  .empty { text-align: center; padding: 30px 20px; color: var(--muted); }
   .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.78em; font-weight: 600; }
-  .badge-ok { background: #c6f6d5; color: #22543d; }
-  .badge-fail { background: #fed7d7; color: #742a2a; }
-  .badge-skip { background: #e2e8f0; color: #4a5568; }
-  .badge-extra { background: #bee3f8; color: #2c5282; }
-  .badge-partial { background: #feebc8; color: #7b341e; }
-  .badge-diet { background: #b2f5ea; color: #234e52; }
-  .meal-tag { background: #bee3f8; color: #2c5282; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; }
-  .freq-tag { background: #faf089; color: #744210; padding: 2px 8px; border-radius: 10px; font-size: 0.72em; }
-  .reason-area { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e0; }
+  .badge-ok { background: var(--success-soft); color: var(--success); }
+  .badge-fail { background: var(--danger-soft); color: var(--danger); }
+  .badge-skip { background: var(--border); color: var(--text-2); }
+  .badge-extra { background: var(--info-soft); color: var(--info); }
+  .badge-partial { background: var(--warning-soft); color: var(--warning); }
+  .badge-diet { background: var(--info-soft); color: var(--info); }
+  .meal-tag { background: var(--info-soft); color: var(--info); padding: 2px 8px; border-radius: 10px; font-size: 0.75em; }
+  .freq-tag { background: var(--warning-soft); color: var(--warning); padding: 2px 8px; border-radius: 10px; font-size: 0.72em; }
+  .reason-area { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
 
   .weekday-pick { display: flex; gap: 6px; flex-wrap: wrap; }
   .weekday-pick label {
-    display: flex; align-items: center; gap: 6px; background: #edf2f7;
+    display: flex; align-items: center; gap: 6px; background: var(--surface3);
     padding: 10px 12px; border-radius: 8px; cursor: pointer; margin: 0;
     font-weight: normal; min-height: 40px;
   }
 
   .weekly-progress {
-    background: #edf2f7; padding: 12px 14px; border-radius: 10px;
+    background: var(--surface3); padding: 12px 14px; border-radius: 10px;
     margin-bottom: 14px; font-size: 0.9em;
   }
-  .weekly-progress .bar { height: 8px; background: #cbd5e0; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+  .weekly-progress .bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 6px; }
   .weekly-progress .bar > div { height: 100%; background: var(--accent); transition: width 0.3s; }
 
   .insight-card {
@@ -417,28 +367,28 @@
   .insight-card.diet { border-color: var(--text-muted); background: var(--bg); }
   .insight-card .icon { flex-shrink: 0; line-height: 1; color: var(--text-muted); }
   .insight-card .content { flex: 1; line-height: 1.5; }
-  .insight-card .content strong { color: #2d3748; }
+  .insight-card .content strong { color: var(--text); }
   .insight-card .stat-num { font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(0,0,0,0.05); }
 
   .alert-card {
-    background: white; border-radius: 12px; padding: 14px 16px;
+    background: var(--surface); border-radius: 12px; padding: 14px 16px;
     margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start;
-    border-left: 5px solid #e53e3e; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    border-left: 5px solid var(--danger); box-shadow: 0 2px 10px rgba(0,0,0,0.06);
   }
   .alert-card.high { border-color: var(--danger); background: var(--danger-soft); }
   .alert-card.medium { border-color: var(--warning); background: var(--warning-soft); }
   .alert-card.low { border-color: var(--border); background: var(--bg); }
   .alert-card .alert-icon { flex-shrink: 0; line-height: 1; color: var(--text-muted); }
   .alert-card .alert-content { flex: 1; line-height: 1.5; }
-  .alert-card .alert-title { font-weight: 700; margin-bottom: 4px; color: #2d3748; }
-  .alert-card .alert-desc { font-size: 0.92em; color: #4a5568; }
+  .alert-card .alert-title { font-weight: 700; margin-bottom: 4px; color: var(--text); }
+  .alert-card .alert-desc { font-size: 0.92em; color: var(--text-2); }
   .alert-card .alert-pill {
     display: inline-block; padding: 2px 8px; border-radius: 8px;
     font-size: 0.7em; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.5px; margin-bottom: 6px;
   }
-  .alert-card.high .alert-pill { background: var(--danger); color: white; }
-  .alert-card.medium .alert-pill { background: var(--warning); color: white; }
+  .alert-card.high .alert-pill { background: var(--danger); color: var(--on-accent); }
+  .alert-card.medium .alert-pill { background: var(--warning); color: var(--on-accent); }
   .alert-card.low .alert-pill { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
 
   .pred-card {
@@ -451,24 +401,24 @@
   .pred-info { flex: 1; min-width: 0; }
   .pred-name { font-weight: 600; font-size: 0.95em; }
   .pred-bar-wrap {
-    height: 22px; background: #edf2f7; border-radius: 6px; overflow: hidden;
+    height: 22px; background: var(--surface3); border-radius: 6px; overflow: hidden;
     position: relative; margin-top: 4px;
   }
   .pred-bar {
     height: 100%; transition: width 0.5s; display: flex; align-items: center;
-    padding: 0 8px; color: white; font-weight: 700; font-size: 0.78em;
+    padding: 0 8px; color: var(--on-accent); font-weight: 700; font-size: 0.78em;
   }
   .pred-bar.high { background: var(--success); }
   .pred-bar.medium { background: var(--warning); }
   .pred-bar.low { background: var(--danger); }
-  .pred-confidence { font-size: 0.75em; color: #a0aec0; margin-top: 2px; }
+  .pred-confidence { font-size: 0.75em; color: var(--muted); margin-top: 2px; }
   .pred-day-selector { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
   .pred-day-btn {
     padding: 8px 12px; border: 1px solid var(--border); border-radius: 20px;
     background: var(--surface); cursor: pointer; font-size: 0.875rem; font-weight: 500;
     color: var(--text); min-height: 38px; transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
-  .pred-day-btn:hover { background: var(--cat-hover); border-color: #C7D2FE; color: var(--text); }
+  .pred-day-btn:hover { background: var(--cat-hover); border-color: var(--accent); color: var(--text); }
   .pred-day-btn.active {
     background: var(--cat-selected-bg); border-color: var(--cat-selected-border);
     color: var(--cat-selected-text); font-weight: 600;
@@ -477,41 +427,41 @@
   .year-compare-card { background: var(--surface); border-radius: var(--radius-sm); padding: 16px; border: 1px solid var(--border); }
   .year-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin: 10px 0; }
   .year-side { text-align: center; padding: 14px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--border); }
-  .year-side.current { background: var(--accent-soft); border-color: #BFDBFE; color: var(--text); }
+  .year-side.current { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
   .year-side.current .year-value { color: var(--accent); }
   .year-side .year-label { font-size: 0.78em; opacity: 0.85; font-weight: 600; }
   .year-side .year-value { font-size: 1.8em; font-weight: 700; line-height: 1.2; }
   .year-side .year-extra { font-size: 0.78em; opacity: 0.85; margin-top: 2px; }
-  .year-vs { font-size: 1.4em; font-weight: 700; color: #a0aec0; }
+  .year-vs { font-size: 1.4em; font-weight: 700; color: var(--muted); }
   .year-diff { text-align: center; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 0.9em; margin-top: 6px; }
-  .year-diff.pos { background: #c6f6d5; color: #22543d; }
-  .year-diff.neg { background: #fed7d7; color: #742a2a; }
-  .year-diff.neutral { background: #e2e8f0; color: #4a5568; }
+  .year-diff.pos { background: var(--success-soft); color: var(--success); }
+  .year-diff.neg { background: var(--danger-soft); color: var(--danger); }
+  .year-diff.neutral { background: var(--border); color: var(--text-2); }
   .month-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 10px; }
   .month-cell { background: var(--bg); border-radius: 8px; padding: 10px; border-left: 3px solid var(--accent); border: 1px solid var(--border); border-left: 3px solid var(--accent); }
-  .month-cell .m-name { font-size: 0.78em; color: #718096; font-weight: 600; text-transform: uppercase; }
+  .month-cell .m-name { font-size: 0.78em; color: var(--muted); font-weight: 600; text-transform: uppercase; }
   .month-cell .m-val { font-size: 1.3em; font-weight: 700; margin-top: 2px; }
   .month-cell .m-vs { font-size: 0.78em; margin-top: 4px; }
   .month-cell .m-vs.up { color: var(--success); }
   .month-cell .m-vs.down { color: var(--danger); }
 
-  .trend-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+  .trend-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
   .trend-row:last-child { border: none; }
   .trend-name { flex: 1; font-weight: 600; }
-  .trend-bar-wrap { flex: 2; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; min-width: 80px; }
+  .trend-bar-wrap { flex: 2; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; min-width: 80px; }
   .trend-bar { height: 100%; transition: width 0.5s; }
   .trend-pct { font-weight: 700; min-width: 50px; text-align: right; font-variant-numeric: tabular-nums; }
 
   .corr-row {
     display: grid; grid-template-columns: 1fr auto; gap: 8px;
     align-items: center; padding: 10px 12px; border-radius: 8px;
-    margin-bottom: 6px; background: #f7fafc;
+    margin-bottom: 6px; background: var(--surface2);
   }
   .corr-row .desc { font-size: 0.93em; line-height: 1.4; }
   .corr-row .value { font-weight: 700; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; }
-  .corr-row .value.pos { background: #c6f6d5; color: #22543d; }
-  .corr-row .value.neg { background: #fed7d7; color: #742a2a; }
-  .corr-row .value.neutral { background: #e2e8f0; color: #4a5568; }
+  .corr-row .value.pos { background: var(--success-soft); color: var(--success); }
+  .corr-row .value.neg { background: var(--danger-soft); color: var(--danger); }
+  .corr-row .value.neutral { background: var(--border); color: var(--text-2); }
 
   .modal-bg {
     display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
@@ -519,7 +469,7 @@
   }
   .modal-bg.show { display:flex; }
   .modal {
-    background:white; border-radius:16px; padding:22px; max-width:600px; width:100%;
+    background:var(--surface); border-radius:16px; padding:22px; max-width:600px; width:100%;
     max-height: calc(100vh - 32px); overflow-y:auto;
   }
 
@@ -540,7 +490,7 @@
   }
   .bottom-nav button.active { color: var(--accent); background: var(--accent-soft); }
   .bottom-nav button .alert-badge {
-    position: absolute; top: 2px; right: 6px; background: var(--danger); color: white;
+    position: absolute; top: 2px; right: 6px; background: var(--danger); color: var(--on-accent);
     border-radius: 10px; padding: 1px 5px; font-size: 0.85em; font-weight: 700;
   }
 
@@ -561,19 +511,19 @@
   }
   .login-tabs button.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
   .login-error {
-    display: none; background: #fff5f5; color: #c53030; border: 1px solid #feb2b2;
+    display: none; background: var(--danger-soft); color: var(--danger); border: 1px solid var(--danger);
     padding: 10px 12px; border-radius: 8px; font-size: 0.88em; margin-bottom: 12px;
   }
   .login-error.show { display: block; }
   .cloud-bar {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    flex-wrap: wrap; background: rgba(255,255,255,0.2); color: white;
+    flex-wrap: wrap; background: rgba(255,255,255,0.2); color: var(--on-accent);
     padding: 8px 12px; border-radius: 10px; margin-bottom: 12px; font-size: 0.85em;
   }
-  .cloud-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: #a0aec0; display: inline-block; margin-right: 6px; }
-  .cloud-bar.sync .dot { background: #f6e05e; animation: pulse 1s infinite; }
-  .cloud-bar.ok .dot { background: #68d391; }
-  .cloud-bar.err .dot { background: #fc8181; }
+  .cloud-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 6px; }
+  .cloud-bar.sync .dot { background: var(--warning); animation: pulse 1s infinite; }
+  .cloud-bar.ok .dot { background: var(--success); }
+  .cloud-bar.err .dot { background: var(--danger); }
   @keyframes pulse { 50% { opacity: 0.4; } }
   #mainApp { display: none; }
   #mainApp.show { display: block; }
@@ -581,9 +531,9 @@
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px; margin-bottom: 16px; position: relative; z-index: 50;
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 12px 16px; padding-right: 64px; box-shadow: var(--shadow-sm);
+    padding: 12px 16px; box-shadow: var(--shadow-sm);
   }
-  .app-brand { color: var(--text); font-weight: 600; font-size: 1.0625rem; letter-spacing: -0.02em; }
+  .app-brand { color: var(--accent-dark); font-family: var(--font-display); font-weight: 600; font-size: 1.25rem; letter-spacing: -0.02em; }
   .account-menu-wrap { position: relative; }
   .account-trigger {
     display: flex; align-items: center; gap: 8px; background: var(--bg); color: var(--text);
@@ -602,18 +552,18 @@
   }
   .account-dropdown.show { display: block; }
   .account-dropdown .account-email {
-    font-size: 0.82em; color: #718096; padding: 6px 10px 10px; word-break: break-all;
+    font-size: 0.82em; color: var(--muted); padding: 6px 10px 10px; word-break: break-all;
   }
   .account-dropdown .menu-btn {
-    width: 100%; text-align: left; background: var(--accent); color: white;
+    width: 100%; text-align: left; background: var(--accent); color: var(--on-accent);
     border-radius: 8px; margin-bottom: 6px; font-size: 0.8125rem; font-weight: 500;
   }
   .account-dropdown .menu-link {
     width: 100%; text-align: left; background: transparent; color: var(--text);
     border: none; font-size: 0.8125rem; padding: 10px 12px; cursor: pointer; font-weight: 500;
   }
-  .account-dropdown .menu-link:hover { background: #f7fafc; border-radius: 8px; }
-  .account-dropdown .menu-divider { border: none; border-top: 1px solid #edf2f7; margin: 6px 0; }
+  .account-dropdown .menu-link:hover { background: var(--surface2); border-radius: 8px; }
+  .account-dropdown .menu-divider { border: none; border-top: 1px solid var(--border2); margin: 6px 0; }
   .account-dropdown .sync-line {
     font-size: 0.75em; color: var(--text-subtle); padding: 8px 10px 4px; display: flex; align-items: center; gap: 6px;
   }
@@ -624,10 +574,10 @@
   .insight-card .icon:empty { display: none; }
   .alert-card .alert-icon:empty { display: none; }
   .menu-option-card {
-    border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 12px;
-    background: #fafafa;
+    border: 2px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px;
+    background: var(--surface2);
   }
-  .menu-option-card.active-option { border-color: #BFDBFE; background: var(--accent-soft); }
+  .menu-option-card.active-option { border-color: var(--accent); background: var(--accent-soft); }
   .menu-option-head {
     display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;
   }
@@ -638,7 +588,7 @@
     color: var(--text); transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
   .menu-option-chip:hover {
-    background: var(--cat-hover); border-color: #C7D2FE; color: var(--text);
+    background: var(--cat-hover); border-color: var(--accent); color: var(--text);
   }
   .menu-option-chip.active {
     background: var(--cat-selected-bg); border-color: var(--cat-selected-border);
@@ -678,10 +628,13 @@ body.embed-scoped .page-header,
 body.embed-scoped .app-topbar{display:none!important;}
 body.embed-scoped{padding-bottom:0!important;}
 .floating-settings-btn{
+  display:none; align-items:center; justify-content:center; color:var(--text);
   position:fixed; top:10px; right:10px; z-index:80;
   background:var(--surface); border:1px solid var(--border); border-radius:50%;
-  width:36px; height:36px; font-size:16px; cursor:pointer; box-shadow:var(--shadow-md);
+  width:44px; height:44px; font-size:16px; cursor:pointer; box-shadow:var(--shadow-md);
 }
+/* o botão só aparece quando o cabeçalho com o menu de conta está escondido (modo embutido) */
+body.hide-chrome .floating-settings-btn, body.embed-scoped .floating-settings-btn{display:inline-flex;}
 /* Usado quando esta página é a aba "Hábitos e Performance" inteira: some só
    o cabeçalho (marca + menu de conta + título), mantém as abas normais */
 body.hide-chrome .app-topbar,
@@ -720,7 +673,7 @@ body.hide-chrome .page-header{display:none!important;}
       </div>
       <button type="submit" id="loginBtn" style="width:100%;">Entrar</button>
     </form>
-    <p style="margin-top:14px; font-size:0.8em; color:#a0aec0; text-align:center;">
+    <p style="margin-top:14px; font-size:0.8em; color:var(--muted); text-align:center;">
       Configure URL e chave do Supabase no início do script (CONFIG).
     </p>
   </div>
@@ -728,10 +681,10 @@ body.hide-chrome .page-header{display:none!important;}
 
 <div id="mainApp">
 <div class="container">
-<button type="button" class="floating-settings-btn" onclick="openSettings()" title="Configurações">⚙️</button>
+<button type="button" class="floating-settings-btn" onclick="openSettings()" title="Configurações" aria-label="Configurações"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span></button>
 <div class="app-topbar">
   <div class="app-brand">LifePlan</div>
-  <button type="button" onclick="openSearchPanel()" title="Buscar em hábitos, medições e dieta" style="background:var(--accent-soft);border:1px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;font-size:13px;margin-left:8px;color:var(--text)">🔍 Buscar</button>
+  <button type="button" onclick="openSearchPanel()" title="Buscar em hábitos, medições e dieta" style="background:var(--accent-soft);border:1px solid var(--border);border-radius:10px;padding:6px 10px;cursor:pointer;font-size:13px;margin-left:8px;color:var(--text);min-height:44px;display:inline-flex;align-items:center;gap:6px"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span> Buscar</button>
   <div class="account-menu-wrap">
     <button type="button" class="account-trigger" onclick="toggleAccountMenu(event)" aria-haspopup="true" aria-expanded="false" id="accountTrigger">
       <span class="account-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
@@ -750,9 +703,9 @@ body.hide-chrome .page-header{display:none!important;}
 <div id="search-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:flex-start;justify-content:center;padding-top:60px" onclick="if(event.target===this)closeSearchPanel()">
   <div style="background:var(--surface);border-radius:14px;width:92%;max-width:640px;max-height:78vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,0.25)">
     <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)">
-      <span style="font-size:16px">🔍</span>
+      <span style="color:var(--muted);display:inline-flex"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span></span>
       <input id="search-input" type="text" placeholder="Buscar por hábito, medição ou alimento..." oninput="performSearch(this.value)" style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text)">
-      <button type="button" onclick="closeSearchPanel()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--text)">✕</button>
+      <button type="button" onclick="closeSearchPanel()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--text);min-width:44px;min-height:44px" aria-label="Fechar busca"><span class="ico"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span></button>
     </div>
     <div id="search-results" style="overflow-y:auto;padding:8px 0"></div>
   </div>
@@ -965,7 +918,7 @@ body.hide-chrome .page-header{display:none!important;}
 <!-- INSIGHTS -->
 <div class="panel" id="insights">
   <div class="card">
-    <h2>💪 Treinos da semana</h2>
+    <h2>Treinos da semana</h2>
     <p class="muted">Vem da meta que você configura na aba Treinos do LifePlan, e das marcações feitas na Início.</p>
     <div id="weeklyWorkoutInsight"><div class="empty">Carregando...</div></div>
   </div>
@@ -1000,11 +953,11 @@ body.hide-chrome .page-header{display:none!important;}
   <div class="card">
     <h2>Comparação temporal</h2>
     <p class="muted">Compare períodos equivalentes.</p>
-    <h3 style="margin-top:10px; color:#4a5568; font-size:1em; margin-bottom:8px;">Este mês vs mês passado</h3>
+    <h3 style="margin-top:10px; color:var(--text-2); font-size:1em; margin-bottom:8px;">Este mês vs mês passado</h3>
     <div id="monthVsMonth" class="year-compare-card"></div>
-    <h3 style="margin-top:18px; color:#4a5568; font-size:1em; margin-bottom:8px;">Mesmo período do ano passado</h3>
+    <h3 style="margin-top:18px; color:var(--text-2); font-size:1em; margin-bottom:8px;">Mesmo período do ano passado</h3>
     <div id="yearVsYear" class="year-compare-card"></div>
-    <h3 style="margin-top:18px; color:#4a5568; font-size:1em; margin-bottom:8px;">Histórico mensal</h3>
+    <h3 style="margin-top:18px; color:var(--text-2); font-size:1em; margin-bottom:8px;">Histórico mensal</h3>
     <div id="monthHistory" class="month-grid"></div>
   </div>
 
@@ -1207,8 +1160,8 @@ body.hide-chrome .page-header{display:none!important;}
     </div>
 
     <div style="margin-top:18px;">
-      <label>📋 Cardápio — opções desta refeição</label>
-      <p style="font-size:0.85em; color:#718096; margin-bottom:10px;">Cada opção é um cardápio alternativo (ex.: proteína A, proteína B). Adicione os alimentos de cada opção.</p>
+      <label>Cardápio — opções desta refeição</label>
+      <p style="font-size:0.85em; color:var(--muted); margin-bottom:10px;">Cada opção é um cardápio alternativo (ex.: proteína A, proteína B). Adicione os alimentos de cada opção.</p>
       <div id="mealOptionsList"></div>
       <button type="button" class="diet small" onclick="addMealOption()" style="width:100%; margin-top:8px;">+ Nova opção do cardápio</button>
     </div>
@@ -1222,13 +1175,22 @@ body.hide-chrome .page-header{display:none!important;}
 
 <script>
 // ================= TEMA / GRÁFICOS =================
+// Canvas não entende var(--x): lemos o valor computado do tema atual a cada uso
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function hexAlpha(hex,a){
+  const h=(hex||'').replace('#','');
+  if(h.length!==6) return hex;
+  const n=parseInt(h,16);
+  return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;
+}
 const CHART = {
-  accent: '#2563EB',
-  success: '#16A34A',
-  warning: '#D97706',
-  danger: '#DC2626',
-  muted: '#64748B',
-  palette: ['#2563EB', '#64748B', '#16A34A', '#D97706', '#DC2626', '#4F46E5', '#0891B2']
+  get accent(){ return cssVar('--accent-fill'); },
+  get success(){ return cssVar('--success'); },
+  get warning(){ return cssVar('--warning'); },
+  get danger(){ return cssVar('--danger'); },
+  get muted(){ return cssVar('--muted'); },
+  get palette(){ return [cssVar('--accent-fill'), cssVar('--muted'), cssVar('--success'), cssVar('--warning'), cssVar('--danger'), cssVar('--info'), cssVar('--accent-light')]; },
+  soft(color){ return hexAlpha(color,0.12); }
 };
 
 // ================= CONFIG SUPABASE =================
@@ -1250,6 +1212,8 @@ if (supaConfigured()) {
 }
 
 // ================= STORAGE =================
+const ICO_P={"settings": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/>", "x": "<path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/>", "check": "<path d=\"M20 6 9 17l-5-5\"/>", "dumbbell": "<path d=\"M6.5 6.5v11\"/><path d=\"M17.5 6.5v11\"/><path d=\"M3.5 9v6\"/><path d=\"M20.5 9v6\"/><path d=\"M6.5 12h11\"/>", "pencil": "<path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\"/><path d=\"m15 5 4 4\"/>", "trash": "<path d=\"M3 6h18\"/><path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/>", "moon": "<path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\"/>", "alert": "<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/>", "trendUp": "<path d=\"M22 7 13.5 15.5 8.5 10.5 2 17\"/><path d=\"M16 7h6v6\"/>", "trendDown": "<path d=\"M22 17 13.5 8.5 8.5 13.5 2 7\"/><path d=\"M16 17h6v-6\"/>", "minus": "<path d=\"M5 12h14\"/>", "calendar": "<path d=\"M8 2v4\"/><path d=\"M16 2v4\"/><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M3 10h18\"/>", "flame": "<path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\"/>", "camera": "<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/>", "scale": "<path d=\"M12 3v18\"/><path d=\"m19 8 3 8a5 5 0 0 1-6 0zV7\"/><path d=\"M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1\"/><path d=\"m5 8 3 8a5 5 0 0 1-6 0zV7\"/><path d=\"M7 21h10\"/>", "ruler": "<path d=\"M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0z\"/><path d=\"m14.5 12.5 2-2\"/><path d=\"m11.5 9.5 2-2\"/><path d=\"m8.5 6.5 2-2\"/><path d=\"m17.5 15.5 2-2\"/>", "utensils": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\"/><path d=\"M7 2v20\"/><path d=\"M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/>"};
+function ico(n){return '<span class="ico"><svg viewBox="0 0 24 24">'+(ICO_P[n]||'')+'</svg></span>';}
 const KEY = 'habitsAppV4';
 const KEY_V3 = 'habitsAppV3';
 const KEY_V2 = 'habitsAppV2';
@@ -1422,7 +1386,7 @@ function performSearch(query) {
 
   (db.habits||[]).forEach(h => {
     if (h.name.toLowerCase().includes(q)) {
-      results.push({ icon: '✅', title: h.name, subtitle: 'Hábito', value: '', onClick: () => { closeSearchPanel(); switchPanel('today'); } });
+      results.push({ icon: ico('check'), title: h.name, subtitle: 'Hábito', value: '', onClick: () => { closeSearchPanel(); switchPanel('today'); } });
     }
   });
 
@@ -1433,7 +1397,7 @@ function performSearch(query) {
       if (m.weight_kg!=null) parts.push(m.weight_kg+'kg');
       if (m.muscle_pct!=null) parts.push(m.muscle_pct+'% músculo');
       if (m.fat_pct!=null) parts.push(m.fat_pct+'% gordura');
-      results.push({ icon: '📏', title: m.notes || 'Medição', subtitle: `Corpo · ${fmtDate(m.recorded_at)}`, value: parts.join(' · '), onClick: () => { closeSearchPanel(); switchPanel('body'); } });
+      results.push({ icon: ico('ruler'), title: m.notes || 'Medição', subtitle: `Corpo · ${fmtDate(m.recorded_at)}`, value: parts.join(' · '), onClick: () => { closeSearchPanel(); switchPanel('body'); } });
     }
   });
 
@@ -1442,7 +1406,7 @@ function performSearch(query) {
       (opt.foods||[]).forEach(food => {
         const haystack = `${food.name||''} ${meal.name||''}`.toLowerCase();
         if (haystack.includes(q)) {
-          results.push({ icon: meal.emoji||'🍽️', title: food.name, subtitle: `Dieta · ${meal.name}`, value: food.amount||'', onClick: () => { closeSearchPanel(); switchPanel('diet'); } });
+          results.push({ icon: ico('utensils'), title: food.name, subtitle: `Dieta · ${meal.name}`, value: food.amount||'', onClick: () => { closeSearchPanel(); switchPanel('diet'); } });
         }
       });
     });
@@ -1460,7 +1424,7 @@ function performSearch(query) {
     item.onmouseenter = () => item.style.background = 'var(--cat-hover)';
     item.onmouseleave = () => item.style.background = 'transparent';
     item.innerHTML = `
-      <span style="font-size:18px">${r.icon}</span>
+      <span style="color:var(--accent);display:inline-flex">${r.icon}</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</div>
         <div style="font-size:11px;color:var(--text-subtle)">${r.subtitle}</div>
@@ -1550,7 +1514,7 @@ function showLoginError(msg, isError = true) {
   const errEl = document.getElementById('loginError');
   errEl.textContent = msg;
   errEl.classList.add('show');
-  if (!isError) errEl.style.background = '#f0fff4';
+  if (!isError) errEl.style.background = 'var(--success-soft)';
 }
 
 async function logout() {
@@ -1766,7 +1730,7 @@ function loadEntries() {
   const optPending = optional.filter(h => rec[h.id]?.status && rec[h.id]?.status !== 'done');
   const optDone = optional.filter(h => rec[h.id]?.status === 'done');
   if (optPending.length) {
-    html += `<h3 style="margin-top:18px; color:#4a5568;">Avulsos</h3>`;
+    html += `<h3 style="margin-top:18px; color:var(--text-2);">Avulsos</h3>`;
     html += optPending.map(h => renderHabit(h, true)).join('');
   }
 
@@ -1842,7 +1806,7 @@ function showToast(msg) {
   const t = document.createElement('div');
   t.textContent = msg;
   t.style.cssText = `position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
-    background:#1F2937; color:white; padding:10px 18px; border-radius:10px;
+    background:var(--text); color:var(--bg); padding:10px 18px; border-radius:10px;
     z-index:200; font-weight:500; font-size:0.875rem; box-shadow:0 4px 12px rgba(0,0,0,0.12);`;
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 1800);
@@ -2003,7 +1967,7 @@ function renderDietPanel() {
       <div class="food-list">
         <div class="food-list-header">${selectedOpt ? selectedOpt.name : 'Cardápio'} (${activeFoods.length} ${activeFoods.length === 1 ? 'item' : 'itens'})</div>
         ${foodsHtml}
-      </div>` : '<div style="color:#a0aec0; font-size:0.85em; padding:8px 0;">Sem alimentos nesta opção</div>'}
+      </div>` : '<div style="color:var(--muted); font-size:0.85em; padding:8px 0;">Sem alimentos nesta opção</div>'}
 
       <div class="meal-toggles" onclick="event.stopPropagation()">
         <button type="button" class="toggle-btn toggle-done ${r.followed==='full'?'active-done':''}" onclick="setMealStatus('${meal.id}','full')">100% segui</button>
@@ -2185,8 +2149,8 @@ function renderSettings() {
         <div class="freq">${describeFreq(h)}</div>
       </div>
       <div style="display:flex; gap:6px;">
-        <button class="small" onclick="editHabit('${h.id}')">✏️</button>
-        <button class="small danger" onclick="delHabit('${h.id}')">🗑️</button>
+        <button class="small" onclick="editHabit('${h.id}')" aria-label="Editar hábito">${ico('pencil')}</button>
+        <button class="small danger" onclick="delHabit('${h.id}')" aria-label="Remover hábito">${ico('trash')}</button>
       </div>
     </div>
   `).join('') || '<div class="empty">Nenhum hábito.</div>';
@@ -2200,36 +2164,36 @@ function renderSettings() {
           <span style="font-size:1.4em;">${m.emoji || '🍽️'}</span>
           <div>
             <div class="nm">${m.name}</div>
-            ${m.time ? `<div style="font-size:0.82em; color:#718096;">⏰ ${m.time}</div>` : ''}
+            ${m.time ? `<div style="font-size:0.82em; color:var(--muted);">⏰ ${m.time}</div>` : ''}
           </div>
         </div>
         <div style="display:flex; gap:6px;">
-          <button class="small" onclick="editMealPlan('${m.id}')">✏️ Editar</button>
-          <button class="small danger" onclick="delMealPlan('${m.id}')">🗑️</button>
+          <button class="small" onclick="editMealPlan('${m.id}')">${ico('pencil')} Editar</button>
+          <button class="small danger" onclick="delMealPlan('${m.id}')" aria-label="Remover refeição">${ico('trash')}</button>
         </div>
       </div>
       ${getMealOptions(m).map(opt => `
-        <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #e2e8f0;">
+        <div style="margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
           <div style="font-size:0.8125rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">${opt.name}</div>
           ${opt.foods && opt.foods.length ? opt.foods.map(f => `<div class="food-cfg-row">
             <span class="nm">${f.name}</span>
             <span class="amt">${f.amount}</span>
-          </div>`).join('') : '<div style="font-size:0.82em; color:#a0aec0;">Sem alimentos</div>'}
+          </div>`).join('') : '<div style="font-size:0.82em; color:var(--muted);">Sem alimentos</div>'}
         </div>
-      `).join('') || '<div style="font-size:0.85em; color:#a0aec0; padding:6px 0;">Sem opções de cardápio</div>'}
+      `).join('') || '<div style="font-size:0.85em; color:var(--muted); padding:6px 0;">Sem opções de cardápio</div>'}
     </div>
   `).join('') || '<div class="empty">Nenhuma refeição cadastrada.</div>';
 
   document.getElementById('tagList').innerHTML = db.contextTags.map((t,i) =>
     `<div class="chip">${t}<button onclick="delTag(${i})">×</button></div>`
-  ).join('') || '<span style="color:#a0aec0;">Nenhuma tag.</span>';
+  ).join('') || '<span style="color:var(--muted);">Nenhuma tag.</span>';
 
   document.getElementById('reasonList').innerHTML = db.reasons.map((r,i) =>
     `<div class="chip">${r}<button onclick="delReason(${i})">×</button></div>`
-  ).join('') || '<span style="color:#a0aec0;">Nenhum motivo.</span>';
+  ).join('') || '<span style="color:var(--muted);">Nenhum motivo.</span>';
   document.getElementById('mealList').innerHTML = db.meals.map((m,i) =>
     `<div class="chip">${m}<button onclick="delMeal(${i})">×</button></div>`
-  ).join('') || '<span style="color:#a0aec0;">Nenhuma refeição.</span>';
+  ).join('') || '<span style="color:var(--muted);">Nenhuma refeição.</span>';
 
   document.getElementById('alertThreshold').value = db.alertConfig.threshold;
   document.getElementById('alertWindow').value = db.alertConfig.window;
@@ -2308,7 +2272,7 @@ function closeMealModal() {
 function renderMealOptionsEditor() {
   const div = document.getElementById('mealOptionsList');
   if (!editingMealOptions.length) {
-    div.innerHTML = '<div style="font-size:0.85em; color:#a0aec0; padding:8px;">Adicione pelo menos uma opção de cardápio</div>';
+    div.innerHTML = '<div style="font-size:0.85em; color:var(--muted); padding:8px;">Adicione pelo menos uma opção de cardápio</div>';
     return;
   }
   div.innerHTML = editingMealOptions.map((opt, oi) => `
@@ -2324,7 +2288,7 @@ function renderMealOptionsEditor() {
           <input type="text" value="${(f.amount||'').replace(/"/g, '&quot;')}" onchange="updateOptionFood(${oi}, ${fi}, 'amount', this.value)" style="max-width:120px; font-size:0.9em; padding:6px 10px;">
           <button type="button" class="small danger" onclick="removeOptionFood(${oi}, ${fi})">×</button>
         </div>
-      `).join('') || '<div style="font-size:0.82em; color:#a0aec0; margin-bottom:8px;">Nenhum alimento nesta opção</div>'}
+      `).join('') || '<div style="font-size:0.82em; color:var(--muted); margin-bottom:8px;">Nenhum alimento nesta opção</div>'}
       <div class="form-row" style="margin-top:8px;">
         <input type="text" id="newFoodName-${oi}" placeholder="Alimento">
         <input type="text" id="newFoodAmount-${oi}" placeholder="Qtd" style="max-width:100px;">
@@ -2501,14 +2465,14 @@ function renderDashboard() {
   drawChart('chartDaily', 'line', {
     labels: last30.map(x => fmtDate(x)),
     datasets: [{ label: 'Pontuação %', data: last30.map(x => dayScore(x)),
-      borderColor: CHART.accent, backgroundColor: 'rgba(37,99,235,0.08)',
+      borderColor: CHART.accent, backgroundColor: CHART.soft(CHART.accent),
       fill: true, tension: 0.3, spanGaps: true, pointRadius: 2 }]
   }, {scales:{y:{min:0,max:100}}});
 
   drawChart('chartDietDaily', 'line', {
     labels: last30.map(x => fmtDate(x)),
     datasets: [{ label: 'Dieta %', data: last30.map(x => dietDayScore(x)),
-      borderColor: CHART.muted, backgroundColor: 'rgba(100,116,139,0.1)',
+      borderColor: CHART.muted, backgroundColor: CHART.soft(CHART.muted),
       fill: true, tension: 0.3, spanGaps: true, pointRadius: 2 }]
   }, {scales:{y:{min:0,max:100}}});
 
@@ -2600,8 +2564,8 @@ function renderDashboard() {
       html += `<div style="padding:6px; font-weight:600; font-size:0.82em;">${h.name}</div>`;
       matrix[h.id].forEach(v => {
         const i = max ? v/max : 0;
-        const bg = v===0 ? '#f7fafc' : `rgba(235, 51, 73, ${0.2 + i*0.7})`;
-        const color = i > 0.5 ? 'white' : '#2d3748';
+        const bg = v===0 ? 'var(--surface2)' : `color-mix(in srgb, var(--warning) ${Math.round((0.2 + i*0.7)*100)}%, transparent)`;
+        const color = i > 0.6 ? 'var(--on-accent)' : 'var(--text)';
         html += `<div class="heat-cell" style="background:${bg}; color:${color};">${v}</div>`;
       });
     });
@@ -2614,6 +2578,7 @@ function drawChart(id, type, data, opts={}) {
   const ctx = document.getElementById(id);
   if (!ctx) return;
   const isMobile = window.innerWidth < 600;
+  Chart.defaults.color = cssVar('--muted'); Chart.defaults.borderColor = cssVar('--border'); Chart.defaults.font.family = cssVar('--font-body');
   charts[id] = new Chart(ctx, { type, data, options: Object.assign({
     responsive:true, maintainAspectRatio:false,
     plugins:{ legend:{position:'bottom', labels:{boxWidth: isMobile?10:14, font:{size: isMobile?10:12}}}}
@@ -2900,7 +2865,7 @@ function updateAlertBadge() {
     if (alerts.length === 0) { el.style.display = 'none'; return; }
     el.style.display = 'inline-block';
     el.textContent = alerts.length;
-    el.style.background = high > 0 ? '#e53e3e' : '#f7971e';
+    el.style.background = high > 0 ? 'var(--danger)' : 'var(--warning)';
   });
 }
 
@@ -2995,16 +2960,16 @@ function renderPredictions() {
 
   list.innerHTML = predictions.map(p => {
     if (p.notScheduled) return `<div class="pred-card" style="opacity:0.5;"><div class="pred-row">
-        <div class="pred-icon">😴</div><div class="pred-info">
+        <div class="pred-icon">${ico('moon')}</div><div class="pred-info">
           <div class="pred-name">${p.habit.name}</div><div class="pred-confidence">${p.message}</div>
         </div></div></div>`;
-    if (p.alreadyMet) return `<div class="pred-card" style="background:#f0fff4;"><div class="pred-row">
+    if (p.alreadyMet) return `<div class="pred-card" style="background:var(--success-soft);"><div class="pred-row">
         <div class="pred-info">
           <div class="pred-name">${p.habit.name}</div><div class="pred-confidence">${p.message}</div>
         </div></div></div>`;
     const pct = Math.round(p.probability*100);
     const cls = pct >= 70 ? 'high' : pct >= 40 ? 'medium' : 'low';
-    const icon = pct >= 70 ? '💪' : pct >= 40 ? '🤔' : '⚠️';
+    const icon = ico(pct >= 70 ? 'trendUp' : pct >= 40 ? 'minus' : 'alert');
     const factorsList = p.factors.slice(0, 3).map(f => {
       if (f.isTag) {
         const sym = f.diff > 0 ? '↑' : '↓';
@@ -3025,7 +2990,7 @@ function renderPredictions() {
   if (overallProb !== null) {
     const pct = Math.round(overallProb*100);
     const cls = pct >= 70 ? 'green' : pct >= 40 ? 'orange' : 'red';
-    const msg = pct >= 70 ? 'Dia provavelmente bom 🚀' : pct >= 40 ? 'Dia mediano.' : 'Dia desafiador.';
+    const msg = pct >= 70 ? 'Dia provavelmente bom' : pct >= 40 ? 'Dia mediano.' : 'Dia desafiador.';
     overallDiv.innerHTML = `<div class="stat ${cls}"><div class="v">${pct}%</div>
       <div class="l">Probabilidade média do dia<br><strong>${msg}</strong></div></div>`;
   } else { overallDiv.innerHTML = ''; }
@@ -3132,7 +3097,7 @@ function renderTemporalCompare() {
       monthDivs.push(`<div class="month-cell">
         <div class="m-name">${m.label}</div>
         <div class="m-val">${data.avg.toFixed(0)}%</div>
-        <div style="font-size:0.72em; color:#a0aec0;">${data.n} dias</div>
+        <div style="font-size:0.72em; color:var(--muted);">${data.n} dias</div>
         ${vsHtml}</div>`);
     }
   }
@@ -3184,7 +3149,7 @@ function renderDietAnalysis() {
       <div class="stat stat-danger"><div class="v stat-truncate" title="${worst && worst.rate.rate < 80 ? worst.meal.name : ''}">${worst && worst.rate.rate < 80 ? `${worst.meal.name} (${Math.round(worst.rate.rate)}%)` : '-'}</div><div class="l">Mais difícil</div></div>
     </div>
 
-    <h3 style="margin-bottom:10px; font-size:1em; color:#4a5568;">📊 Cumprimento por refeição</h3>`;
+    <h3 style="margin-bottom:10px; font-size:1em; color:var(--text-2);">Cumprimento por refeição</h3>`;
   mealAnalysis.forEach(({meal, rate}) => {
     const pct = Math.round(rate.rate);
     const color = pct >= 80 ? CHART.success : pct >= 50 ? CHART.warning : CHART.danger;
@@ -3192,7 +3157,7 @@ function renderDietAnalysis() {
       <div class="trend-name">${meal.emoji || '🍽️'} ${meal.name}</div>
       <div class="trend-bar-wrap"><div class="trend-bar" style="width:${pct}%; background:${color};"></div></div>
       <div class="trend-pct">${pct}%</div>
-      <div style="font-size:0.85em; color:#718096; min-width:80px;">${rate.n} reg.</div>
+      <div style="font-size:0.85em; color:var(--muted); min-width:80px;">${rate.n} reg.</div>
     </div>`;
   });
 
@@ -3201,7 +3166,7 @@ function renderDietAnalysis() {
     const bestWd = sortedWd[0]; const worstWd = sortedWd[sortedWd.length-1];
     if (bestWd.avg - worstWd.avg > 10) {
       html += `<div class="insight-card diet" style="margin-top:14px;">
-        <div class="icon">📅</div>
+        <div class="icon">${ico('calendar')}</div>
         <div class="content">Você segue melhor a dieta às <strong>${weekdays[bestWd.wd]}s</strong> (${bestWd.avg.toFixed(0)}%) e tem mais dificuldade às <strong>${weekdays[worstWd.wd]}s</strong> (${worstWd.avg.toFixed(0)}%).</div>
       </div>`;
     }
@@ -3217,7 +3182,7 @@ function renderDietAnalysis() {
   }
   if (dStreak >= 3) {
     html += `<div class="insight-card positive" style="margin-top:14px;">
-      <div class="icon">🔥</div>
+      <div class="icon">${ico('flame')}</div>
       <div class="content"><strong>${dStreak} dias seguidos</strong> com dieta acima de 80%! Mantenha o ritmo.</div>
     </div>`;
   }
@@ -3266,7 +3231,7 @@ async function renderWeeklyWorkoutInsight() {
     const met = done >= goal;
     div.innerHTML = `<div class="diet-summary">
       <div class="big-num" style="color:${met ? 'var(--success)' : 'var(--text)'}">${done}/${goal}</div>
-      <div class="desc">${met ? '🎉 Meta da semana batida!' : `Faltam ${goal-done} treino(s) para bater a meta desta semana`}</div>
+      <div class="desc">${met ? 'Meta da semana batida!' : `Faltam ${goal-done} treino(s) para bater a meta desta semana`}</div>
       <div style="background:var(--border); border-radius:8px; height:8px; margin-top:10px; overflow:hidden;">
         <div style="background:${met?'var(--success)':'var(--accent)'}; height:100%; width:${pct}%;"></div>
       </div>
@@ -3290,7 +3255,7 @@ function renderTrendSummary() {
       <div style="font-size:3em;">${arrow}</div>
       <div style="flex:1; min-width:200px;">
         <div style="font-size:1.4em; font-weight:700; color:${color};">${status}</div>
-        <div style="color:#4a5568; line-height:1.5; margin-top:4px;">
+        <div style="color:var(--text-2); line-height:1.5; margin-top:4px;">
           Variação semanal: <strong>${t.weeklyChange > 0 ? '+' : ''}${t.weeklyChange.toFixed(1)}%</strong><br>
           1ª metade: ${t.firstAvg.toFixed(1)}% · 2ª: ${t.secondAvg.toFixed(1)}%
         </div></div></div>`;
@@ -3309,7 +3274,7 @@ function renderTrendSummary() {
   const trendLine = values.map((_,i)=>slope*i + intercept);
   drawChart('chartTrend', 'line', { labels,
     datasets: [
-      { label: 'Real', data: values, borderColor: CHART.accent, backgroundColor:'rgba(37,99,235,0.08)', fill: true, tension: 0.3, spanGaps: true, pointRadius: 2 },
+      { label: 'Real', data: values, borderColor: CHART.accent, backgroundColor:CHART.soft(CHART.accent), fill: true, tension: 0.3, spanGaps: true, pointRadius: 2 },
       { label: 'Tendência', data: trendLine, borderColor: color, borderDash: [6,4], borderWidth: 2, pointRadius: 0, fill: false }
     ]
   }, {scales:{y:{min:0,max:100}}});
@@ -3319,7 +3284,7 @@ function renderPeriodCompare() {
   const p = periodComparison();
   const div = document.getElementById('periodCompare');
   const card = (label, current, prev) => {
-    if (current === null || prev === null) return `<div class="stat" style="background:#a0aec0;"><div class="v">-</div><div class="l">${label}</div></div>`;
+    if (current === null || prev === null) return `<div class="stat" style="background:var(--muted);"><div class="v">-</div><div class="l">${label}</div></div>`;
     const diff = current - prev;
     const cls = diff > 1 ? 'green' : diff < -1 ? 'red' : '';
     const arrow = diff > 1 ? '↑' : diff < -1 ? '↓' : '→';
@@ -3334,18 +3299,18 @@ function renderHabitTrends() {
   const div = document.getElementById('habitTrends');
   if (!trends.length) { div.innerHTML = '<div class="empty">Sem hábitos.</div>'; return; }
   div.innerHTML = trends.map(t => {
-    if (!t.current && !t.prev) return `<div class="trend-row"><div class="trend-name">${t.habit.name}</div><div style="color:#a0aec0;">Sem dados</div></div>`;
+    if (!t.current && !t.prev) return `<div class="trend-row"><div class="trend-name">${t.habit.name}</div><div style="color:var(--muted);">Sem dados</div></div>`;
     const cur = t.current ? Math.round(t.current.rate*100) : 0;
     const prev = t.prev ? Math.round(t.prev.rate*100) : 0;
     const diff = t.diff !== null ? Math.round(t.diff*100) : 0;
-    const arrow = diff > 5 ? '🔼' : diff < -5 ? '🔽' : '➡️';
+    const arrow = diff > 5 ? '▲' : diff < -5 ? '▼' : '→';
     const color = diff > 5 ? CHART.success : diff < -5 ? CHART.danger : CHART.muted;
     return `<div class="trend-row">
       <div class="trend-name">${t.habit.name}</div>
       <div class="trend-bar-wrap"><div class="trend-bar" style="width:${cur}%; background:${color};"></div></div>
       <div class="trend-pct">${cur}%</div>
       <div style="color:${color};">${arrow}</div>
-      <div style="font-size:0.85em; color:#718096; min-width:80px;">${diff>0?'+':''}${diff}% vs ${prev}%</div>
+      <div style="font-size:0.85em; color:var(--muted); min-width:80px;">${diff>0?'+':''}${diff}% vs ${prev}%</div>
     </div>`;
   }).join('');
 }
@@ -3365,7 +3330,7 @@ function renderCorrelations() {
   // Dieta x Hábito
   db.habits.forEach(h => {
     const c = dietHabitCorrelation(h.id);
-    if (c && Math.abs(c.r) > 0.1) pairs.push({ a: '🥗 Dieta', b: h.name, r: c.r, n: c.n, type: 'diet' });
+    if (c && Math.abs(c.r) > 0.1) pairs.push({ a: 'Dieta', b: h.name, r: c.r, n: c.n, type: 'diet' });
   });
 
   pairs.sort((x,y) => Math.abs(y.r) - Math.abs(x.r));
@@ -3380,7 +3345,7 @@ function renderCorrelations() {
     else if (p.r < -0.2) interpret = `<strong>${p.a}</strong> e <strong>${p.b}</strong> têm leve oposição.`;
     else interpret = `<strong>${p.a}</strong> e <strong>${p.b}</strong> são independentes.`;
     return `<div class="corr-row">
-      <div class="desc">${interpret}<br><small style="color:#a0aec0;">${p.n} dias com ambos${p.type === 'diet' ? ' · inclui dieta' : ''}</small></div>
+      <div class="desc">${interpret}<br><small style="color:var(--muted);">${p.n} dias com ambos${p.type === 'diet' ? ' · inclui dieta' : ''}</small></div>
       <div class="value ${cls}">${p.r > 0 ? '+' : ''}${p.r.toFixed(2)}</div>
     </div>`;
   }).join('');
@@ -3410,7 +3375,7 @@ function renderTagImpact() {
         diff: ((withSum/withN) - (withoutSum/withoutN))/100, nWith: withN, nWithout: withoutN };
     })();
     if (dietImp && Math.abs(dietImp.diff) > 0.05) {
-      allImpacts.push({ tag, habit: '🥗 Dieta', ...dietImp });
+      allImpacts.push({ tag, habit: 'Dieta', ...dietImp });
     }
   });
   if (!allImpacts.length) { div.innerHTML = '<div class="empty">Marque tags em alguns dias.</div>'; return; }
@@ -3420,9 +3385,9 @@ function renderTagImpact() {
     const cls = imp.diff > 0.1 ? 'pos' : imp.diff < -0.1 ? 'neg' : 'neutral';
     const verb = imp.diff > 0 ? 'cumpre mais' : 'cumpre menos';
     return `<div class="corr-row">
-      <div class="desc">Em dias com <strong style="background:#edf2f7; padding:2px 8px; border-radius:6px;">${imp.tag}</strong>,
+      <div class="desc">Em dias com <strong style="background:var(--surface3); padding:2px 8px; border-radius:6px;">${imp.tag}</strong>,
         você ${verb} <strong>${imp.habit}</strong>.<br>
-        <small style="color:#718096;">${Math.round(imp.withRate*100)}% com tag · ${Math.round(imp.withoutRate*100)}% sem (${imp.nWith} vs ${imp.nWithout} dias)</small>
+        <small style="color:var(--muted);">${Math.round(imp.withRate*100)}% com tag · ${Math.round(imp.withoutRate*100)}% sem (${imp.nWith} vs ${imp.nWithout} dias)</small>
       </div><div class="value ${cls}">${pct > 0 ? '+' : ''}${pct}%</div></div>`;
   }).join('');
 }
@@ -3440,7 +3405,7 @@ function renderWeekdayPatterns() {
     const pct = Math.round((worstDay.fails/totalFails)*100);
     html += `<div class="corr-row">
       <div class="desc"><strong>${h.name}</strong>: falha mais às <strong>${weekdays[worstDay.i]}s</strong>.<br>
-        <small style="color:#718096;">${worstDay.fails} de ${totalFails} erros (${pct}%)</small></div>
+        <small style="color:var(--muted);">${worstDay.fails} de ${totalFails} erros (${pct}%)</small></div>
       <div class="value neg">${pct}%</div></div>`;
   });
   div.innerHTML = html || '<div class="empty">Sem padrões.</div>';
@@ -3625,20 +3590,20 @@ function renderBodyPanel() {
     listEl.innerHTML = '<div class="empty">Nenhuma medição ainda. Adicione a primeira acima.</div>';
   } else {
     listEl.innerHTML = [...sorted].reverse().map(m => `
-      <div style="background:#f7fafc; padding:12px; border-radius:10px; margin-bottom:8px; border:1px solid #e2e8f0;">
+      <div style="background:var(--surface2); padding:12px; border-radius:10px; margin-bottom:8px; border:1px solid var(--border);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <strong>${new Date(m.recorded_at + 'T00:00').toLocaleDateString('pt-BR')}</strong>
           <div style="display:flex;gap:6px">
-            ${m.photo_path ? `<button class="small" onclick="viewProgressPhoto('${m.photo_path}')" title="Ver foto de progresso">📷</button>` : ''}
+            ${m.photo_path ? `<button class="small" onclick="viewProgressPhoto('${m.photo_path}')" title="Ver foto de progresso" aria-label="Ver foto de progresso">${ico('camera')}</button>` : ''}
             <button class="small danger" onclick="deleteBodyMetric('${m.id}')">Excluir</button>
           </div>
         </div>
         <div style="margin-top:8px; display:flex; gap:12px; flex-wrap:wrap; font-size:0.95em;">
-          ${m.weight_kg != null ? `<span>⚖️ <strong>${Number(m.weight_kg).toFixed(1)}</strong> kg</span>` : ''}
-          ${m.muscle_pct != null ? `<span>💪 <strong>${Number(m.muscle_pct).toFixed(1)}%</strong> músculo</span>` : ''}
-          ${m.fat_pct != null ? `<span>📉 <strong>${Number(m.fat_pct).toFixed(1)}%</strong> gordura</span>` : ''}
+          ${m.weight_kg != null ? `<span>${ico('scale')} <strong>${Number(m.weight_kg).toFixed(1)}</strong> kg</span>` : ''}
+          ${m.muscle_pct != null ? `<span>${ico('dumbbell')} <strong>${Number(m.muscle_pct).toFixed(1)}%</strong> músculo</span>` : ''}
+          ${m.fat_pct != null ? `<span>${ico('trendDown')} <strong>${Number(m.fat_pct).toFixed(1)}%</strong> gordura</span>` : ''}
         </div>
-        ${m.notes ? `<p style="margin-top:8px; color:#718096; font-size:0.88em;">${m.notes}</p>` : ''}
+        ${m.notes ? `<p style="margin-top:8px; color:var(--muted); font-size:0.88em;">${m.notes}</p>` : ''}
       </div>
     `).join('');
   }
@@ -3657,7 +3622,7 @@ function renderBodyChart(rows) {
   const w = rows.map(r => r.weight_kg);
   if (w.some(v => v != null)) {
     datasets.push({
-      label: 'Peso (kg)', data: w, borderColor: CHART.accent, backgroundColor: 'rgba(37,99,235,0.08)',
+      label: 'Peso (kg)', data: w, borderColor: CHART.accent, backgroundColor: CHART.soft(CHART.accent),
       tension: 0.3, pointRadius: 4, spanGaps: true, yAxisID: 'y'
     });
   }
@@ -3665,13 +3630,13 @@ function renderBodyChart(rows) {
   const fa = rows.map(r => r.fat_pct);
   if (mu.some(v => v != null)) {
     datasets.push({
-      label: 'Músculo (%)', data: mu, borderColor: CHART.success, backgroundColor: 'rgba(22,163,74,0.08)',
+      label: 'Músculo (%)', data: mu, borderColor: CHART.success, backgroundColor: CHART.soft(CHART.success),
       tension: 0.3, pointRadius: 3, spanGaps: true, yAxisID: 'y1'
     });
   }
   if (fa.some(v => v != null)) {
     datasets.push({
-      label: 'Gordura (%)', data: fa, borderColor: CHART.warning, backgroundColor: 'rgba(217,119,6,0.08)',
+      label: 'Gordura (%)', data: fa, borderColor: CHART.warning, backgroundColor: CHART.soft(CHART.warning),
       tension: 0.3, pointRadius: 3, spanGaps: true, yAxisID: 'y1'
     });
   }
@@ -3710,7 +3675,7 @@ function renderHistory() {
       if (r.status === 'skip') return `<span class="badge badge-skip">${h.name}</span>`;
       let txt = `<span class="badge badge-fail">${h.name}</span>`;
       const extras = [r.meal, r.reason].filter(Boolean).join(' • ');
-      if (extras) txt += ` <small style="color:#718096;">(${extras})</small>`;
+      if (extras) txt += ` <small style="color:var(--muted);">(${extras})</small>`;
       return txt;
     }).filter(Boolean);
 
@@ -3726,19 +3691,19 @@ function renderHistory() {
         if (r.followed === 'skip') return `<span class="badge badge-skip">${m.name}</span>`;
         return null;
       }).filter(Boolean);
-      if (dItems.length) dietItems = `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #e2e8f0;"><small style="color:#38b2ac; font-weight:600;">🥗 Dieta:</small><br>${dItems.join(' ')}</div>`;
+      if (dItems.length) dietItems = `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);"><small style="color:var(--info); font-weight:600;">🥗 Dieta:</small><br>${dItems.join(' ')}</div>`;
     }
 
-    html += `<div style="background:white; padding:14px; border-radius:10px; margin-bottom:10px; border:1px solid #e2e8f0;">
+    html += `<div style="background:var(--surface); padding:14px; border-radius:10px; margin-bottom:10px; border:1px solid var(--border);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
-        <div><strong>${new Date(d+'T00:00').toLocaleDateString('pt-BR')}</strong> <small style="color:#718096;">${wd}</small></div>
+        <div><strong>${new Date(d+'T00:00').toLocaleDateString('pt-BR')}</strong> <small style="color:var(--muted);">${wd}</small></div>
         <div style="display:flex; gap:6px;">
           ${s!==null?`<div style="background:var(--accent-soft); color:var(--accent); padding:4px 10px; border-radius:8px; font-weight:600; font-size:0.8125rem;">Háb. ${s}%</div>`:''}
           ${ds!==null?`<div style="background:var(--bg); color:var(--text-muted); border:1px solid var(--border); padding:4px 10px; border-radius:8px; font-weight:600; font-size:0.8125rem;">Dieta ${ds}%</div>`:''}
         </div>
       </div>
       ${tags ? `<div style="margin-bottom:8px;">${tags}</div>` : ''}
-      <div style="display:flex; flex-direction:column; gap:6px;">${items.join('')||'<em style="color:#a0aec0;">-</em>'}</div>
+      <div style="display:flex; flex-direction:column; gap:6px;">${items.join('')||'<em style="color:var(--muted);">-</em>'}</div>
       ${dietItems}
     </div>`;
   });
@@ -3762,7 +3727,7 @@ function importData(e) {
   r.readAsText(f);
 }
 function resetAll() {
-  if (confirm('⚠️ Apagar tudo?')) { if (confirm('Tem certeza?')) { localStorage.removeItem(KEY); location.reload(); } }
+  if (confirm('Apagar tudo?')) { if (confirm('Tem certeza?')) { localStorage.removeItem(KEY); location.reload(); } }
 }
 
 window.addEventListener('resize', () => {

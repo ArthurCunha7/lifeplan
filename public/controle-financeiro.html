@@ -5,35 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Finanças — LifePlan</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="/lifeplan-theme.css">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-  :root {
-    --bg: #f5f0ea;
-    --surface: #ffffff;
-    --surface2: #f0ebe3;
-    --border: #ddd5c8;
-    --accent: #8b6f47;
-    --accent2: #5a7a5c;
-    --danger: #b85450;
-    --warn: #c9954a;
-    --text: #2e2520;
-    --muted: #8a7d72;
-    --card-radius: 12px;
-  }
-
-  [data-theme="dark"] {
-    --bg: #17181a;
-    --surface: #232527;
-    --surface2: #2b2d30;
-    --border: #3c3e41;
-    --accent: #c99b6a;
-    --accent2: #7fa082;
-    --danger: #d97873;
-    --warn: #dba968;
-    --text: #ecebe8;
-    --muted: #a3a29d;
-  }
+  /* Tokens vêm de /lifeplan-theme.css. Aqui só os apelidos usados por esta página. */
+  html:root { --accent2: var(--success); --p0: #3F5A38; --p1: #2F5F7E; --p2: #7A4E16; --p3: #7A3E5C; --p4: #5A4A8A; --p5: #8A4A2A; --p6: #2F6B6B; --p7: #66742A; --p8: #8A3E6E; --p9: #5B6659; }
+  html:root[data-theme="dark"] { --p0: #A9C29A; --p1: #8FB8D4; --p2: #EBB872; --p3: #D49BB9; --p4: #B7A9E0; --p5: #E0A682; --p6: #8CCBC4; --p7: #C5D08A; --p8: #E0A0CF; --p9: #B8C4B5; }
 
   body { transition: background-color .2s, color .2s; }
 
@@ -42,72 +18,65 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Inter', sans-serif;
-    font-size: 14px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.4;
     min-height: 100vh;
   }
 
   header {
-    background: var(--surface);
+    background: var(--bg);
     border-bottom: 1px solid var(--border);
-    padding: 10px 16px;
-    padding-right: 64px; /* espaço reservado pro botão flutuante de tema do app principal, pra nunca sobrepor */
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    padding: 14px 16px 0;
     position: sticky;
     top: 0;
     z-index: 100;
   }
 
-  .header-actions {
-    display: flex;
-    gap: 8px;
-    margin-left: auto;
-    flex-wrap: wrap;
-  }
-
-  .logo {
-    font-weight: 700;
-    font-size: 16px;
-    letter-spacing: -0.5px;
-    padding: 16px 0;
-    color: var(--accent);
+  .head-top {
     display: flex;
     align-items: center;
-    gap: 8px;
-    white-space: nowrap;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
   }
 
-  .logo span { color: var(--text); }
-
-  nav { display: flex; gap: 4px; flex: 1 1 100%; overflow-x: auto; order: 1; }
-  .header-actions { order: 2; }
-  @media (min-width: 640px) {
-    nav { flex: 1 1 auto; order: 0; }
-    .header-actions { order: 0; }
+  .page-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+    color: var(--text);
   }
+
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  nav { display: flex; gap: 4px; overflow-x: auto; }
 
   nav button {
     background: none;
     border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
     color: var(--muted);
-    padding: 8px 14px;
-    border-radius: 8px;
+    padding: 12px 14px 9px;
+    min-height: 48px;
     cursor: pointer;
     font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 600;
     white-space: nowrap;
-    transition: all .15s;
+    transition: color .15s, border-color .15s;
   }
 
-  nav button:hover { color: var(--text); background: var(--surface2); }
-  nav button.active { color: var(--accent); background: rgba(139,111,71,.12); }
+  nav button:hover { color: var(--text); }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-  .tab { display: none; padding: 24px; }
+  .tab { display: none; padding: 20px 16px 32px; }
   .tab.active { display: block; }
+
+  svg.ic { flex-shrink: 0; vertical-align: -0.2em; }
 
   .section-head {
     display: flex;
@@ -119,8 +88,9 @@
   }
 
   .section-title {
-    font-size: 18px;
-    font-weight: 700;
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 500;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -131,8 +101,8 @@
     font-weight: 600;
     padding: 2px 8px;
     border-radius: 20px;
-    background: rgba(139,111,71,.15);
-    color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-dark);
   }
 
   .card {
@@ -140,7 +110,7 @@
     border: 1px solid var(--border);
     border-radius: var(--card-radius);
     overflow: hidden;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
   .card-header {
@@ -162,7 +132,8 @@
   }
 
   .card-total {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
     font-size: 19px;
     font-weight: 700;
     color: var(--accent2);
@@ -191,12 +162,12 @@
 
   tbody td {
     padding: 10px 14px;
-    border-bottom: 1px solid rgba(42,48,69,.5);
+    border-bottom: 1px solid var(--border2);
     vertical-align: middle;
   }
 
   tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover td { background: rgba(255,255,255,.02); }
+  tbody tr:hover td { background: var(--row-hover); }
 
   input[type="text"],
   input[type="number"],
@@ -204,10 +175,11 @@
   select {
     background: var(--surface2);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: var(--text);
     font-family: inherit;
-    font-size: 13px;
+    font-size: 14px;
+    min-height: 40px;
     padding: 6px 10px;
     width: 100%;
     outline: none;
@@ -225,18 +197,20 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 7px 14px;
-    border-radius: 8px;
+    padding: 8px 16px;
+    min-height: 44px;
+    justify-content: center;
+    border-radius: 12px;
     border: none;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all .15s;
   }
 
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: #a08060; }
+  .btn-primary { background: var(--accent); color: var(--on-accent); }
+  .btn-primary:hover { filter: brightness(1.1); }
 
   .btn-ghost {
     background: transparent;
@@ -246,9 +220,9 @@
   .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
 
   .btn-danger { background: transparent; color: var(--danger); border: 1px solid transparent; padding: 4px 8px; }
-  .btn-danger:hover { background: rgba(255,107,107,.1); border-color: var(--danger); }
+  .btn-danger:hover { background: var(--danger-soft); border-color: var(--danger); }
 
-  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-sm { padding: 4px 10px; font-size: 13px; min-height: 40px; min-width: 40px; }
 
   .profile-select {
     display: flex;
@@ -258,68 +232,77 @@
   }
 
   .chip {
-    padding: 3px 10px;
+    padding: 3px 12px;
     border-radius: 20px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     border: 1.5px solid transparent;
     transition: all .15s;
-    opacity: .45;
+    opacity: .6;
     white-space: nowrap;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
   }
 
   .chip.selected { opacity: 1; }
 
-  .chip[data-p="0"] { color: #8b6f47; border-color: #8b6f47; }
-  .chip[data-p="0"].selected { background: rgba(139,111,71,.2); }
-  .chip[data-p="1"] { color: #5a7a5c; border-color: #5a7a5c; }
-  .chip[data-p="1"].selected { background: rgba(90,122,92,.2); }
-  .chip[data-p="2"] { color: #b85450; border-color: #b85450; }
-  .chip[data-p="2"].selected { background: rgba(184,84,80,.2); }
-  .chip[data-p="3"] { color: #c9954a; border-color: #c9954a; }
-  .chip[data-p="3"].selected { background: rgba(201,149,74,.2); }
-  .chip[data-p="4"] { color: #7a6b8a; border-color: #7a6b8a; }
-  .chip[data-p="4"].selected { background: rgba(122,107,138,.2); }
-  .chip[data-p="5"] { color: #f97316; border-color: #f97316; }
-  .chip[data-p="5"].selected { background: rgba(249,115,22,.2); }
-  .chip[data-p="6"] { color: #06b6d4; border-color: #06b6d4; }
-  .chip[data-p="6"].selected { background: rgba(6,182,212,.2); }
 
-  .profile-card[data-p="5"]::before { background: #f97316; }
-  .profile-card[data-p="6"]::before { background: #4a8a8a; }
-  .profile-card[data-p="5"] .profile-card-name { color: #c07040; }
-  .profile-card[data-p="6"] .profile-card-name { color: #4a8a8a; }
-  .chip[data-p="5"] { color: #c07040; border-color: #c07040; }
-  .chip[data-p="5"].selected { background: rgba(192,112,64,.2); }
-  .chip[data-p="6"] { color: #4a8a8a; border-color: #4a8a8a; }
-  .chip[data-p="6"].selected { background: rgba(74,138,138,.2); }
-  .chip[data-p="7"] { color: #7a9a40; border-color: #7a9a40; }
-  .chip[data-p="7"].selected { background: rgba(122,154,64,.2); }
-  .chip[data-p="8"] { color: #9a6090; border-color: #9a6090; }
-  .chip[data-p="8"].selected { background: rgba(154,96,144,.2); }
-  .chip[data-p="9"] { color: #b06070; border-color: #b06070; }
-  .chip[data-p="9"].selected { background: rgba(176,96,112,.2); }
 
-  .profile-card[data-p="5"]::before { background: #c07040; }
-  .profile-card[data-p="6"]::before { background: #4a8a8a; }
-  .profile-card[data-p="7"]::before { background: #7a9a40; }
-  .profile-card[data-p="8"]::before { background: #9a6090; }
-  .profile-card[data-p="9"]::before { background: #b06070; }
-  .profile-card[data-p="5"] .profile-card-name { color: #c07040; }
-  .profile-card[data-p="6"] .profile-card-name { color: #4a8a8a; }
-  .profile-card[data-p="7"] .profile-card-name { color: #7a9a40; }
-  .profile-card[data-p="8"] .profile-card-name { color: #9a6090; }
-  .profile-card[data-p="9"] .profile-card-name { color: #b06070; }
+
+
+  /* cores por perfil (tokens --p0…--p9, claro e escuro) */
+  .chip[data-p="0"] { color: var(--p0); border-color: var(--p0); }
+  .chip[data-p="0"].selected { background: color-mix(in srgb, var(--p0) 18%, transparent); }
+  .profile-card[data-p="0"]::before { background: var(--p0); }
+  .profile-card[data-p="0"] .profile-card-name { color: var(--p0); }
+  .chip[data-p="1"] { color: var(--p1); border-color: var(--p1); }
+  .chip[data-p="1"].selected { background: color-mix(in srgb, var(--p1) 18%, transparent); }
+  .profile-card[data-p="1"]::before { background: var(--p1); }
+  .profile-card[data-p="1"] .profile-card-name { color: var(--p1); }
+  .chip[data-p="2"] { color: var(--p2); border-color: var(--p2); }
+  .chip[data-p="2"].selected { background: color-mix(in srgb, var(--p2) 18%, transparent); }
+  .profile-card[data-p="2"]::before { background: var(--p2); }
+  .profile-card[data-p="2"] .profile-card-name { color: var(--p2); }
+  .chip[data-p="3"] { color: var(--p3); border-color: var(--p3); }
+  .chip[data-p="3"].selected { background: color-mix(in srgb, var(--p3) 18%, transparent); }
+  .profile-card[data-p="3"]::before { background: var(--p3); }
+  .profile-card[data-p="3"] .profile-card-name { color: var(--p3); }
+  .chip[data-p="4"] { color: var(--p4); border-color: var(--p4); }
+  .chip[data-p="4"].selected { background: color-mix(in srgb, var(--p4) 18%, transparent); }
+  .profile-card[data-p="4"]::before { background: var(--p4); }
+  .profile-card[data-p="4"] .profile-card-name { color: var(--p4); }
+  .chip[data-p="5"] { color: var(--p5); border-color: var(--p5); }
+  .chip[data-p="5"].selected { background: color-mix(in srgb, var(--p5) 18%, transparent); }
+  .profile-card[data-p="5"]::before { background: var(--p5); }
+  .profile-card[data-p="5"] .profile-card-name { color: var(--p5); }
+  .chip[data-p="6"] { color: var(--p6); border-color: var(--p6); }
+  .chip[data-p="6"].selected { background: color-mix(in srgb, var(--p6) 18%, transparent); }
+  .profile-card[data-p="6"]::before { background: var(--p6); }
+  .profile-card[data-p="6"] .profile-card-name { color: var(--p6); }
+  .chip[data-p="7"] { color: var(--p7); border-color: var(--p7); }
+  .chip[data-p="7"].selected { background: color-mix(in srgb, var(--p7) 18%, transparent); }
+  .profile-card[data-p="7"]::before { background: var(--p7); }
+  .profile-card[data-p="7"] .profile-card-name { color: var(--p7); }
+  .chip[data-p="8"] { color: var(--p8); border-color: var(--p8); }
+  .chip[data-p="8"].selected { background: color-mix(in srgb, var(--p8) 18%, transparent); }
+  .profile-card[data-p="8"]::before { background: var(--p8); }
+  .profile-card[data-p="8"] .profile-card-name { color: var(--p8); }
+  .chip[data-p="9"] { color: var(--p9); border-color: var(--p9); }
+  .chip[data-p="9"].selected { background: color-mix(in srgb, var(--p9) 18%, transparent); }
+  .profile-card[data-p="9"]::before { background: var(--p9); }
+  .profile-card[data-p="9"] .profile-card-name { color: var(--p9); }
 
   .val-cell {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
     font-size: 14px;
     color: var(--text);
     white-space: nowrap;
   }
 
-  .negative { color: var(--danger) !important; }
+  .negative { color: var(--warning) !important; }
   .positive { color: var(--accent2) !important; }
 
   tfoot td {
@@ -327,7 +310,8 @@
     border-top: 1px solid var(--border);
     font-weight: 600;
     background: var(--surface2);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
   }
 
   .profile-grid {
@@ -353,16 +337,6 @@
     height: 3px;
   }
 
-  .profile-card[data-p="0"]::before { background: #8b6f47; }
-  .profile-card[data-p="1"]::before { background: #5a7a5c; }
-  .profile-card[data-p="2"]::before { background: #b85450; }
-  .profile-card[data-p="3"]::before { background: #c9954a; }
-  .profile-card[data-p="4"]::before { background: #7a6b8a; }
-  .profile-card[data-p="5"]::before { background: #c07040; }
-  .profile-card[data-p="6"]::before { background: #4a8a8a; }
-  .profile-card[data-p="7"]::before { background: #7a9a40; }
-  .profile-card[data-p="8"]::before { background: #9a6090; }
-  .profile-card[data-p="9"]::before { background: #b06070; }
 
   .profile-card-name {
     font-size: 16px;
@@ -370,16 +344,6 @@
     margin-bottom: 16px;
   }
 
-  .profile-card[data-p="0"] .profile-card-name { color: #8b6f47; }
-  .profile-card[data-p="1"] .profile-card-name { color: #5a7a5c; }
-  .profile-card[data-p="2"] .profile-card-name { color: #b85450; }
-  .profile-card[data-p="3"] .profile-card-name { color: #c9954a; }
-  .profile-card[data-p="4"] .profile-card-name { color: #7a6b8a; }
-  .profile-card[data-p="5"] .profile-card-name { color: #c07040; }
-  .profile-card[data-p="6"] .profile-card-name { color: #4a8a8a; }
-  .profile-card[data-p="7"] .profile-card-name { color: #7a9a40; }
-  .profile-card[data-p="8"] .profile-card-name { color: #9a6090; }
-  .profile-card[data-p="9"] .profile-card-name { color: #b06070; }
 
   .profile-card-row {
     display: flex;
@@ -394,7 +358,8 @@
   .profile-card-row .label { color: var(--muted); }
 
   .profile-card-final {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
     font-size: 18px;
     font-weight: 700;
     padding-top: 4px;
@@ -460,7 +425,7 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-  select option { background: #f0ebe3; }
+  select option { background: var(--surface2); color: var(--text); }
 
   .category-select {
     display: flex;
@@ -475,8 +440,8 @@
     font-size: 10px;
     font-weight: 600;
     cursor: pointer;
-    border: 1.5px solid #7a6b8a;
-    color: #7a6b8a;
+    border: 1.5px solid var(--info);
+    color: var(--info);
     transition: all .15s;
     opacity: .4;
     white-space: nowrap;
@@ -484,7 +449,7 @@
 
   .cat-chip.selected {
     opacity: 1;
-    background: rgba(122,107,138,.2);
+    background: var(--info-soft);
   }
 
   .balanco-section {
@@ -506,13 +471,13 @@
   /* Compact "balões" inside Balanço Mensal tab */
   #tab-balanco .card {
     margin-bottom: 14px;
-    border-radius: 8px;
+    border-radius: var(--card-radius);
   }
   #tab-balanco .card-header {
     padding: 8px 12px;
   }
   #tab-balanco .card-title {
-    font-size: 12px;
+    font-size: 13px;
     gap: 6px;
   }
   #tab-balanco .card-total {
@@ -520,8 +485,8 @@
   }
   #tab-balanco table th,
   #tab-balanco table td {
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: 8px 10px;
+    font-size: 13px;
   }
   #tab-balanco .profile-manager-card {
     padding: 8px !important;
@@ -560,7 +525,8 @@
     border-bottom: 1px dashed var(--border);
     border-radius: 0;
     color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
     font-size: 13px;
     padding: 2px 4px;
     width: 120px;
@@ -597,7 +563,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 14px;
-    border-bottom: 1px solid rgba(42,48,69,.4);
+    border-bottom: 1px solid var(--border2);
     font-size: 13px;
   }
 
@@ -626,7 +592,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 18px;
-    border-bottom: 1px solid rgba(42,48,69,.5);
+    border-bottom: 1px solid var(--border2);
   }
 
   .profile-manager-row:last-child { border-bottom: none; }
@@ -655,19 +621,56 @@
 
   /* Referencia table */
   .referencia-value-display {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
     font-size: 13px;
     color: var(--accent2);
   }
 
   .referencia-remaining {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-body);
+    font-variant-numeric: tabular-nums;
     font-size: 12px;
   }
 
   .lancamento-diff-positive { color: var(--accent2); }
-  .lancamento-diff-negative { color: var(--danger); }
+  .lancamento-diff-negative { color: var(--warning); }
   .lancamento-diff-neutral { color: var(--muted); }
+
+
+  /* ── Saldo do mês (hero) ── */
+  .saldo-hero { padding: 22px 20px 20px; background: var(--accent-soft); border-bottom: 1px solid var(--border); }
+  .saldo-hero.neg { background: var(--warning-soft); }
+  .saldo-hero-label { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .2px; }
+  .saldo-hero-val { font-family: var(--font-display); font-size: 38px; font-weight: 500; line-height: 1.15; margin: 4px 0 6px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .saldo-hero.neg .saldo-hero-val { color: var(--warning); }
+  .saldo-hero-sub { font-size: 13px; color: var(--muted); }
+  .saldo-line { display: flex; align-items: center; gap: 12px; padding: 10px 16px; min-height: 60px; border-bottom: 1px solid var(--border2); cursor: pointer; user-select: none; }
+  .saldo-line:hover { background: var(--row-hover); }
+  .row-ic, .plan-ic { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .plan-ic.over { background: var(--warning-soft); color: var(--warning); }
+  .row-name { font-size: 15px; font-weight: 600; color: var(--text); }
+  .row-chev { font-size: 12px; color: var(--muted); }
+  .row-moves { display: flex; gap: 2px; }
+
+  /* ── Planejamento mensal ── */
+  .plan-row { padding: 14px 16px 12px; border-bottom: 1px solid var(--border2); }
+  .plan-head { display: flex; align-items: center; gap: 12px; }
+  .plan-mid { flex: 1; min-width: 0; }
+  .plan-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+  .plan-name { font-size: 15px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+  .plan-sub { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .plan-rest { margin-left: auto; font-size: 14px; font-weight: 700; color: var(--accent-dark); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+  .plan-rest.over { color: var(--warning); }
+  .plan-track { height: 8px; border-radius: 4px; background: var(--track); margin: 10px 0 2px; overflow: hidden; }
+  .plan-fill { height: 100%; border-radius: 4px; background: var(--accent-fill); }
+  .plan-fill.over { background: var(--warning); }
+  .plan-edit { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+  .plan-edit label { font-size: 13px; color: var(--muted); }
+  .pix-row { padding: 12px 16px; border-bottom: 1px solid var(--border2); display: flex; flex-direction: column; gap: 8px; }
+  .pix-row:last-child { border-bottom: none; }
+  .pix-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .plan-closing { padding: 14px 16px; font-size: 14px; color: var(--text-2); background: var(--surface2); border-top: 1px solid var(--border); }
 
   /* ── Relatório em PDF (impressão) ────────────────────────────────────── */
   #pdf-report { padding: 24px; color: #1a1a1a; background: #fff; }
@@ -704,24 +707,27 @@
 <div id="pdf-report" style="display:none"></div>
 
 <header>
+  <div class="head-top">
+    <h1 class="page-title">Finanças</h1>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openSearchPanel()" title="Buscar em faturas, pagamentos e balanço"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Buscar</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar um PDF com faturas, pagamentos, resumo por perfil e balanço"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> Exportar PDF</button>
+    </div>
+  </div>
   <nav id="nav">
     <button class="active" onclick="showTab('faturas')">Faturas</button>
-    <button onclick="showTab('resumo')">Resumo &amp; Perfis</button>
-    <button onclick="showTab('balanco')">Balanço Mensal</button>
+    <button onclick="showTab('resumo')">Resumo</button>
+    <button onclick="showTab('balanco')">Balanço</button>
   </nav>
-  <div class="header-actions">
-    <button class="btn btn-ghost btn-sm" onclick="openSearchPanel()" title="Buscar em faturas, pagamentos e balanço">🔍 Buscar</button>
-    <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar um PDF com faturas, pagamentos, resumo por perfil e balanço">📄 Exportar PDF</button>
-  </div>
 </header>
 
 <!-- ── PAINEL DE BUSCA ── -->
-<div id="search-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:2000;align-items:flex-start;justify-content:center;padding-top:60px" onclick="if(event.target===this)closeSearchPanel()">
-  <div style="background:var(--surface);border-radius:14px;width:92%;max-width:640px;max-height:78vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,0.25)">
+<div id="search-overlay" style="display:none;position:fixed;inset:0;background:rgba(16,22,18,0.55);z-index:2000;align-items:flex-start;justify-content:center;padding-top:60px" onclick="if(event.target===this)closeSearchPanel()">
+  <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);width:92%;max-width:640px;max-height:78vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,0.25)">
     <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)">
-      <span style="font-size:16px">🔍</span>
+      <span style="color:var(--muted);display:inline-flex"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
       <input id="search-input" type="text" placeholder="Buscar por descrição, categoria, perfil ou valor..." oninput="performSearch(this.value)" style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text)">
-      <button class="btn btn-ghost btn-sm" onclick="closeSearchPanel()">✕</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeSearchPanel()" aria-label="Fechar busca"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
     <div id="search-results" style="overflow-y:auto;padding:8px 0"></div>
   </div>
@@ -731,13 +737,28 @@
 <div id="tab-faturas" class="tab active">
   <div id="faturas-container"></div>
   <div style="padding:0 0 24px">
-    <button class="btn btn-ghost" onclick="addFatura()">＋ Nova Fatura</button>
+    <button class="btn btn-ghost" onclick="addFatura()"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Nova fatura</button>
+  </div>
+
+  <!-- Balão de Pix: já saiu da conta, então conta no perfil mas NÃO entra no total de nenhuma fatura -->
+  <div class="card" id="pix-card">
+    <div class="card-header">
+      <div class="card-title">Pix <span class="badge">fora do total das faturas</span></div>
+      <div class="card-total" id="pix-total" style="color:var(--text)">R$ 0,00</div>
+    </div>
+    <div style="padding:10px 16px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border2)">
+      Registre aqui os Pix que já saíram. Cada um conta no gasto do perfil escolhido, mas não soma em nenhuma fatura — não há nada a pagar depois.
+    </div>
+    <div id="pix-body"></div>
+    <div class="add-row-bar">
+      <button class="btn btn-ghost btn-sm" onclick="addPixRow()"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Novo Pix</button>
+    </div>
   </div>
 
   <div class="card" id="pagamentos-card">
     <div class="card-header">
       <button class="btn btn-ghost btn-sm" id="pagamentos-toggle-btn" onclick="togglePagamentosSection()">▸</button>
-      <div class="card-title">💸 Registro de Pagamentos</div>
+      <div class="card-title">Registro de pagamentos</div>
     </div>
     <div id="pagamentos-body" style="display:none">
       <div id="pagamentos-container"></div>
@@ -748,27 +769,27 @@
 <!-- TAB 2 — RESUMO & PERFIS (Saldo Final + Resumo por Perfil + Gerenciar Perfis) -->
 <div id="tab-resumo" class="tab">
   <div class="section-head">
-    <div class="section-title">⚖️ Saldo Final por Perfil</div>
+    <div class="section-title">Saldo final por perfil</div>
   </div>
   <div id="saldo-container"></div>
 
   <div class="section-head" style="margin-top:16px">
-    <div class="section-title">📊 Gastos por Perfil</div>
+    <div class="section-title">Gastos por perfil</div>
   </div>
   <div id="perfis-summary"></div>
 
   <div class="section-head" style="margin-top:16px">
-    <div class="section-title">👤 Gerenciar Perfis</div>
+    <div class="section-title">Gerenciar perfis</div>
   </div>
   <div class="card" style="padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
     <span style="font-size:12px;color:var(--muted)">Código pra convidar sua família:</span>
-    <span id="family-invite-code" style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;color:var(--accent)">—</span>
-    <button class="btn btn-ghost btn-sm" onclick="copyInviteCode()">📋 Copiar</button>
+    <span id="family-invite-code" style="font-family:var(--font-body);font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;color:var(--accent-dark)">—</span>
+    <button class="btn btn-ghost btn-sm" onclick="copyInviteCode()"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Copiar</button>
   </div>
   <div class="card">
     <div class="card-header">
       <div class="card-title">Perfis ativos</div>
-      <button class="btn btn-ghost btn-sm" id="btn-add-profile" onclick="addProfile()">＋ Adicionar perfil</button>
+      <button class="btn btn-ghost btn-sm" id="btn-add-profile" onclick="addProfile()"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Adicionar perfil</button>
     </div>
     <div id="profiles-manager-body"></div>
   </div>
@@ -777,14 +798,14 @@
 <!-- TAB 5 — BALANÇO MENSAL -->
 <div id="tab-balanco" class="tab">
   <div class="section-head">
-    <div class="section-title">📅 Balanço Mensal</div>
+    <div class="section-title">Balanço mensal</div>
   </div>
 
   <div id="balanco-tables-container"></div>
 
   <div style="padding:4px 0 24px;display:flex;gap:8px;flex-wrap:wrap">
-    <button class="btn btn-ghost btn-sm" onclick="addBalancoTable()">＋ Nova tabela</button>
-    <button class="btn btn-ghost btn-sm" onclick="addPlanejamentoTable()">📊 ＋ Planejamento Mensal</button>
+    <button class="btn btn-ghost btn-sm" onclick="addBalancoTable()"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Nova tabela</button>
+    <button class="btn btn-ghost btn-sm" onclick="addPlanejamentoTable()"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Planejamento mensal</button>
   </div>
 </div>
 
@@ -793,7 +814,41 @@
 // ══════════════════════════════════════════════════════
 //  CONSTANTS
 // ══════════════════════════════════════════════════════
-const PROFILE_COLORS = ['#8b6f47','#5a7a5c','#b85450','#c9954a','#7a6b8a','#c07040','#4a8a8a','#7a9a40','#9a6090','#b06070'];
+
+// ── Ícones de linha (SVG inline, herdam a cor do texto) ──
+const IC_PATHS = {"search": "<circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/>", "x": "<path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/>", "plus": "<path d=\"M5 12h14\"/><path d=\"M12 5v14\"/>", "check": "<path d=\"M20 6 9 17l-5-5\"/>", "eye": "<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>", "eyeOff": "<path d=\"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49\"/><path d=\"M14.084 14.158a3 3 0 0 1-4.242-4.242\"/><path d=\"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143\"/><path d=\"m2 2 20 20\"/>", "trash": "<path d=\"M3 6h18\"/><path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/>", "copy": "<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/>", "camera": "<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/>", "image": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/><circle cx=\"9\" cy=\"9\" r=\"2\"/><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\"/>", "fileText": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/><path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/><path d=\"M10 9H8\"/><path d=\"M16 13H8\"/><path d=\"M16 17H8\"/>", "users": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/><path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>", "trendUp": "<path d=\"M22 7 13.5 15.5 8.5 10.5 2 17\"/><path d=\"M16 7h6v6\"/>", "trendDown": "<path d=\"M22 17 13.5 8.5 8.5 13.5 2 7\"/><path d=\"M16 17h6v-6\"/>", "landmark": "<path d=\"M3 22h18\"/><path d=\"M6 18v-7\"/><path d=\"M10 18v-7\"/><path d=\"M14 18v-7\"/><path d=\"M18 18v-7\"/><path d=\"m12 2 9 5H3z\"/>", "card": "<rect width=\"20\" height=\"14\" x=\"2\" y=\"5\" rx=\"2\"/><path d=\"M2 10h20\"/>", "utensils": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\"/><path d=\"M7 2v20\"/><path d=\"M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/>", "car": "<path d=\"M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2\"/><circle cx=\"7\" cy=\"17\" r=\"2\"/><path d=\"M9 17h6\"/><circle cx=\"17\" cy=\"17\" r=\"2\"/>", "scissors": "<circle cx=\"6\" cy=\"6\" r=\"3\"/><path d=\"M8.12 8.12 12 12\"/><path d=\"M20 4 8.12 15.88\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M14.8 14.8 20 20\"/>", "gift": "<rect x=\"3\" y=\"8\" width=\"18\" height=\"4\" rx=\"1\"/><path d=\"M12 8v13\"/><path d=\"M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7\"/><path d=\"M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5\"/>", "dots": "<circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/><circle cx=\"5\" cy=\"12\" r=\"1\"/>", "home": "<path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/>", "book": "<path d=\"M12 7v14\"/><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\"/>", "leaf": "<path d=\"M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z\"/><path d=\"M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12\"/>", "dumbbell": "<path d=\"M6.5 6.5v11\"/><path d=\"M17.5 6.5v11\"/><path d=\"M3.5 9v6\"/><path d=\"M20.5 9v6\"/><path d=\"M6.5 12h11\"/>", "wallet": "<path d=\"M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1\"/><path d=\"M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4\"/>", "link": "<path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\"/><path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\"/>"};
+function ic(name, size, label) {
+  size = size || 18;
+  const body = IC_PATHS[name] || IC_PATHS.dots;
+  const a11y = label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"';
+  return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" ${a11y}>${body}</svg>`;
+}
+// Ícone da categoria de gasto a partir de palavras-chave do nome
+const CAT_ICON_RULES = [
+  [/academia|treino|esporte|muscula|pilates|crossfit/, 'dumbbell'],
+  [/restaur|comida|mercado|supermerc|lanche|ifood|aliment|padaria|feira|bar\b|cafe/, 'utensils'],
+  [/dieta|nutri|saude|farmacia|medic|consulta|suplement|terapia|dentista/, 'leaf'],
+  [/uber|transporte|carro|combust|gasolina|onibus|metro|estacion|moto|pedagio/, 'car'],
+  [/salao|cabelo|barbear|barba|beleza|estetica|unha/, 'scissors'],
+  [/desejo|presente|lista|lazer|viagem|compras|roupa/, 'gift'],
+  [/parcelad|cartao|fatura|emprestimo|divida|financiamento/, 'card'],
+  [/casa|aluguel|condominio|luz|agua|internet|energia|moradia/, 'home'],
+  [/estudo|curso|livro|escola|faculdade|mensalidade/, 'book'],
+];
+function catIconName(cat) {
+  const n = String(cat || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  for (const [re, name] of CAT_ICON_RULES) if (re.test(n)) return name;
+  return 'dots';
+}
+function tableIconName(t) {
+  if (t.type === 'entradas') return 'trendUp';
+  if (t.type === 'faturas_auto' || t.id === 'faturas') return 'card';
+  if (t.id === 'banco') return 'landmark';
+  if (t.sign === 1) return 'trendUp';
+  if (t.sign === -1) return 'trendDown';
+  return catIconName(t.name) === 'dots' ? 'wallet' : catIconName(t.name);
+}
+const PROFILE_COLORS = ['var(--p0)','var(--p1)','var(--p2)','var(--p3)','var(--p4)','var(--p5)','var(--p6)','var(--p7)','var(--p8)','var(--p9)'];
 function getProfileColor(idx) {
   return PROFILE_COLORS[idx % PROFILE_COLORS.length];
 }
@@ -885,7 +940,7 @@ async function ensureFamilyAndMigrate() {
     try {
       const { data: fid, error } = await supa.rpc('join_family_by_code', { code: choice.code.trim().toUpperCase() });
       if (error) throw error;
-      alert('✅ Você entrou na família! Os dados financeiros compartilhados já vão carregar.');
+      alert('Você entrou na família! Os dados financeiros compartilhados já vão carregar.');
       return fid;
     } catch (e) {
       alert('Não foi possível entrar com esse código: ' + (e.message || e) + '\n\nConfira com quem te convidou e tente de novo.');
@@ -908,7 +963,7 @@ async function ensureFamilyAndMigrate() {
     family_id: newFamily.id, data: oldRow?.data || state
   });
 
-  alert(`✅ Sua família foi criada!\n\nCódigo de convite: ${inviteCode}\n\nCompartilhe esse código com quem você quer que entre — vai poder ver esse código de novo em "Resumo & Perfis" a qualquer momento.`);
+  alert(`Sua família foi criada!\n\nCódigo de convite: ${inviteCode}\n\nCompartilhe esse código com quem você quer que entre — vai poder ver esse código de novo em "Resumo & Perfis" a qualquer momento.`);
 
   return newFamily.id;
 }
@@ -921,13 +976,13 @@ function showFamilyChoiceModal() {
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px';
     overlay.innerHTML = `
       <div style="background:var(--surface);border-radius:16px;max-width:400px;width:100%;padding:24px;text-align:center">
-        <div style="font-size:36px;margin-bottom:8px">👨‍👩‍👧‍👦</div>
+        <div style="color:var(--accent);margin-bottom:8px;display:flex;justify-content:center"><svg class="ic" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
         <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Bem-vindo ao Finanças</div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Alguém da sua família já usa o LifePlan?</div>
-        <button id="fam-create-btn" class="btn btn-primary" style="width:100%;margin-bottom:10px;padding:12px">✨ Não, criar minha família</button>
-        <button id="fam-join-toggle-btn" class="btn btn-ghost" style="width:100%;padding:12px">🔑 Sim, tenho um código de convite</button>
+        <button id="fam-create-btn" class="btn btn-primary" style="width:100%;margin-bottom:10px;padding:12px">Não, criar minha família</button>
+        <button id="fam-join-toggle-btn" class="btn btn-ghost" style="width:100%;padding:12px">Sim, tenho um código de convite</button>
         <div id="fam-join-form" style="display:none;margin-top:14px">
-          <input id="fam-code-input" type="text" placeholder="FAM-XXXXXX" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:14px;text-transform:uppercase;box-sizing:border-box;margin-bottom:10px">
+          <input id="fam-code-input" type="text" placeholder="FAM-XXXXXX" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;text-align:center;font-family:var(--font-body);font-variant-numeric:tabular-nums;font-size:14px;text-transform:uppercase;box-sizing:border-box;margin-bottom:10px">
           <button id="fam-join-btn" class="btn btn-primary" style="width:100%;padding:12px">Entrar na família</button>
         </div>
       </div>
@@ -1009,7 +1064,7 @@ function getDefaultState() {
     // ── BALANÇO MENSAL: unified customizable table system ──
     balancoTables: [
       {
-        id: 'banco', name: 'Saldo em Conta', icon: '🏦', type: 'custom',
+        id: 'banco', name: 'Saldo em Conta', icon: '', type: 'custom',
         columns: [
           { id: 'nome', name: 'Banco / Conta', type: 'text' },
           { id: 'val', name: 'Valor (R$)', type: 'number' }
@@ -1018,17 +1073,17 @@ function getDefaultState() {
         sign: 1, includeInSaldo: true
       },
       {
-        id: 'faturas', name: 'Faturas', icon: '🗂️', type: 'faturas_auto',
+        id: 'faturas', name: 'Faturas', icon: '', type: 'faturas_auto',
         rows: [],
         sign: -1, includeInSaldo: true
       },
       {
-        id: 'entradas', name: 'Entradas', icon: '💰', type: 'entradas',
+        id: 'entradas', name: 'Entradas', icon: '', type: 'entradas',
         columns: [], rows: [],
         sign: 1, includeInSaldo: true
       },
       {
-        id: genId(), name: 'Planejamento Mensal', icon: '📊', type: 'planejamento',
+        id: genId(), name: 'Planejamento Mensal', icon: '', type: 'planejamento',
         rows: [
           { id: genId(), categoria: 'Academia', profileIdx: 0, valor: 0 },
           { id: genId(), categoria: 'Restaurante', profileIdx: 0, valor: 0 },
@@ -1058,7 +1113,7 @@ if (!state.balancoTables) {
     else refRows.push(parceladoRow);
   }
   state.balancoTables.push({
-    id: 'referencia', name: 'Referência', icon: '📌', type: 'custom',
+    id: 'referencia', name: 'Referência', icon: '', type: 'custom',
     columns: [
       { id: 'cat', name: 'Categoria', type: 'text' },
       { id: 'val', name: 'Valor de Referência (R$)', type: 'number' }
@@ -1070,21 +1125,21 @@ if (!state.balancoTables) {
   // Migrate Faturas (balanço) — agora é um resumo automático, não precisa
   // mais migrar linhas manuais antigas
   state.balancoTables.push({
-    id: 'faturas', name: 'Faturas', icon: '🗂️', type: 'faturas_auto',
+    id: 'faturas', name: 'Faturas', icon: '', type: 'faturas_auto',
     rows: [],
     sign: -1, includeInSaldo: true
   });
 
   // Entradas (computed, built-in)
   state.balancoTables.push({
-    id: 'entradas', name: 'Entradas', icon: '💰', type: 'entradas',
+    id: 'entradas', name: 'Entradas', icon: '', type: 'entradas',
     columns: [], rows: [],
     sign: 1, includeInSaldo: true
   });
 
   // Lançamentos (computed, built-in, informational by default)
   state.balancoTables.push({
-    id: 'lancamentos', name: 'Lançamentos', icon: '🔮', type: 'lancamentos',
+    id: 'lancamentos', name: 'Lançamentos', icon: '', type: 'lancamentos',
     columns: [], rows: [],
     refTableId: 'referencia',
     sign: 0, includeInSaldo: false
@@ -1180,7 +1235,7 @@ if (state.balancoTables && !state._migratedBancoV1) {
   state._migratedBancoV1 = true;
   if (!state.balancoTables.find(t => t.id === 'banco')) {
     state.balancoTables.unshift({
-      id: 'banco', name: 'Saldo em Conta', icon: '🏦', type: 'custom',
+      id: 'banco', name: 'Saldo em Conta', icon: '', type: 'custom',
       columns: [
         { id: 'nome', name: 'Banco / Conta', type: 'text' },
         { id: 'val', name: 'Valor (R$)', type: 'number' }
@@ -1253,7 +1308,7 @@ function performSearch(query) {
       const haystack = `${r.name||''} ${r.category||''} ${profileName} ${r.value||''}`.toLowerCase();
       if (haystack.includes(q)) {
         results.push({
-          icon: '🧾', title: r.name || '(sem descrição)',
+          icon: 'card', title: r.name || '(sem descrição)',
           subtitle: `${f.name} · ${formatDateBR(r.date)||'—'} · ${profileName||'sem perfil'}${r.category?' · '+r.category:''}`,
           value: fmt(r.value),
           onClick: () => { closeSearchPanel(); showTab('faturas'); _collapsedFaturas[f.id]=false; renderFaturas(); }
@@ -1267,7 +1322,7 @@ function performSearch(query) {
     const haystack = `${p.desc||''} ${profileName} ${p.value||''}`.toLowerCase();
     if (haystack.includes(q)) {
       results.push({
-        icon: '💰', title: p.desc || '(sem descrição)',
+        icon: 'trendUp', title: p.desc || '(sem descrição)',
         subtitle: `Pagamento · ${formatDateBR(p.date)||'—'} · ${profileName||'sem perfil'}`,
         value: fmt(p.value),
         onClick: () => { closeSearchPanel(); showTab('resumo'); if (p.profileIdx!=null) _collapsedProfiles[p.profileIdx]=false; renderPerfis(); }
@@ -1285,7 +1340,7 @@ function performSearch(query) {
           const mainCol = t.columns.find(c=>c.type==='text');
           const valCol = t.columns.find(c=>c.type==='number');
           results.push({
-            icon: t.icon||'📋', title: (mainCol ? r.values?.[mainCol.id] : null) || '(sem nome)',
+            icon: 'wallet', title: (mainCol ? r.values?.[mainCol.id] : null) || '(sem nome)',
             subtitle: t.name,
             value: valCol ? fmt(r.values?.[valCol.id]||0) : '',
             onClick: () => { closeSearchPanel(); showTab('balanco'); }
@@ -1298,7 +1353,7 @@ function performSearch(query) {
         const haystack = `${r.categoria||''} ${profileName}`.toLowerCase();
         if (haystack.includes(q)) {
           results.push({
-            icon: '📊', title: r.categoria,
+            icon: catIconName(r.categoria), title: r.categoria,
             subtitle: `${t.name} · ${profileName}`,
             value: fmt(r.valor),
             onClick: () => { closeSearchPanel(); showTab('balanco'); }
@@ -1320,7 +1375,7 @@ function performSearch(query) {
     item.onmouseenter = () => item.style.background = 'var(--surface2)';
     item.onmouseleave = () => item.style.background = 'transparent';
     item.innerHTML = `
-      <span style="font-size:18px">${r.icon}</span>
+      <span class="row-ic">${ic(r.icon,18)}</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</div>
         <div style="font-size:11px;color:var(--muted)">${r.subtitle}</div>
@@ -1343,7 +1398,7 @@ function exportFinanceReportPDF() {
   let html = `<h1>Relatório Financeiro</h1><div class="pdf-subtitle">Gerado em ${today} — LifePlan</div>`;
 
   // ── FATURAS ──
-  html += `<h2>🧾 Faturas</h2>`;
+  html += `<h2>Faturas</h2>`;
   if (!state.faturas.length) {
     html += `<div class="pdf-empty">Nenhuma fatura cadastrada.</div>`;
   }
@@ -1364,7 +1419,7 @@ function exportFinanceReportPDF() {
   });
 
   // ── PAGAMENTOS ──
-  html += `<h2>💸 Pagamentos</h2>`;
+  html += `<h2>Pagamentos</h2>`;
   const totalPagoGeral = state.payments.reduce((s,p) => s + (parseFloat(p.value)||0), 0);
   if (!state.payments.length) {
     html += `<div class="pdf-empty">Nenhum pagamento registrado.</div>`;
@@ -1379,7 +1434,7 @@ function exportFinanceReportPDF() {
   }
 
   // ── RESUMO POR PERFIL (mesma fórmula real da aba Resumo & Perfis) ──
-  html += `<h2>⚖️ Resumo por Perfil</h2>`;
+  html += `<h2>Resumo por Perfil</h2>`;
   html += `<table><thead><tr><th>Perfil</th><th>Total Gastos</th><th>Total Pago</th><th>Saldo</th></tr></thead><tbody>`;
   let gtGastos = 0, gtPago = 0;
   getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
@@ -1395,11 +1450,11 @@ function exportFinanceReportPDF() {
   html += `</tbody></table>`;
 
   // ── BALANÇO MENSAL ──
-  html += `<h2>📅 Balanço Mensal</h2>`;
+  html += `<h2>Balanço Mensal</h2>`;
   let saldoFinal = 0;
   state.balancoTables.forEach(t => {
     if (t.includeInSaldo && t.sign !== 0) saldoFinal += getTableTotal(t) * t.sign;
-    html += `<h3>${t.icon||''} ${t.name}</h3>`;
+    html += `<h3>${t.name}</h3>`;
     if (t.type === 'planejamento') {
       const rows = (t.rows||[]).filter(r => r.categoria && r.profileIdx != null);
       if (!rows.length) { html += `<div class="pdf-empty">Nenhuma categoria cadastrada.</div>`; }
@@ -1428,7 +1483,7 @@ function exportFinanceReportPDF() {
       html += `<div class="pdf-empty">Total: ${fmt(getTableTotal(t))}</div>`;
     }
   });
-  html += `<h3>💡 Saldo do Mês: <span class="${saldoFinal>=0?'pdf-pos':'pdf-neg'}">${fmt(saldoFinal)}</span></h3>`;
+  html += `<h3>Saldo do mês: <span class="${saldoFinal>=0?'pdf-pos':'pdf-neg'}">${fmt(saldoFinal)}</span></h3>`;
 
   document.getElementById('pdf-report').innerHTML = html;
   window.print();
@@ -1468,7 +1523,7 @@ function togglePagamentosSection() {
 }
 
 function renderActive(name) {
-  if (name === 'faturas') { renderFaturas(); renderPagamentos(); }
+  if (name === 'faturas') { renderFaturas(); renderPix(); renderPagamentos(); }
   else if (name === 'resumo') { renderSaldo(); renderPerfis(); renderProfilesManager(); }
   else if (name === 'balanco') renderBalanco();
 }
@@ -1541,19 +1596,19 @@ function buildReceiptCell(r, fId) {
   if (r.receiptPath) {
     const viewBtn = document.createElement('button');
     viewBtn.className = 'btn btn-ghost btn-sm';
-    viewBtn.innerHTML = '🖼️';
+    viewBtn.innerHTML = ic('image'); viewBtn.setAttribute('aria-label','Ver recibo');
     viewBtn.title = 'Ver recibo';
     viewBtn.onclick = () => viewReceipt(r.receiptPath);
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-ghost btn-sm';
-    delBtn.innerHTML = '✕';
+    delBtn.innerHTML = ic('x'); delBtn.setAttribute('aria-label','Remover recibo');
     delBtn.title = 'Remover recibo';
     delBtn.onclick = () => removeReceipt(fId, r.id, r.receiptPath);
     wrap.append(viewBtn, delBtn);
   } else {
     const addBtn = document.createElement('button');
     addBtn.className = 'btn btn-ghost btn-sm';
-    addBtn.innerHTML = '📷';
+    addBtn.innerHTML = ic('camera'); addBtn.setAttribute('aria-label','Anexar foto do recibo');
     addBtn.title = 'Anexar foto do recibo';
     addBtn.onclick = () => triggerReceiptUpload(fId, r.id);
     wrap.appendChild(addBtn);
@@ -1811,7 +1866,7 @@ function renderProfilesManager() {
     if (idx !== lastIdx) {
       const delBtn = document.createElement('button');
       delBtn.className = 'btn btn-danger btn-sm';
-      delBtn.innerHTML = '🗑';
+      delBtn.innerHTML = ic('trash'); delBtn.setAttribute('aria-label','Remover'); 
       delBtn.title = 'Remover perfil';
       delBtn.onclick = () => removeProfile(idx);
       row.appendChild(delBtn);
@@ -1824,9 +1879,9 @@ function renderProfilesManager() {
     linkRow.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:8px;font-size:11px';
     const linkedUserId = state.profiles[idx].linkedUserId;
     if (linkedUserId && currentUser && linkedUserId === currentUser.id) {
-      linkRow.innerHTML = `<span style="color:var(--accent2);font-weight:700">✅ Esta é a sua conta</span>`;
+      linkRow.innerHTML = `<span style="color:var(--accent2);font-weight:700">${ic('check')} Esta é a sua conta</span>`;
     } else if (linkedUserId) {
-      linkRow.innerHTML = `<span style="color:var(--muted)">🔗 Vinculado a outro membro da família</span>`;
+      linkRow.innerHTML = `<span style="color:var(--muted)">Vinculado a outro membro da família</span>`;
       const unlinkBtn = document.createElement('button');
       unlinkBtn.className = 'btn btn-ghost btn-sm';
       unlinkBtn.textContent = 'Desvincular';
@@ -1835,7 +1890,7 @@ function renderProfilesManager() {
     } else {
       const linkBtn = document.createElement('button');
       linkBtn.className = 'btn btn-ghost btn-sm';
-      linkBtn.textContent = '🔗 Vincular minha conta a este perfil';
+      linkBtn.textContent = 'Vincular minha conta a este perfil';
       linkBtn.onclick = () => linkMyAccountToProfile(idx);
       linkRow.appendChild(linkBtn);
     }
@@ -1892,7 +1947,7 @@ function renderProfilesManager() {
       };
 
       const rmBtn = document.createElement('button');
-      rmBtn.textContent = '✕';
+      rmBtn.innerHTML = ic('x'); /*x*/
       rmBtn.style.background = 'none';
       rmBtn.style.border = 'none';
       rmBtn.style.color = 'var(--danger)';
@@ -1970,7 +2025,7 @@ function addBalancoTable() {
   const t = {
     id: genId(),
     name: 'Nova Tabela',
-    icon: '📋',
+    icon: '',
     type: 'custom',
     columns: [
       { id: genId(), name: 'Nome', type: 'text' },
@@ -1995,7 +2050,7 @@ function addPlanejamentoTable() {
   const t = {
     id: genId(),
     name: 'Planejamento Mensal',
-    icon: '📊',
+    icon: '',
     type: 'planejamento',
     rows: [], // cada linha: { id, categoria, valor, profileIdx }
     sign: -1,
@@ -2104,7 +2159,7 @@ function buildSaldoSection(posIdx, totalTables) {
 
   const label = document.createElement('div');
   label.className = 'balanco-section-title';
-  label.textContent = '💡 Saldo do Mês';
+  label.textContent = 'Visão do mês';
   label.style.margin = '0';
 
   const moveUp = document.createElement('button');
@@ -2141,17 +2196,18 @@ function buildBalancoTableCard(t, tIdx, totalTables) {
     titleRow.style.display = 'flex';
     titleRow.style.alignItems = 'center';
     titleRow.style.gap = '6px';
+    titleRow.style.flexWrap = 'wrap';
     titleRow.style.marginBottom = '8px';
 
     const iconInput = document.createElement('input');
-    iconInput.type = 'text'; iconInput.value = t.icon || '📋';
+    iconInput.type = 'text'; iconInput.value = t.icon || '';
     iconInput.style.cssText = 'width:32px;background:transparent;border:none;font-size:16px;color:var(--text);text-align:center;cursor:pointer';
     iconInput.oninput = e => { t.icon = e.target.value; saveState(); };
 
     const nameInput = document.createElement('input');
     nameInput.type = 'text'; nameInput.value = t.name;
     nameInput.className = 'balanco-section-title';
-    nameInput.style.cssText = 'background:transparent;border:none;flex:1;cursor:text;outline:none;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)';
+    nameInput.style.cssText = 'background:transparent;border:none;flex:1 1 160px;min-width:140px;cursor:text;outline:none;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)';
     nameInput.oninput = e => { t.name = e.target.value; saveState(); renderSaldoBuilder(); };
 
     const moveUp = document.createElement('button');
@@ -2166,12 +2222,12 @@ function buildBalancoTableCard(t, tIdx, totalTables) {
     moveDown.onclick = () => moveBalancoTable(t.id, 1);
     moveDown.disabled = tIdx === totalTables - 1;
 
-    titleRow.append(iconInput, nameInput, moveUp, moveDown);
+    titleRow.append(nameInput, moveUp, moveDown);
 
     // ── Sign toggle (include in saldo / exclude) ──
     const signBtn = document.createElement('button');
     signBtn.className = 'btn btn-ghost btn-sm';
-    const signColors = { 1: 'var(--accent2)', '-1': 'var(--danger)', 0: 'var(--muted)' };
+    const signColors = { 1: 'var(--accent2)', '-1': 'var(--warning)', 0: 'var(--muted)' };
     const signLabels = { 1: '＋ Saldo', '-1': '− Saldo', 0: 'off' };
     signBtn.textContent = signLabels[t.sign] ?? 'off';
     signBtn.style.cssText = `font-size:10px;padding:2px 7px;color:${signColors[t.sign] ?? 'var(--muted)'};border-color:currentColor`;
@@ -2187,7 +2243,7 @@ function buildBalancoTableCard(t, tIdx, totalTables) {
     // "de fábrica" — com um aviso extra pras que têm comportamento especial) ──
     const specialBehavior = ['entradas','lancamentos','banco'];
     const delTableBtn = document.createElement('button');
-    delTableBtn.className = 'btn btn-danger btn-sm'; delTableBtn.innerHTML = '🗑';
+    delTableBtn.className = 'btn btn-danger btn-sm'; delTableBtn.innerHTML = ic('trash'); delTableBtn.setAttribute('aria-label','Remover'); 
     delTableBtn.style.padding = '2px 6px';
     delTableBtn.onclick = () => {
       const msg = specialBehavior.includes(t.id)
@@ -2252,7 +2308,7 @@ function renderBancoCard(card, t) {
     valInp.value = row.values['val'] || 0;
     valInp.placeholder = '0,00';
     valInp.step = '0.01';
-    valInp.style.cssText = 'background:transparent;border:none;color:var(--accent2);font-size:22px;font-weight:700;width:100%;outline:none;font-family:"JetBrains Mono",monospace;padding:4px 0';
+    valInp.style.cssText = 'background:transparent;border:none;color:var(--accent2);font-size:22px;font-weight:700;width:100%;outline:none;font-family:var(--font-body);font-variant-numeric:tabular-nums;padding:4px 0';
     valInp.onblur = e => { row.values['val'] = parseFloat(e.target.value) || 0; saveState(); renderBalanco(); };
 
     const prefix = document.createElement('span');
@@ -2261,7 +2317,7 @@ function renderBancoCard(card, t) {
 
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-danger btn-sm';
-    delBtn.innerHTML = '✕';
+    delBtn.innerHTML = ic('x'); delBtn.setAttribute('aria-label','Remover');
     delBtn.style.cssText = 'position:absolute;top:8px;right:8px;padding:2px 6px;font-size:10px;opacity:.5';
     delBtn.onmouseenter = () => delBtn.style.opacity = '1';
     delBtn.onmouseleave = () => delBtn.style.opacity = '.5';
@@ -2424,7 +2480,7 @@ function removePlanejamentoRow(t, rowId) {
 function renderFaturasAutoCard(card, t) {
   const header = document.createElement('div');
   header.className = 'card-header';
-  header.innerHTML = `<div class="card-title">${t.icon||'🗂️'} ${t.name}</div>`;
+  header.innerHTML = `<div class="card-title">${ic('card')} ${t.name}</div>`;
   card.appendChild(header);
 
   const note = document.createElement('div');
@@ -2459,168 +2515,155 @@ function renderFaturasAutoCard(card, t) {
   card.appendChild(wrap);
 }
 
+const _planEditOpen = {};
 function renderPlanejamentoCard(card, t) {
-  const wrap = document.createElement('div');
-  wrap.className = 'table-wrap';
-  const table = document.createElement('table');
-  table.innerHTML = `<thead><tr><th>Categoria</th><th>Perfil</th><th>Expectativa</th><th>Gasto</th><th>Restante</th><th></th></tr></thead>`;
-  const tbody = document.createElement('tbody');
-
+  const list = document.createElement('div');
   if (!t.rows.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Nenhuma categoria ainda — adicione abaixo.</div></td></tr>`;
+    list.innerHTML = '<div class="empty">Nenhuma categoria ainda — adicione abaixo.</div>';
   }
 
   t.rows.forEach(row => {
-    const tr = document.createElement('tr');
+    const valor = parseFloat(row.valor) || 0;
+    const ready = row.profileIdx != null && !!row.categoria;
+    const gasto = ready ? computeGastoCategoria(row.profileIdx, row.categoria) : 0;
+    const restante = valor - gasto;
+    const over = ready && restante < 0;
+    const pct = valor > 0 ? Math.min(100, gasto / valor * 100) : (gasto > 0 ? 100 : 0);
+    const editing = _planEditOpen[row.id] !== undefined ? _planEditOpen[row.id] : !ready;
 
-    const tdCat = document.createElement('td');
-    const cats = row.profileIdx != null ? getProfileCategories(row.profileIdx) : null;
-    if (!cats) {
-      const hint = document.createElement('span');
-      hint.style.cssText = 'color:var(--muted);font-size:11px';
-      hint.textContent = row.profileIdx == null ? 'Escolha o perfil ao lado →' : 'Este perfil ainda não tem categorias';
-      tdCat.appendChild(hint);
-    } else {
-      const selCat = document.createElement('select');
-      selCat.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:5px 6px;font-size:12px;color:var(--text);width:100%;box-sizing:border-box';
-      const optEmpty = document.createElement('option');
-      optEmpty.value = ''; optEmpty.textContent = '— selecione a categoria —';
-      selCat.appendChild(optEmpty);
-      cats.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c; opt.textContent = c;
-        if (c === row.categoria) opt.selected = true;
-        selCat.appendChild(opt);
-      });
-      selCat.onchange = e => { row.categoria = e.target.value; saveState(); renderBalancoTables(); };
-      tdCat.appendChild(selCat);
+    const item = document.createElement('div');
+    item.className = 'plan-row';
+
+    const head = document.createElement('div');
+    head.className = 'plan-head';
+    const badge = document.createElement('span');
+    badge.className = 'plan-ic' + (over ? ' over' : '');
+    badge.innerHTML = ic(catIconName(row.categoria), 20);
+
+    const mid = document.createElement('div');
+    mid.className = 'plan-mid';
+    const nm = document.createElement('div');
+    nm.className = 'plan-name';
+    nm.textContent = row.categoria || 'Nova categoria';
+    const sub = document.createElement('div');
+    sub.className = 'plan-sub';
+    const pName = row.profileIdx != null ? (state.profiles[row.profileIdx]?.name || '') : '';
+    sub.textContent = ready ? `${fmt(gasto)} de ${fmt(valor)}${pName ? ' · ' + pName : ''}` : 'Escolha perfil e categoria';
+    mid.append(nm);
+
+    const rest = document.createElement('div');
+    rest.className = 'plan-rest' + (over ? ' over' : '');
+    rest.textContent = ready ? (over ? `estourou ${fmt(Math.abs(restante))}` : `restam ${fmt(restante)}`) : '';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-ghost btn-sm';
+    editBtn.textContent = editing ? 'Fechar' : 'Editar';
+    editBtn.setAttribute('aria-expanded', editing ? 'true' : 'false');
+    editBtn.onclick = () => { _planEditOpen[row.id] = !editing; renderBalancoTables(); };
+
+    head.append(badge, mid, editBtn);
+    item.appendChild(head);
+
+    const meta = document.createElement('div');
+    meta.className = 'plan-meta';
+    meta.append(sub, rest);
+    item.appendChild(meta);
+
+    if (ready || valor > 0) {
+      const track = document.createElement('div');
+      track.className = 'plan-track';
+      track.setAttribute('role', 'progressbar');
+      track.setAttribute('aria-valuemin', '0'); track.setAttribute('aria-valuemax', '100');
+      track.setAttribute('aria-valuenow', String(Math.round(pct)));
+      const fill = document.createElement('div');
+      fill.className = 'plan-fill' + (over ? ' over' : '');
+      fill.style.width = pct + '%';
+      track.appendChild(fill);
+      item.appendChild(track);
     }
 
-    const tdProfile = document.createElement('td');
-    tdProfile.appendChild(profileChips(row.profileIdx, newIdx => {
-      row.profileIdx = row.profileIdx === newIdx ? null : newIdx;
-      saveState(); renderBalancoTables();
-    }));
+    if (editing) {
+      const edit = document.createElement('div');
+      edit.className = 'plan-edit';
 
-    const gasto = row.profileIdx != null && row.categoria ? computeGastoCategoria(row.profileIdx, row.categoria) : 0;
-    const restante = (parseFloat(row.valor)||0) - gasto;
+      edit.appendChild(profileChips(row.profileIdx, newIdx => {
+        row.profileIdx = row.profileIdx === newIdx ? null : newIdx;
+        saveState(); renderBalancoTables();
+      }));
 
-    const tdVal = document.createElement('td');
-    const inVal = document.createElement('input');
-    inVal.type = 'number'; inVal.step = '0.01'; inVal.value = row.valor || 0; inVal.placeholder = '0,00';
-    inVal.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:13px;font-weight:700;color:var(--accent2);font-family:"JetBrains Mono",monospace';
-    attachElasticWidth(inVal, 80, 160);
-    inVal.onchange = e => { row.valor = parseFloat(e.target.value)||0; saveState(); renderBalancoTables(); };
-    tdVal.appendChild(inVal);
+      const cats = row.profileIdx != null ? getProfileCategories(row.profileIdx) : null;
+      if (!cats) {
+        const hint = document.createElement('span');
+        hint.style.cssText = 'color:var(--muted);font-size:13px';
+        hint.textContent = row.profileIdx == null ? 'Escolha o perfil acima' : 'Este perfil ainda não tem categorias';
+        edit.appendChild(hint);
+      } else {
+        const selCat = document.createElement('select');
+        selCat.setAttribute('aria-label', 'Categoria');
+        selCat.style.cssText = 'flex:1;min-width:160px';
+        const optEmpty = document.createElement('option');
+        optEmpty.value = ''; optEmpty.textContent = '— selecione a categoria —';
+        selCat.appendChild(optEmpty);
+        cats.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c; opt.textContent = c;
+          if (c === row.categoria) opt.selected = true;
+          selCat.appendChild(opt);
+        });
+        selCat.onchange = e => { row.categoria = e.target.value; saveState(); renderBalancoTables(); };
+        edit.appendChild(selCat);
+      }
 
-    const tdGasto = document.createElement('td');
-    tdGasto.className = 'val-cell negative';
-    tdGasto.textContent = fmt(gasto);
+      const lbl = document.createElement('label');
+      lbl.textContent = 'Previsto';
+      const inVal = document.createElement('input');
+      inVal.type = 'number'; inVal.step = '0.01'; inVal.value = row.valor || 0; inVal.placeholder = '0,00';
+      inVal.setAttribute('aria-label', 'Valor previsto');
+      inVal.style.cssText = 'font-weight:700;font-variant-numeric:tabular-nums';
+      attachElasticWidth(inVal, 100, 170);
+      inVal.onchange = e => { row.valor = parseFloat(e.target.value) || 0; saveState(); renderBalancoTables(); };
+      lbl.appendChild(document.createTextNode(' '));
+      const valWrap = document.createElement('span');
+      valWrap.style.cssText = 'display:inline-flex;align-items:center;gap:8px';
+      valWrap.append(lbl, inVal);
+      edit.appendChild(valWrap);
 
-    const tdRestante = document.createElement('td');
-    tdRestante.className = 'val-cell ' + (restante >= 0 ? 'positive' : 'negative');
-    tdRestante.textContent = (restante >= 0 ? '+' : '') + fmt(restante);
-
-    const tdDel = document.createElement('td');
-    const delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-danger btn-sm'; delBtn.innerHTML = '🗑';
-    delBtn.onclick = () => { if (confirm('Remover esta categoria do planejamento?')) removePlanejamentoRow(t, row.id); };
-    tdDel.appendChild(delBtn);
-
-    tr.append(tdCat, tdProfile, tdVal, tdGasto, tdRestante, tdDel);
-    tbody.appendChild(tr);
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-danger btn-sm';
+      delBtn.innerHTML = ic('trash'); delBtn.setAttribute('aria-label', 'Remover categoria'); delBtn.title = 'Remover categoria';
+      delBtn.onclick = () => { if (confirm('Remover esta categoria do planejamento?')) removePlanejamentoRow(t, row.id); };
+      edit.appendChild(delBtn);
+      item.appendChild(edit);
+    }
+    list.appendChild(item);
   });
+  card.appendChild(list);
 
-  table.appendChild(tbody);
-  wrap.appendChild(table);
-  card.appendChild(wrap);
-
-  // ── Resumo: total estimado do mês e quanto ainda falta gastar ──
-  const validRowsForSummary = t.rows.filter(r => r.categoria && r.profileIdx != null);
-  if (validRowsForSummary.length) {
-    const totalEstimado = validRowsForSummary.reduce((s,r) => s + (parseFloat(r.valor)||0), 0);
-    const totalRestante = validRowsForSummary.reduce((s,r) => s + ((parseFloat(r.valor)||0) - computeGastoCategoria(r.profileIdx, r.categoria)), 0);
-    const summary = document.createElement('div');
-    summary.style.cssText = 'display:flex;gap:24px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid var(--border);background:var(--surface2)';
-    summary.innerHTML = `
-      <div>
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Total estimado do mês</div>
-        <div class="val-cell" style="font-size:17px;font-weight:700;color:var(--text)">${fmt(totalEstimado)}</div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Ainda falta gastar</div>
-        <div class="val-cell ${totalRestante >= 0 ? 'positive' : 'negative'}" style="font-size:17px;font-weight:700">${totalRestante >= 0 ? '' : '− '}${fmt(Math.abs(totalRestante))}</div>
-      </div>
-    `;
-    card.appendChild(summary);
+  // ── Fechamento: quantas categorias ficaram dentro do previsto ──
+  const validRows = t.rows.filter(r => r.categoria && r.profileIdx != null);
+  if (validRows.length) {
+    const totalEstimado = validRows.reduce((s, r) => s + (parseFloat(r.valor) || 0), 0);
+    const totalGasto = validRows.reduce((s, r) => s + computeGastoCategoria(r.profileIdx, r.categoria), 0);
+    const totalRestante = totalEstimado - totalGasto;
+    const overCount = validRows.filter(r => computeGastoCategoria(r.profileIdx, r.categoria) > (parseFloat(r.valor) || 0)).length;
+    const okCount = validRows.length - overCount;
+    const closing = document.createElement('div');
+    closing.className = 'plan-closing';
+    let msg = `${okCount} ${okCount === 1 ? 'categoria fechada' : 'categorias fechadas'} no previsto.`;
+    msg += overCount === 0 ? ' Nenhuma estourou.' : ` ${overCount} ${overCount === 1 ? 'estourou' : 'estouraram'}.`;
+    closing.innerHTML = `<div>${msg}</div>
+      <div class="plan-sub" style="margin-top:4px">Previsto ${fmt(totalEstimado)} · ainda falta gastar <strong class="${totalRestante >= 0 ? 'positive' : 'negative'}">${totalRestante >= 0 ? '' : '− '}${fmt(Math.abs(totalRestante))}</strong></div>`;
+    card.appendChild(closing);
   }
 
   const addBar = document.createElement('div');
   addBar.className = 'add-row-bar';
   const addBtn = document.createElement('button');
   addBtn.className = 'btn btn-ghost btn-sm';
-  addBtn.textContent = '＋ Adicionar categoria';
+  addBtn.innerHTML = ic('plus') + ' Adicionar categoria';
   addBtn.onclick = () => addPlanejamentoRow(t);
   addBar.appendChild(addBtn);
   card.appendChild(addBar);
-
-  // ── Gráfico de barras: expectativa vs. gasto, uma dupla de barras por categoria ──
-  const validRows = t.rows.filter(r => r.categoria && r.profileIdx != null);
-  if (validRows.length) {
-    const chartWrap = document.createElement('div');
-    chartWrap.style.cssText = 'padding:18px 16px;border-top:1px solid var(--border)';
-
-    const maxVal = Math.max(1, ...validRows.map(r => Math.max(parseFloat(r.valor)||0, computeGastoCategoria(r.profileIdx, r.categoria))));
-    const chartH = 140;
-
-    const bars = document.createElement('div');
-    bars.style.cssText = 'display:flex;gap:22px;align-items:flex-end;overflow-x:auto;padding-bottom:8px';
-
-    validRows.forEach(row => {
-      const gasto = computeGastoCategoria(row.profileIdx, row.categoria);
-      const expH = Math.round((parseFloat(row.valor)||0) / maxVal * chartH);
-      const gasH = Math.round(gasto / maxVal * chartH);
-      const overBudget = gasto > (parseFloat(row.valor)||0);
-
-      const group = document.createElement('div');
-      group.style.cssText = 'display:flex;flex-direction:column;align-items:center;min-width:74px';
-
-      const barsRow = document.createElement('div');
-      barsRow.style.cssText = `display:flex;gap:6px;align-items:flex-end;height:${chartH}px`;
-
-      const expBar = document.createElement('div');
-      expBar.title = 'Expectativa: ' + fmt(row.valor||0);
-      expBar.style.cssText = `width:22px;height:${expH}px;background:var(--accent2);border-radius:4px 4px 0 0;opacity:.55`;
-
-      const gasBar = document.createElement('div');
-      gasBar.title = 'Gasto: ' + fmt(gasto);
-      gasBar.style.cssText = `width:22px;height:${gasH}px;background:${overBudget?'var(--danger)':'var(--accent2)'};border-radius:4px 4px 0 0`;
-
-      barsRow.append(expBar, gasBar);
-
-      const label = document.createElement('div');
-      label.style.cssText = 'font-size:11px;color:var(--muted);text-align:center;margin-top:6px;max-width:74px;overflow-wrap:break-word';
-      label.textContent = row.categoria;
-
-      const valuesLabel = document.createElement('div');
-      valuesLabel.style.cssText = 'font-size:10px;color:var(--muted);text-align:center;font-family:"JetBrains Mono",monospace';
-      valuesLabel.textContent = fmt(gasto) + ' / ' + fmt(row.valor||0);
-
-      group.append(barsRow, label, valuesLabel);
-      bars.appendChild(group);
-    });
-
-    const legend = document.createElement('div');
-    legend.style.cssText = 'display:flex;gap:16px;font-size:11px;color:var(--muted);margin-top:12px';
-    legend.innerHTML = `
-      <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent2);opacity:.55;border-radius:2px;margin-right:5px"></span>Expectativa</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent2);border-radius:2px;margin-right:5px"></span>Gasto (dentro do previsto)</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:var(--danger);border-radius:2px;margin-right:5px"></span>Gasto (estourou)</span>
-    `;
-
-    chartWrap.append(bars, legend);
-    card.appendChild(chartWrap);
-  }
 }
 
 function renderLancamentosCard(card, t) {
@@ -2699,7 +2742,7 @@ function renderCustomCard(card, t) {
     const delColBtn = document.createElement('button');
     delColBtn.className = 'btn btn-danger btn-sm';
     delColBtn.style.cssText = 'padding:1px 5px;font-size:10px';
-    delColBtn.textContent = '✕';
+    delColBtn.innerHTML = ic('x'); /*x*/
     delColBtn.onclick = () => removeTableColumn(t.id, col.id);
 
     colWrap.append(colNameInput, typeToggle, delColBtn);
@@ -2752,7 +2795,7 @@ function renderCustomCard(card, t) {
 
       const tdDel = document.createElement('td');
       const delBtn = document.createElement('button');
-      delBtn.className = 'btn btn-danger btn-sm'; delBtn.innerHTML = '🗑';
+      delBtn.className = 'btn btn-danger btn-sm'; delBtn.innerHTML = ic('trash'); delBtn.setAttribute('aria-label','Remover'); 
       delBtn.onclick = () => removeTableRow(t.id, row.id);
       tdDel.appendChild(delBtn); tr.appendChild(tdDel);
       tbody.appendChild(tr);
@@ -2787,12 +2830,24 @@ function renderSaldoBuilder() {
   if (!saldoEl) return;
 
   let saldoFinal = 0;
+  state.balancoTables.forEach(t => {
+    if (!t.includeInSaldo || t.sign === 0) return;
+    saldoFinal += getTableTotal(t) * t.sign;
+  });
   saldoEl.innerHTML = '';
+
+  const heroNeg = saldoFinal < 0;
+  const hero = document.createElement('div');
+  hero.className = 'saldo-hero' + (heroNeg ? ' neg' : '');
+  hero.innerHTML = `
+    <div class="saldo-hero-label">Saldo do mês</div>
+    <div class="saldo-hero-val">${heroNeg ? '− ' : ''}${fmt(Math.abs(saldoFinal))}</div>
+    <div class="saldo-hero-sub">${heroNeg ? 'As saídas e faturas passam das entradas neste mês.' : 'Depois de entradas, saídas e faturas.'}</div>`;
+  saldoEl.appendChild(hero);
 
   state.balancoTables.forEach(t => {
     if (!t.includeInSaldo || t.sign === 0) return;
     const tableTotal = getTableTotal(t);
-    saldoFinal += tableTotal * t.sign;
     const signLabel = t.sign === 1 ? '＋' : '−';
     const cls = t.sign === 1 ? 'positive' : 'negative';
     const isOpen = !!_saldoExpanded[t.id];
@@ -2802,37 +2857,35 @@ function renderSaldoBuilder() {
     const tIdx = includedTables.indexOf(t);
 
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 18px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;transition:background .12s';
-    header.onmouseenter = () => header.style.background = 'var(--surface2)';
-    header.onmouseleave = () => header.style.background = '';
+    header.className = 'saldo-line';
 
-    const leftSide = document.createElement('span');
-    leftSide.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)';
+    const lab = document.createElement('span');
+    lab.style.cssText = 'display:flex;align-items:center;gap:12px;flex:1;min-width:0';
+    lab.innerHTML = `<span class="row-ic">${ic(tableIconName(t), 20)}</span><span class="row-name">${t.name}</span><span class="row-chev">${isOpen ? '▾' : '▸'}</span>`;
 
-    // Move buttons (stop propagation so they don't toggle expand)
+    const moves = document.createElement('span');
+    moves.className = 'row-moves';
     const moveUp = document.createElement('button');
     moveUp.className = 'btn btn-ghost btn-sm';
-    moveUp.innerHTML = '↑'; moveUp.style.cssText = 'padding:1px 5px;font-size:11px;opacity:.6';
+    moveUp.innerHTML = '↑'; moveUp.style.cssText = 'padding:1px 5px;opacity:.8';
     moveUp.disabled = tIdx === 0;
-    moveUp.title = 'Mover para cima';
+    moveUp.title = 'Mover para cima'; moveUp.setAttribute('aria-label', 'Mover para cima');
     moveUp.onclick = e => { e.stopPropagation(); moveBalancoTable(t.id, -1); };
-
     const moveDown = document.createElement('button');
     moveDown.className = 'btn btn-ghost btn-sm';
-    moveDown.innerHTML = '↓'; moveDown.style.cssText = 'padding:1px 5px;font-size:11px;opacity:.6';
+    moveDown.innerHTML = '↓'; moveDown.style.cssText = 'padding:1px 5px;opacity:.8';
     moveDown.disabled = tIdx === includedTables.length - 1;
-    moveDown.title = 'Mover para baixo';
+    moveDown.title = 'Mover para baixo'; moveDown.setAttribute('aria-label', 'Mover para baixo');
     moveDown.onclick = e => { e.stopPropagation(); moveBalancoTable(t.id, 1); };
-
-    leftSide.append(moveUp, moveDown);
-    leftSide.innerHTML += `<span style="font-size:11px;opacity:.6">${isOpen ? '▾' : '▸'}</span>${signLabel} ${t.icon || ''} ${t.name}`;
+    moves.append(moveUp, moveDown);
 
     const rightSide = document.createElement('span');
     rightSide.className = `val-cell ${cls}`;
-    rightSide.style.fontSize = '13px';
+    rightSide.style.cssText = 'font-size:15px;font-weight:700';
     rightSide.textContent = `${t.sign === 1 ? '+' : '− '}${fmt(tableTotal)}`;
 
-    header.append(leftSide, rightSide);
+    header.append(lab, rightSide);
+    if (isOpen) header.appendChild(moves);
     header.onclick = () => {
       _saldoExpanded[t.id] = !_saldoExpanded[t.id];
       renderSaldoBuilder();
@@ -2848,18 +2901,18 @@ function renderSaldoBuilder() {
         // Show banco account cards inline
         t.rows.forEach(row => {
           const rowEl = document.createElement('div');
-          rowEl.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 22px;border-bottom:1px solid rgba(0,0,0,.06)';
+          rowEl.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 22px;border-bottom:1px solid var(--border2)';
           const nameInp = document.createElement('input');
           nameInp.type = 'text'; nameInp.value = row.values['nome'] || ''; nameInp.placeholder = 'Nome da conta';
           nameInp.style.cssText = 'flex:2;min-width:80px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:12px;color:var(--text);font-family:inherit';
           nameInp.oninput = e => { row.values['nome'] = e.target.value; saveState(); };
           const valInp = document.createElement('input');
           valInp.type = 'number'; valInp.value = row.values['val'] || 0; valInp.placeholder = '0,00'; valInp.step = '0.01';
-          valInp.style.cssText = 'flex:0 0 auto;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:14px;font-weight:700;color:var(--accent2);font-family:"JetBrains Mono",monospace';
+          valInp.style.cssText = 'flex:0 0 auto;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:14px;font-weight:700;color:var(--accent2);font-family:var(--font-body);font-variant-numeric:tabular-nums';
           attachElasticWidth(valInp, 90, 220);
           valInp.onblur = e => { row.values['val'] = parseFloat(e.target.value) || 0; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
           const del = document.createElement('button');
-          del.className = 'btn btn-danger btn-sm'; del.innerHTML = '🗑'; del.style.padding = '3px 7px';
+          del.className = 'btn btn-danger btn-sm'; del.innerHTML = ic('trash'); del.setAttribute('aria-label','Remover');  del.style.padding = '3px 7px';
           del.onclick = () => removeTableRow(t.id, row.id);
           rowEl.append(nameInp, valInp, del);
           body.appendChild(rowEl);
@@ -2885,7 +2938,7 @@ function renderSaldoBuilder() {
           const saldoCls = saldo >= 0 ? 'positive' : 'negative';
 
           const row = document.createElement('div');
-          row.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:7px 22px;border-bottom:1px solid rgba(0,0,0,.04);opacity:${included ? 1 : .4};cursor:pointer;transition:opacity .15s`;
+          row.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:7px 22px;border-bottom:1px solid var(--border2);opacity:${included ? 1 : .4};cursor:pointer;transition:opacity .15s`;
           row.innerHTML = `<span style="font-size:13px">${dot}${name}</span><span class="val-cell ${saldoCls}" style="font-size:12px">${saldo >= 0 ? '+' : ''}${fmt(saldo)}</span>`;
           row.title = included ? 'Clique para excluir das Entradas' : 'Clique para incluir nas Entradas';
           row.onclick = () => { state.entradasProfiles[idx] = !included; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
@@ -2903,7 +2956,7 @@ function renderSaldoBuilder() {
           state.faturas.forEach(f => {
             const val = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
             const rowEl = document.createElement('div');
-            rowEl.style.cssText = 'display:flex;justify-content:space-between;padding:7px 18px;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px';
+            rowEl.style.cssText = 'display:flex;justify-content:space-between;padding:7px 18px;border-bottom:1px solid var(--border2);font-size:12px';
             rowEl.innerHTML = `<span>${f.name}</span><span class="val-cell negative">${fmt(val)}</span>`;
             body.appendChild(rowEl);
           });
@@ -2925,7 +2978,7 @@ function renderSaldoBuilder() {
         } else {
           t.rows.forEach(row => {
             const rowEl = document.createElement('div');
-            rowEl.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 18px;border-bottom:1px solid rgba(0,0,0,.04);flex-wrap:wrap';
+            rowEl.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 18px;border-bottom:1px solid var(--border2);flex-wrap:wrap';
 
             textCols.forEach(col => {
               const inp = document.createElement('input');
@@ -2945,7 +2998,7 @@ function renderSaldoBuilder() {
             }
 
             const del = document.createElement('button');
-            del.className = 'btn btn-danger btn-sm'; del.innerHTML = '🗑'; del.style.padding = '3px 7px';
+            del.className = 'btn btn-danger btn-sm'; del.innerHTML = ic('trash'); del.setAttribute('aria-label','Remover');  del.style.padding = '3px 7px';
             del.onclick = () => removeTableRow(t.id, row.id);
             rowEl.appendChild(del);
             body.appendChild(rowEl);
@@ -2997,14 +3050,6 @@ function renderSaldoBuilder() {
     }
   });
 
-  const saldoCls = saldoFinal >= 0 ? 'positive' : 'negative';
-  const saldoSign = saldoFinal >= 0 ? '+' : '';
-  const saldoRow = document.createElement('div');
-  saldoRow.className = 'saldo-row';
-  saldoRow.innerHTML = `
-    <span class="saldo-label">💡 SALDO DO MÊS</span>
-    <span class="val-cell ${saldoCls}" style="font-size:20px;font-weight:700">${saldoSign}${fmt(saldoFinal)}</span>`;
-  saldoEl.appendChild(saldoRow);
 }
 
 
@@ -3128,7 +3173,7 @@ function renderFaturas() {
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'btn btn-danger btn-sm';
-    removeBtn.textContent = '✕ Remover';
+    removeBtn.textContent = 'Remover';
     removeBtn.onclick = () => removeFatura(f.id);
 
     titleWrap.appendChild(nameInput);
@@ -3153,7 +3198,7 @@ function renderFaturas() {
     vencInput.type = 'text'; vencInput.placeholder = 'Vencimento (ex: dia 12)'; vencInput.value = f.vencimento || '';
     vencInput.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:12px;color:var(--text);width:150px';
     vencInput.oninput = e => { f.vencimento = e.target.value; saveState(); };
-    metaRow.append('📅 Fechamento:', fechInput, '⏰ Vencimento:', vencInput);
+    metaRow.append('Fechamento:', fechInput, 'Vencimento:', vencInput);
     card.appendChild(metaRow);
 
     const wrap = document.createElement('div');
@@ -3255,7 +3300,7 @@ function renderFaturas() {
         const tdDel = document.createElement('td');
         const delBtn = document.createElement('button');
         delBtn.className = 'btn btn-danger btn-sm';
-        delBtn.innerHTML = '🗑';
+        delBtn.innerHTML = ic('trash'); delBtn.setAttribute('aria-label','Remover'); 
         delBtn.title = 'Remover linha';
         delBtn.onclick = () => removeRow(f.id, r.id);
         tdDel.appendChild(delBtn);
@@ -3299,6 +3344,102 @@ function renderFaturas() {
   });
 }
 
+
+// ══════════════════════════════════════════════════════
+//  PIX (aba Faturas) — saídas que já aconteceram
+//  Ficam em state.pixRows e contam no gasto do perfil, mas nunca somam
+//  no total de uma fatura (não existe nada para pagar depois).
+// ══════════════════════════════════════════════════════
+function updatePixTotal() {
+  const total = (state.pixRows || []).reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+  const el = document.getElementById('pix-total');
+  if (el) el.textContent = fmt(total);
+}
+
+function addPixRow() {
+  if (!state.pixRows) state.pixRows = [];
+  state.pixRows.push({ id: genId(), date: new Date().toISOString().slice(0, 10), desc: '', value: 0, profileIdx: null, category: null });
+  saveState();
+  renderPix();
+}
+
+function renderPix() {
+  const body = document.getElementById('pix-body');
+  if (!body) return;
+  body.innerHTML = '';
+  updatePixTotal();
+
+  const rows = [...(state.pixRows || [])].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  if (!rows.length) {
+    body.innerHTML = '<div class="empty">Nenhum Pix registrado ainda.</div>';
+    return;
+  }
+
+  rows.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'pix-row';
+
+    // linha 1: data + descrição
+    const l1 = document.createElement('div');
+    l1.className = 'pix-line';
+    const inDate = document.createElement('input');
+    inDate.type = 'date'; inDate.value = p.date || ''; inDate.setAttribute('aria-label', 'Data do Pix');
+    inDate.style.cssText = 'flex:0 0 auto;width:auto;min-width:150px';
+    inDate.onchange = e => { p.date = e.target.value; saveState(); };
+    const inDesc = document.createElement('input');
+    inDesc.type = 'text'; inDesc.value = p.desc || ''; inDesc.placeholder = 'Descrição'; inDesc.setAttribute('aria-label', 'Descrição do Pix');
+    inDesc.style.cssText = 'flex:1 1 160px;min-width:0';
+    inDesc.oninput = e => { p.desc = e.target.value; saveState(); };
+    l1.append(inDate, inDesc);
+
+    // linha 2: perfil
+    const l2 = document.createElement('div');
+    l2.className = 'pix-line';
+    l2.appendChild(profileChips(p.profileIdx, newIdx => {
+      p.profileIdx = p.profileIdx === newIdx ? null : newIdx;
+      p.category = null;
+      saveState(); renderPix();
+    }));
+
+    // linha 3: categoria + valor + remover
+    const l3 = document.createElement('div');
+    l3.className = 'pix-line';
+    const cats = p.profileIdx != null ? getProfileCategories(p.profileIdx) : null;
+    if (cats) {
+      const sel = document.createElement('select');
+      sel.setAttribute('aria-label', 'Categoria do Pix');
+      sel.style.cssText = 'flex:1 1 100px;min-width:0';
+      const o0 = document.createElement('option'); o0.value = ''; o0.textContent = '— categoria —';
+      sel.appendChild(o0);
+      cats.forEach(c => {
+        const o = document.createElement('option'); o.value = c; o.textContent = c;
+        if (c === p.category) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.onchange = e => { p.category = e.target.value || null; saveState(); };
+      l3.appendChild(sel);
+    } else {
+      const hint = document.createElement('span');
+      hint.style.cssText = 'flex:1 1 100px;color:var(--muted);font-size:13px';
+      hint.textContent = p.profileIdx == null ? 'Escolha o perfil acima' : 'Este perfil não tem categorias';
+      l3.appendChild(hint);
+    }
+    const inVal = document.createElement('input');
+    inVal.type = 'number'; inVal.step = '0.01'; inVal.value = p.value || ''; inVal.placeholder = '0,00';
+    inVal.setAttribute('aria-label', 'Valor do Pix');
+    inVal.style.cssText = 'flex:0 0 auto;width:110px;font-weight:700;font-variant-numeric:tabular-nums';
+    inVal.oninput = e => { p.value = parseFloat(e.target.value) || 0; saveState(); updatePixTotal(); };
+    const del = document.createElement('button');
+    del.className = 'btn btn-danger btn-sm';
+    del.innerHTML = ic('trash'); del.setAttribute('aria-label', 'Remover Pix'); del.title = 'Remover Pix';
+    del.onclick = () => { state.pixRows = state.pixRows.filter(x => x.id !== p.id); saveState(); renderPix(); };
+    l3.append(inVal, del);
+
+    item.append(l1, l2, l3);
+    body.appendChild(item);
+  });
+}
+
 // ══════════════════════════════════════════════════════
 //  PERFIS
 // ══════════════════════════════════════════════════════
@@ -3313,7 +3454,7 @@ function getAllRowsByProfile(pIdx) {
   });
   (state.pixRows || []).forEach(p => {
     if (p.profileIdx === pIdx && (parseFloat(p.value)||0) !== 0) {
-      rows.push({ id: p.id, date: p.date, name: p.desc, parcelas: '', value: p.value, profileIdx: pIdx, category: null, faturaName: 'Pix', kind: 'pix' });
+      rows.push({ id: p.id, date: p.date, name: p.desc, parcelas: '', value: p.value, profileIdx: pIdx, category: p.category || null, faturaName: 'Pix', kind: 'pix' });
     }
   });
   return rows;
@@ -3370,11 +3511,11 @@ function renderPerfis() {
     const totalEl = document.createElement('div');
     totalEl.className = 'card-total';
     totalEl.textContent = visible ? (saldo>=0?'+':'') + fmt(saldo) : '••••';
-    totalEl.style.color = saldo >= 0 ? 'var(--accent2)' : 'var(--danger)';
+    totalEl.style.color = saldo >= 0 ? 'var(--accent2)' : 'var(--warning)';
 
     const eyeBtn = document.createElement('button');
     eyeBtn.className = 'btn btn-ghost btn-sm';
-    eyeBtn.textContent = visible ? '👁️' : '🙈';
+    eyeBtn.innerHTML = visible ? ic('eye') : ic('eyeOff'); eyeBtn.setAttribute('aria-label', visible ? 'Ocultar valores' : 'Mostrar valores');
     eyeBtn.title = 'Mostrar/ocultar valores deste perfil';
     eyeBtn.onclick = () => { _gastosVisiblePerProfile[pIdx] = !visible; renderPerfis(); };
 
@@ -3417,8 +3558,8 @@ function renderPerfis() {
         const tdTipo = document.createElement('td');
         const isPay = tx.txKind === 'payment';
         tdTipo.innerHTML = isPay
-          ? '<span class="val-cell positive" style="font-size:11px;font-weight:700">💰 Pagamento</span>'
-          : `<span class="val-cell negative" style="font-size:11px;font-weight:700">🧾 ${tx.faturaName||'Gasto'}</span>`;
+          ? '<span class="val-cell positive" style="font-size:11px;font-weight:700">Pagamento</span>'
+          : `<span class="val-cell negative" style="font-size:11px;font-weight:700">${tx.faturaName||'Gasto'}</span>`;
 
         const tdDesc = document.createElement('td');
         const inDesc = document.createElement('input');
@@ -3450,7 +3591,7 @@ function renderPerfis() {
 
         const tdDel = document.createElement('td');
         const delBtn = document.createElement('button');
-        delBtn.className = 'btn btn-danger btn-sm'; delBtn.innerHTML = '🗑';
+        delBtn.className = 'btn btn-danger btn-sm'; delBtn.innerHTML = ic('trash'); delBtn.setAttribute('aria-label','Remover'); 
         delBtn.onclick = () => {
           if (!confirm('Excluir este lançamento?')) return;
           if (tx.txKind === 'payment') { state.payments = state.payments.filter(p=>p.id!==tx.id); saveState(); }
@@ -3532,7 +3673,7 @@ function renderPagamentos() {
 
     const eyeBtn = document.createElement('button');
     eyeBtn.className = 'btn btn-ghost btn-sm';
-    eyeBtn.textContent = visible ? '👁️' : '🙈';
+    eyeBtn.innerHTML = visible ? ic('eye') : ic('eyeOff'); eyeBtn.setAttribute('aria-label', visible ? 'Ocultar valores' : 'Mostrar valores');
     eyeBtn.title = 'Mostrar/ocultar os valores deste perfil';
     eyeBtn.onclick = () => { _pagamentosVisiblePerProfile[pIdx] = !visible; renderPagamentos(); };
 
@@ -3560,7 +3701,7 @@ function renderPagamentos() {
         const tr = document.createElement('tr');
         const delBtn = document.createElement('button');
         delBtn.className = 'btn btn-danger btn-sm';
-        delBtn.innerHTML = '🗑';
+        delBtn.innerHTML = ic('trash'); delBtn.setAttribute('aria-label','Remover'); 
         delBtn.onclick = () => removePayment(p.id);
 
         const tdDel = document.createElement('td');
@@ -3634,7 +3775,7 @@ function renderSaldo() {
     nameDiv.textContent = pName;
     const eyeBtn = document.createElement('button');
     eyeBtn.className = 'btn btn-ghost btn-sm';
-    eyeBtn.textContent = visible ? '👁️' : '🙈';
+    eyeBtn.innerHTML = visible ? ic('eye') : ic('eyeOff'); eyeBtn.setAttribute('aria-label', visible ? 'Ocultar valores' : 'Mostrar valores');
     eyeBtn.title = 'Mostrar/ocultar o saldo deste perfil';
     eyeBtn.onclick = () => { _saldoVisiblePerProfile[pIdx] = !visible; renderSaldo(); };
     nameRow.append(nameDiv, eyeBtn);
@@ -3659,7 +3800,7 @@ function renderSaldo() {
 
   const card = document.createElement('div');
   card.className = 'card';
-  card.innerHTML = `<div class="card-header"><div class="card-title">📋 Resumo Geral</div></div>`;
+  card.innerHTML = `<div class="card-header"><div class="card-title">Resumo geral</div></div>`;
 
   const wrap = document.createElement('div');
   wrap.className = 'table-wrap';
@@ -3721,6 +3862,7 @@ function renderSaldo() {
 //  INIT
 // ══════════════════════════════════════════════════════
 renderFaturas();
+renderPix();
 renderPagamentos();
 </script>
 </body>
