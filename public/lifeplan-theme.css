@@ -37,7 +37,6 @@ html:root {
   --accent: #3F5A38;        /* botões, links, item ativo */
   --accent-dark: #2F4A2A;   /* texto de destaque sobre superfície */
   --accent-fill: #5F7A52;   /* preenchimento de barras e anéis */
-  --accent-light: #5F7A52;
   --accent-soft: #E4EBDA;   /* fundo suave de ícone, chip, item ativo */
   --on-accent: #FFFFFF;     /* texto sobre --accent/--success/--danger */
 
@@ -46,11 +45,9 @@ html:root {
   --danger:  #A4443F;  --danger-soft:  #F7E3E0;
   --warning: #7A4E16;  --warning-soft: #F6E7CC;
   --info:    #2F5F7E;  --info-soft:    #DFEBF2;
-  --warn: var(--warning);
 
   /* forma */
   --radius: 20px;
-  --radius-lg: 24px;
   --radius-sm: 12px;
   --card-radius: 20px;
   --shadow-sm: 0 1px 2px rgba(30, 42, 33, .05);
@@ -83,7 +80,6 @@ html:root[data-theme="dark"] {
   --accent: #A9C29A;
   --accent-dark: #C7D8BA;
   --accent-fill: #A9C29A;
-  --accent-light: #7F9770;
   --accent-soft: #25332A;
   --on-accent: #10180F;
 

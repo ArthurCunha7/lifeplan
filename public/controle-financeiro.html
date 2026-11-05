@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="/lifeplan-theme.css">
 <style>
+  html.cf-boot body { visibility: hidden; }
   /* Tokens vêm de /lifeplan-theme.css. Aqui só os apelidos usados por esta página. */
   html:root { --accent2: var(--success); --p0: #3F5A38; --p1: #2F5F7E; --p2: #7A4E16; --p3: #7A3E5C; --p4: #5A4A8A; --p5: #8A4A2A; --p6: #2F6B6B; --p7: #66742A; --p8: #8A3E6E; --p9: #5B6659; }
   html:root[data-theme="dark"] { --p0: #A9C29A; --p1: #8FB8D4; --p2: #EBB872; --p3: #D49BB9; --p4: #B7A9E0; --p5: #E0A682; --p6: #8CCBC4; --p7: #C5D08A; --p8: #E0A0CF; --p9: #B8C4B5; }
@@ -97,7 +98,7 @@
   }
 
   .badge {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     padding: 2px 8px;
     border-radius: 20px;
@@ -151,7 +152,7 @@
     background: var(--surface2);
     padding: 10px 14px;
     text-align: left;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .8px;
@@ -365,8 +366,6 @@
     padding-top: 4px;
   }
 
-  .dyn-table thead th:first-child,
-  .dyn-table tbody td:first-child { color: var(--muted); font-size: 11px; }
 
   .payment-add-row {
     display: flex;
@@ -391,13 +390,7 @@
     font-size: 13px;
   }
 
-  .grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
 
-  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
 
   .profile-name-input {
     background: transparent;
@@ -437,7 +430,7 @@
   .cat-chip {
     padding: 3px 9px;
     border-radius: 20px;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     border: 1.5px solid var(--info);
@@ -506,18 +499,7 @@
     opacity: 0.2;
   }
 
-  .saldo-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    background: var(--surface2);
-    border-top: 2px solid var(--accent);
-    font-weight: 700;
-    font-size: 15px;
-  }
 
-  .saldo-row .saldo-label { color: var(--text); }
 
   .balanco-editable-row td input[type="number"] {
     background: transparent;
@@ -558,34 +540,10 @@
     background: var(--surface2);
   }
 
-  .cat-total-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border2);
-    font-size: 13px;
-  }
 
-  .cat-total-row:last-child { border-bottom: none; }
-  .cat-total-label { color: var(--muted); }
 
-  .cat-summary-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--card-radius);
-    overflow: hidden;
-    margin-bottom: 16px;
-  }
 
   /* Profile management styles */
-  .profiles-manager {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--card-radius);
-    overflow: hidden;
-    margin-bottom: 24px;
-  }
 
   .profile-manager-row {
     display: flex;
@@ -620,18 +578,7 @@
   .profile-manager-name:focus { border-bottom-color: var(--accent); }
 
   /* Referencia table */
-  .referencia-value-display {
-    font-family: var(--font-body);
-    font-variant-numeric: tabular-nums;
-    font-size: 13px;
-    color: var(--accent2);
-  }
 
-  .referencia-remaining {
-    font-family: var(--font-body);
-    font-variant-numeric: tabular-nums;
-    font-size: 12px;
-  }
 
   .lancamento-diff-positive { color: var(--accent2); }
   .lancamento-diff-negative { color: var(--warning); }
@@ -694,6 +641,8 @@
 <script>
   // Aplica o tema salvo o quanto antes, pra não piscar claro antes de escurecer
   (function(){
+    document.documentElement.classList.add('cf-boot');
+    setTimeout(function(){ document.documentElement.classList.remove('cf-boot'); }, 6000);
     try{
       if(localStorage.getItem('lifeplan_theme') === 'dark'){
         document.documentElement.setAttribute('data-theme','dark');
@@ -705,6 +654,7 @@
 <body>
 
 <div id="pdf-report" style="display:none"></div>
+<div id="cloud-warning" role="alert" style="display:none;background:var(--warning-soft);color:var(--warning);border-bottom:1px solid var(--warning);padding:10px 16px;font-size:14px;font-weight:600">Sem conexão com a nuvem: suas alterações estão sendo guardadas só neste aparelho e ainda não foram salvas online.</div>
 
 <header>
   <div class="head-top">
@@ -781,11 +731,7 @@
   <div class="section-head" style="margin-top:16px">
     <div class="section-title">Gerenciar perfis</div>
   </div>
-  <div class="card" style="padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-    <span style="font-size:12px;color:var(--muted)">Código pra convidar sua família:</span>
-    <span id="family-invite-code" style="font-family:var(--font-body);font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;color:var(--accent-dark)">—</span>
-    <button class="btn btn-ghost btn-sm" onclick="copyInviteCode()"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Copiar</button>
-  </div>
+  <div class="card" id="family-card" style="display:none;padding:16px;margin-bottom:12px"><div id="family-card-body"></div></div>
   <div class="card">
     <div class="card-header">
       <div class="card-title">Perfis ativos</div>
@@ -870,7 +816,10 @@ const CATEGORIES = ['Academia','Restaurantes','Salão','Uber','Dieta','Lista de 
 const __params = new URLSearchParams(window.location.search);
 const SUPABASE_URL = __params.get('sbUrl') || '';
 const SUPABASE_KEY = __params.get('sbKey') || '';
-let supa = null, currentUser = null, familyId = null, familyInviteCode = null;
+let supa = null, currentUser = null, familyId = null, familyInviteCode = null, familyOwnerId = null, isLeader = false;
+// Só vira true depois de CONFIRMAR o que existe na nuvem. Antes disso nada é gravado,
+// para nunca sobrescrever dados já salvos com uma tela ainda vazia.
+let cloudReady = false;
 if (SUPABASE_URL && SUPABASE_KEY) {
   supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 }
@@ -890,14 +839,34 @@ let _collapsedPagamentosPerProfile = {}; // recolhido por padrão, individual po
 let _pagamentosVisiblePerProfile = {}; // censurado por padrão, individual por perfil
 
 let __cfSaveTimer = null;
+let __cfSaveChain = Promise.resolve();
+function setCloudWarning(on) {
+  const el = document.getElementById('cf-cloud-warning') || document.getElementById('cloud-warning');
+  if (el) el.style.display = on ? 'block' : 'none';
+}
+// Cada pessoa grava só no PRÓPRIO registro (finance_data, uma linha por usuário).
+// O banco garante isso: ninguém grava no registro de outra pessoa.
 function flushCloudSave() {
-  if (!supa || !currentUser || !familyId) return;
-  supa.from('finance_data_family').upsert({
-    family_id: familyId, data: state, updated_at: new Date().toISOString()
-  }).then(({error}) => { if (error) console.error('Erro ao salvar finanças na nuvem:', error); });
+  if (!supa || !currentUser || !cloudReady) return;
+  const uid = currentUser.id;
+  const payload = JSON.parse(JSON.stringify(state));
+  __cfSaveChain = __cfSaveChain.then(async () => {
+    try {
+      const { data: upd, error: updErr } = await supa.from('finance_data').update({ data: payload }).eq('user_id', uid).select('user_id');
+      if (updErr) throw updErr;
+      if (!upd || !upd.length) {
+        const { error: insErr } = await supa.from('finance_data').insert({ user_id: uid, data: payload });
+        if (insErr) throw insErr;
+      }
+      setCloudWarning(false);
+    } catch (e) {
+      console.error('Erro ao salvar finanças na nuvem:', e);
+      setCloudWarning(true);
+    }
+  });
 }
 function scheduleCloudSave() {
-  if (!supa || !currentUser || !familyId) return;
+  if (!supa || !currentUser || !cloudReady) return;
   clearTimeout(__cfSaveTimer);
   __cfSaveTimer = setTimeout(flushCloudSave, 250);
 }
@@ -912,60 +881,10 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 function copyInviteCode() {
   if (!familyInviteCode) { alert('Código ainda não carregou — espera um instante e tenta de novo.'); return; }
   navigator.clipboard.writeText(familyInviteCode).then(() => {
-    alert('Código copiado! Envie pra quem você quer convidar pra família.');
+    alert('Código copiado! Envie para quem você quer convidar para o modo família.');
   }).catch(() => {
     prompt('Copie o código abaixo:', familyInviteCode);
   });
-}
-
-// Garante que o usuário logado pertence a uma família — se for a primeira
-// vez, cria uma nova família pra ele sozinho e migra os dados antigos (se
-// existirem) pra dentro dela, sem perder nada. Retorna o id da família.
-async function ensureFamilyAndMigrate() {
-  const { data: membership, error: memErr } = await supa.from('family_members')
-    .select('family_id').eq('user_id', currentUser.id).limit(1).maybeSingle();
-
-  if (memErr) {
-    alert('Erro ao conferir sua família: ' + memErr.message + '\n\nVocê já rodou o migration-family-accounts.sql no Supabase?');
-    return null;
-  }
-
-  if (membership?.family_id) return membership.family_id;
-
-  // Primeira vez desta conta: pergunta se quer criar uma família nova ou
-  // entrar numa que já existe com um código de convite.
-  const choice = await showFamilyChoiceModal();
-
-  if (choice.action === 'join') {
-    try {
-      const { data: fid, error } = await supa.rpc('join_family_by_code', { code: choice.code.trim().toUpperCase() });
-      if (error) throw error;
-      alert('Você entrou na família! Os dados financeiros compartilhados já vão carregar.');
-      return fid;
-    } catch (e) {
-      alert('Não foi possível entrar com esse código: ' + (e.message || e) + '\n\nConfira com quem te convidou e tente de novo.');
-      return await ensureFamilyAndMigrate(); // deixa tentar de novo
-    }
-  }
-
-  // Cria a família e já entra como dono, tudo numa função só no banco (sem
-  // o paradoxo de precisar ler de volta algo que você ainda não tem acesso)
-  const { data: famResult, error: famErr } = await supa.rpc('create_family', { new_name: 'Minha Família' });
-  if (famErr) {
-    alert('Não foi possível criar a família: ' + famErr.message + '\n\nVocê já rodou o migration-family-accounts.sql, migration-family-join.sql E migration-family-fix.sql no SQL Editor do Supabase? Todos os três precisam existir antes de usar isso.');
-    return null;
-  }
-  const newFamily = Array.isArray(famResult) ? famResult[0] : famResult;
-  const inviteCode = newFamily.invite_code;
-
-  const { data: oldRow } = await supa.from('finance_data').select('data').eq('user_id', currentUser.id).maybeSingle();
-  await supa.from('finance_data_family').insert({
-    family_id: newFamily.id, data: oldRow?.data || state
-  });
-
-  alert(`Sua família foi criada!\n\nCódigo de convite: ${inviteCode}\n\nCompartilhe esse código com quem você quer que entre — vai poder ver esse código de novo em "Resumo & Perfis" a qualquer momento.`);
-
-  return newFamily.id;
 }
 
 // Modal bloqueante (só continua quando o usuário escolhe) perguntando se é
@@ -978,12 +897,13 @@ function showFamilyChoiceModal() {
       <div style="background:var(--surface);border-radius:16px;max-width:400px;width:100%;padding:24px;text-align:center">
         <div style="color:var(--accent);margin-bottom:8px;display:flex;justify-content:center"><svg class="ic" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
         <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Bem-vindo ao Finanças</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Alguém da sua família já usa o LifePlan?</div>
-        <button id="fam-create-btn" class="btn btn-primary" style="width:100%;margin-bottom:10px;padding:12px">Não, criar minha família</button>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Você já faz parte do modo família de alguém?</div>
+        <button id="fam-create-btn" class="btn btn-primary" style="width:100%;margin-bottom:10px;padding:12px">Não, ativar meu modo família</button>
         <button id="fam-join-toggle-btn" class="btn btn-ghost" style="width:100%;padding:12px">Sim, tenho um código de convite</button>
         <div id="fam-join-form" style="display:none;margin-top:14px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;text-align:left">Ao entrar, o líder do modo família poderá ver suas finanças (somente leitura). Você não vê as de ninguém.</div>
           <input id="fam-code-input" type="text" placeholder="FAM-XXXXXX" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;text-align:center;font-family:var(--font-body);font-variant-numeric:tabular-nums;font-size:14px;text-transform:uppercase;box-sizing:border-box;margin-bottom:10px">
-          <button id="fam-join-btn" class="btn btn-primary" style="width:100%;padding:12px">Entrar na família</button>
+          <button id="fam-join-btn" class="btn btn-primary" style="width:100%;padding:12px">Entrar no modo família</button>
         </div>
       </div>
     `;
@@ -1006,24 +926,78 @@ function showFamilyChoiceModal() {
   });
 }
 
+
+// Busca a família da pessoa (e se ela é a líder = dona da família).
+async function fetchMyFamily() {
+  const { data: ms, error } = await supa.from('family_members').select('family_id').eq('user_id', currentUser.id);
+  if (error) return { error };
+  const ids = (ms || []).map(m => m.family_id);
+  if (!ids.length) return { family: null };
+  const { data: fams, error: e2 } = await supa.from('families').select('id, owner_id, invite_code').in('id', ids);
+  if (e2) return { error: e2 };
+  const list = fams || [];
+  return { family: list.find(f => f.owner_id === currentUser.id) || list[0] || null };
+}
+
+// Garante que a pessoa está num modo família. Na primeira vez pergunta se quer
+// ativar o dela (e virar a líder) ou entrar no de alguém com um código.
+// As finanças de cada pessoa continuam SÓ dela, nos dois casos.
+async function ensureFamily() {
+  const first = await fetchMyFamily();
+  if (first.error) { alert('Erro ao conferir seu modo família: ' + first.error.message); return null; }
+  if (first.family) return first.family;
+
+  const choice = await showFamilyChoiceModal();
+
+  if (choice.action === 'join') {
+    const { error } = await supa.rpc('join_family_by_code', { code: choice.code.trim().toUpperCase() });
+    if (error) {
+      alert('Não foi possível entrar com esse código: ' + (error.message || error) + '\n\nConfira com quem te convidou e tente de novo.');
+      return await ensureFamily(); // deixa tentar de novo
+    }
+    alert('Você entrou no modo família!\n\nSuas finanças continuam só suas. O líder do modo família pode ver as suas (somente leitura); você não vê as de ninguém.');
+  } else {
+    const { data: famResult, error: famErr } = await supa.rpc('create_family', { new_name: 'Minha Família' });
+    if (famErr) {
+      alert('Não foi possível ativar o modo família: ' + famErr.message);
+      return null;
+    }
+    const newFamily = Array.isArray(famResult) ? famResult[0] : famResult;
+    alert(`Modo família ativado!\n\nVocê é o líder. Código de convite: ${newFamily.invite_code}\n\nQuem entrar com esse código terá as próprias finanças, só dela. Você poderá ver as contas de todos (somente leitura); os membros não veem as suas nem as dos outros. Você vê esse código de novo em "Resumo".`);
+  }
+  const again = await fetchMyFamily();
+  return again.family || null;
+}
+
+function bootDone() { document.documentElement.classList.remove('cf-boot'); }
+
 async function loadFinanceFromCloud() {
-  if (!supa) return;
+  if (!supa) { bootDone(); return; }
   try {
     const { data: { session } } = await supa.auth.getSession();
-    if (!session?.user) return;
+    if (!session?.user) { bootDone(); return; }
     currentUser = session.user;
 
-    familyId = await ensureFamilyAndMigrate();
-    if (!familyId) return; // ensureFamilyAndMigrate já mostrou o erro pro usuário
+    // Aparelho compartilhado: se os dados guardados aqui são de OUTRA pessoa,
+    // apaga e recomeça com os da pessoa que acabou de entrar.
+    const lastUid = localStorage.getItem('cf_state_uid');
+    if (lastUid && lastUid !== currentUser.id) {
+      localStorage.removeItem('cf_state');
+      sessionStorage.removeItem('cf_cloud_synced');
+      localStorage.setItem('cf_state_uid', currentUser.id);
+      location.reload();
+      return;
+    }
+    localStorage.setItem('cf_state_uid', currentUser.id);
 
-    const { data: famRow, error: famRowErr } = await supa.from('families').select('invite_code').eq('id', familyId).maybeSingle();
-    if (famRowErr) console.error('Erro ao buscar código da família:', famRowErr);
-    familyInviteCode = famRow?.invite_code || null;
-    const codeEl = document.getElementById('family-invite-code');
-    if (codeEl && familyInviteCode) codeEl.textContent = familyInviteCode;
-
-    const { data: row, error: rowErr } = await supa.from('finance_data_family').select('data').eq('family_id', familyId).maybeSingle();
-    if (rowErr) { console.error('Erro ao carregar dados financeiros da família:', rowErr); return; }
+    // Dados PRÓPRIOS desta pessoa
+    const { data: row, error: rowErr } = await supa.from('finance_data').select('data').eq('user_id', currentUser.id).maybeSingle();
+    if (rowErr) {
+      console.error('Erro ao carregar dados financeiros:', rowErr);
+      setCloudWarning(true); // cloudReady continua false: nada é gravado por cima
+      bootDone();
+      return;
+    }
     if (row?.data) {
       const cloudJson = JSON.stringify(row.data);
       const localJson = JSON.stringify(state);
@@ -1036,11 +1010,160 @@ async function loadFinanceFromCloud() {
         return;
       }
     }
+    cloudReady = true;
+    bootDone();
+
+    // Modo família (quem é líder, código de convite)
+    const fam = await ensureFamily();
+    if (fam) {
+      familyId = fam.id; familyOwnerId = fam.owner_id; familyInviteCode = fam.invite_code || null;
+      isLeader = fam.owner_id === currentUser.id;
+    }
+    renderFamilyCard();
   } catch (e) {
     console.error('Erro ao carregar finanças da nuvem:', e);
     alert('Ocorreu um erro ao carregar os dados financeiros: ' + (e.message || e));
+  } finally {
+    bootDone();
   }
 }
+
+// ── MODO FAMÍLIA: cartão na aba Resumo + "Contas da família" (só líder) ──────
+function escHtml(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderFamilyCard() {
+  const card = document.getElementById('family-card');
+  const body = document.getElementById('family-card-body');
+  if (!card || !body) return;
+  if (!familyId) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  if (isLeader) {
+    body.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <strong style="font-size:16px">Modo família</strong><span class="badge">Você é o líder</span>
+      </div>
+      <div style="font-size:14px;color:var(--text-2);margin-bottom:12px">
+        Você pode ver as contas de todos os membros, somente leitura. Cada membro vê apenas a própria.
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <span style="font-size:13px;color:var(--muted)">Código de convite:</span>
+        <span id="family-invite-code" style="font-weight:700;font-size:15px;color:var(--accent-dark);font-variant-numeric:tabular-nums">${escHtml(familyInviteCode || '—')}</span>
+        <button class="btn btn-ghost btn-sm" onclick="copyInviteCode()">Copiar</button>
+      </div>
+      <button class="btn btn-primary" onclick="openFamilyAccounts()">Ver contas da família</button>`;
+  } else {
+    body.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <strong style="font-size:16px">Modo família</strong><span class="badge">Membro</span>
+      </div>
+      <div style="font-size:14px;color:var(--text-2)">
+        Suas finanças são só suas: você não vê as de ninguém. O líder do modo família pode ver as suas, somente leitura.
+      </div>`;
+  }
+}
+
+function closeFamilyView() {
+  const el = document.getElementById('family-view');
+  if (el) el.remove();
+}
+
+function openFamilyView(title, innerHtml) {
+  closeFamilyView();
+  const ov = document.createElement('div');
+  ov.id = 'family-view';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(16,22,18,0.55);z-index:2500;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto';
+  ov.onclick = e => { if (e.target === ov) closeFamilyView(); };
+  ov.innerHTML = `
+    <div role="dialog" aria-modal="true" aria-label="${escHtml(title)}" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:640px;box-shadow:var(--shadow-md)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 12px 12px 18px;border-bottom:1px solid var(--border)">
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:500;min-width:0;overflow-wrap:anywhere">${escHtml(title)}</div>
+        <button class="btn btn-ghost btn-sm" onclick="closeFamilyView()" aria-label="Fechar">${ic('x')}</button>
+      </div>
+      <div id="family-view-body">${innerHtml}</div>
+    </div>`;
+  document.body.appendChild(ov);
+}
+
+async function openFamilyAccounts() {
+  if (!isLeader) return; // a tela só existe para o líder (e o banco também só devolve para ele)
+  openFamilyView('Contas da família', '<div class="empty">Carregando…</div>');
+  const { data, error } = await supa.rpc('family_members_overview');
+  const body = document.getElementById('family-view-body');
+  if (!body) return;
+  if (error) { body.innerHTML = '<div class="empty">Não foi possível carregar a lista agora.</div>'; return; }
+  const rows = data || [];
+  if (!rows.length) { body.innerHTML = '<div class="empty">Ainda não há membros.</div>'; return; }
+  body.innerHTML = '';
+  const note = document.createElement('div');
+  note.style.cssText = 'padding:12px 18px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border2)';
+  note.textContent = 'Somente leitura. Cada membro vê apenas as próprias finanças.';
+  body.appendChild(note);
+  rows.forEach(m => {
+    const me = m.user_id === currentUser.id;
+    const b = document.createElement('button');
+    b.className = 'saldo-line';
+    b.style.cssText = 'width:100%;background:none;border:none;border-bottom:1px solid var(--border2);text-align:left;font-family:inherit;color:inherit';
+    b.innerHTML = `<span class="row-ic">${ic('users', 20)}</span><span class="row-name" style="flex:1;min-width:0;overflow-wrap:anywhere">${escHtml(m.email || 'Sem e-mail')}</span><span class="badge">${me ? 'Você · líder' : 'Membro'}</span>`;
+    b.onclick = () => me ? closeFamilyView() : openMemberAccount(m.user_id, m.email);
+    body.appendChild(b);
+  });
+}
+
+async function openMemberAccount(uid, email) {
+  openFamilyView(email || 'Conta do membro', '<div class="empty">Carregando…</div>');
+  const { data: row, error } = await supa.from('finance_data').select('data').eq('user_id', uid).maybeSingle();
+  const body = document.getElementById('family-view-body');
+  if (!body) return;
+  if (error) { body.innerHTML = '<div class="empty">Não foi possível carregar esta conta.</div>'; return; }
+  if (!row?.data) { body.innerHTML = '<div class="empty">Este membro ainda não registrou nada.</div>'; return; }
+  let html = '';
+  try { html = memberSummaryHTML(row.data); }
+  catch (e) { console.error(e); html = '<div class="empty">Não foi possível ler os dados desta conta.</div>'; }
+  body.innerHTML = '<div style="padding:10px 18px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border2)">Somente leitura</div>' + html;
+}
+
+// Resumo somente-leitura das finanças de um membro (tudo escapado: o conteúdo é de outra pessoa).
+function memberSummaryHTML(ms) {
+  const F = window.FinanceFormulas;
+  const money = v => escHtml(fmt(v));
+  const sum = arr => (arr || []).reduce((s, r) => s + (parseFloat(r.value) || 0), 0);
+  const tables = Array.isArray(ms.balancoTables) ? ms.balancoTables : [];
+  const faturas = Array.isArray(ms.faturas) ? ms.faturas : [];
+  const pix = Array.isArray(ms.pixRows) ? ms.pixRows : [];
+  const profName = i => { const p = (ms.profiles || [])[i]; return p == null ? '' : (typeof p === 'object' ? p.name : p) || ''; };
+
+  let saldo = 0; const lines = [];
+  tables.forEach(t => {
+    if (!t.includeInSaldo || t.sign === 0) return;
+    let total = 0; try { total = F.cfGetTableTotal(ms, t) || 0; } catch (e) {}
+    saldo += total * t.sign;
+    lines.push(`<div class="saldo-line" style="cursor:default"><span class="row-ic">${ic(tableIconName(t), 20)}</span><span class="row-name" style="flex:1;overflow-wrap:anywhere">${escHtml(t.name)}</span><span class="val-cell ${t.sign === 1 ? 'positive' : 'negative'}" style="font-weight:700">${t.sign === 1 ? '+' : '− '}${money(total)}</span></div>`);
+  });
+  const neg = saldo < 0;
+  let html = `<div class="saldo-hero${neg ? ' neg' : ''}"><div class="saldo-hero-label">Saldo do mês</div><div class="saldo-hero-val">${neg ? '− ' : ''}${money(Math.abs(saldo))}</div></div>${lines.join('')}`;
+
+  html += '<div style="padding:14px 18px 4px;font-family:var(--font-display);font-size:18px">Faturas</div>';
+  html += faturas.length ? faturas.map(f => `<div class="saldo-line" style="cursor:default;min-height:48px"><span class="row-name" style="flex:1;overflow-wrap:anywhere">${escHtml(f.name)}</span><span class="val-cell" style="font-weight:700">${money(sum(f.rows))}</span></div>`).join('') : '<div class="empty">Nenhuma fatura.</div>';
+  html += `<div class="saldo-line" style="cursor:default;min-height:48px"><span class="row-name" style="flex:1">Pix (fora das faturas)</span><span class="val-cell" style="font-weight:700">${money(sum(pix))}</span></div>`;
+
+  const plans = tables.filter(t => t.type === 'planejamento');
+  plans.forEach(t => {
+    const rows = (t.rows || []).filter(r => r.categoria && r.profileIdx != null);
+    if (!rows.length) return;
+    html += `<div style="padding:14px 18px 4px;font-family:var(--font-display);font-size:18px">${escHtml(t.name || 'Planejamento')}</div>`;
+    rows.forEach(r => {
+      const valor = parseFloat(r.valor) || 0;
+      let gasto = 0; try { gasto = F.cfComputeGastoCategoria(ms, r.profileIdx, r.categoria) || 0; } catch (e) {}
+      const rest = valor - gasto, over = rest < 0;
+      const pct = valor > 0 ? Math.min(100, gasto / valor * 100) : (gasto > 0 ? 100 : 0);
+      html += `<div class="plan-row"><div class="plan-head"><span class="plan-ic${over ? ' over' : ''}">${ic(catIconName(r.categoria), 20)}</span><div class="plan-mid"><div class="plan-name">${escHtml(r.categoria)}</div><div class="plan-sub">${money(gasto)} de ${money(valor)}${profName(r.profileIdx) ? ' · ' + escHtml(profName(r.profileIdx)) : ''}</div></div><div class="plan-rest${over ? ' over' : ''}">${over ? 'estourou ' + money(-rest) : 'restam ' + money(rest)}</div></div><div class="plan-track"><div class="plan-fill${over ? ' over' : ''}" style="width:${pct}%"></div></div></div>`;
+    });
+  });
+  return html + '<div style="height:8px"></div>';
+}
+
 loadFinanceFromCloud();
 
 function getDefaultState() {
@@ -1378,7 +1501,7 @@ function performSearch(query) {
       <span class="row-ic">${ic(r.icon,18)}</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</div>
-        <div style="font-size:11px;color:var(--muted)">${r.subtitle}</div>
+        <div style="font-size:12px;color:var(--muted)">${r.subtitle}</div>
       </div>
       <div style="font-size:13px;font-weight:700;color:var(--accent2);white-space:nowrap">${r.value}</div>
     `;
@@ -1387,7 +1510,7 @@ function performSearch(query) {
   });
   if (results.length > 50) {
     const more = document.createElement('div');
-    more.style.cssText = 'padding:10px 16px;font-size:11px;color:var(--muted);text-align:center';
+    more.style.cssText = 'padding:10px 16px;font-size:12px;color:var(--muted);text-align:center';
     more.textContent = `+ ${results.length-50} resultados a mais — refine a busca`;
     resultsEl.appendChild(more);
   }
@@ -1876,12 +1999,12 @@ function renderProfilesManager() {
 
     // ── Vincular a uma conta de login de verdade ──
     const linkRow = document.createElement('div');
-    linkRow.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:8px;font-size:11px';
+    linkRow.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px';
     const linkedUserId = state.profiles[idx].linkedUserId;
     if (linkedUserId && currentUser && linkedUserId === currentUser.id) {
       linkRow.innerHTML = `<span style="color:var(--accent2);font-weight:700">${ic('check')} Esta é a sua conta</span>`;
     } else if (linkedUserId) {
-      linkRow.innerHTML = `<span style="color:var(--muted)">Vinculado a outro membro da família</span>`;
+      linkRow.innerHTML = `<span style="color:var(--muted)">Vinculado a outro membro do modo família</span>`;
       const unlinkBtn = document.createElement('button');
       unlinkBtn.className = 'btn btn-ghost btn-sm';
       unlinkBtn.textContent = 'Desvincular';
@@ -1999,25 +2122,6 @@ function getTableTotal(t) {
   // A conta de verdade agora mora em public/finance-formulas.js (fonte
   // única, compartilhada com a prévia da Início) — aqui só repassamos.
   return FinanceFormulas.cfGetTableTotal(state, t);
-}
-
-function computeEntradas() {
-  // O total vem da fórmula compartilhada (garantida igual à da Início);
-  // o detalhamento por perfil (rows) continua sendo montado aqui, só pra
-  // exibição na tela.
-  const total = FinanceFormulas.cfComputeEntradasTotal(state);
-  const rows = [];
-  getActiveProfiles()
-    .filter(({ idx }) => state.entradasProfiles[idx] !== false)
-    .forEach(({ name, idx }) => {
-      const rws = getAllRowsByProfile(idx);
-      const tg = rws.reduce((s, r) => s + (parseFloat(r.value) || 0), 0);
-      const pays = state.payments.filter(p => p.profileIdx === idx);
-      const tp = pays.reduce((s, p) => s + p.value, 0);
-      const saldo = (tp - tg) * -1;
-      rows.push({ name, idx, saldo });
-    });
-  return { total, rows };
 }
 
 // ── Table CRUD ──
@@ -2230,7 +2334,7 @@ function buildBalancoTableCard(t, tIdx, totalTables) {
     const signColors = { 1: 'var(--accent2)', '-1': 'var(--warning)', 0: 'var(--muted)' };
     const signLabels = { 1: '＋ Saldo', '-1': '− Saldo', 0: 'off' };
     signBtn.textContent = signLabels[t.sign] ?? 'off';
-    signBtn.style.cssText = `font-size:10px;padding:2px 7px;color:${signColors[t.sign] ?? 'var(--muted)'};border-color:currentColor`;
+    signBtn.style.cssText = `font-size:12px;padding:2px 7px;color:${signColors[t.sign] ?? 'var(--muted)'};border-color:currentColor`;
     signBtn.title = 'Altera como esta tabela entra no Saldo';
     signBtn.onclick = () => {
       t.sign = t.sign === 1 ? -1 : t.sign === -1 ? 0 : 1;
@@ -2300,7 +2404,7 @@ function renderBancoCard(card, t) {
     nameInp.type = 'text';
     nameInp.value = row.values['nome'] || '';
     nameInp.placeholder = 'Nome da conta';
-    nameInp.style.cssText = 'background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;width:100%;outline:none;padding-bottom:4px;font-family:inherit';
+    nameInp.style.cssText = 'background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;width:100%;outline:none;padding-bottom:4px;font-family:inherit';
     nameInp.oninput = e => { row.values['nome'] = e.target.value; saveState(); };
 
     const valInp = document.createElement('input');
@@ -2313,12 +2417,12 @@ function renderBancoCard(card, t) {
 
     const prefix = document.createElement('span');
     prefix.textContent = 'R$';
-    prefix.style.cssText = 'font-size:11px;color:var(--muted);font-weight:600';
+    prefix.style.cssText = 'font-size:12px;color:var(--muted);font-weight:600';
 
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-danger btn-sm';
     delBtn.innerHTML = ic('x'); delBtn.setAttribute('aria-label','Remover');
-    delBtn.style.cssText = 'position:absolute;top:8px;right:8px;padding:2px 6px;font-size:10px;opacity:.5';
+    delBtn.style.cssText = 'position:absolute;top:8px;right:8px;padding:2px 6px;font-size:12px;opacity:.5';
     delBtn.onmouseenter = () => delBtn.style.opacity = '1';
     delBtn.onmouseleave = () => delBtn.style.opacity = '.5';
     delBtn.onclick = () => removeTableRow(t.id, row.id);
@@ -2379,7 +2483,7 @@ function renderBancoCard(card, t) {
 function renderEntradasCard(card, t) {
   // Header hint
   const hint = document.createElement('div');
-  hint.style.cssText = 'padding:6px 14px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2)';
+  hint.style.cssText = 'padding:6px 14px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2)';
   hint.textContent = 'Clique no perfil para incluir ou excluir do total de Entradas.';
   card.appendChild(hint);
 
@@ -2423,7 +2527,7 @@ function renderEntradasCard(card, t) {
     tdToggle.style.textAlign = 'center';
     const toggle = document.createElement('button');
     toggle.className = 'btn btn-sm';
-    toggle.style.cssText = `padding:2px 8px;font-size:11px;font-weight:600;${included
+    toggle.style.cssText = `padding:2px 8px;font-size:12px;font-weight:600;${included
       ? 'color:var(--accent2);border:1px solid var(--accent2);background:rgba(90,122,92,.12)'
       : 'color:var(--muted);border:1px solid var(--border)'}`;
     toggle.textContent = included ? '✓' : '○';
@@ -2484,7 +2588,7 @@ function renderFaturasAutoCard(card, t) {
   card.appendChild(header);
 
   const note = document.createElement('div');
-  note.style.cssText = 'padding:6px 16px;font-size:11px;color:var(--muted);font-style:italic';
+  note.style.cssText = 'padding:6px 16px;font-size:12px;color:var(--muted);font-style:italic';
   note.textContent = 'Atualizado automaticamente a partir da aba Faturas — edite os valores lá.';
   card.appendChild(note);
 
@@ -2726,12 +2830,12 @@ function renderCustomCard(card, t) {
 
     const colNameInput = document.createElement('input');
     colNameInput.type = 'text'; colNameInput.value = col.name;
-    colNameInput.style.cssText = 'background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;width:100%;outline:none';
+    colNameInput.style.cssText = 'background:transparent;border:none;border-bottom:1px dashed var(--border);color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;width:100%;outline:none';
     colNameInput.oninput = e => { col.name = e.target.value; saveState(); };
 
     const typeToggle = document.createElement('button');
     typeToggle.className = 'btn btn-ghost btn-sm';
-    typeToggle.style.cssText = 'padding:1px 4px;font-size:10px;opacity:.6';
+    typeToggle.style.cssText = 'padding:1px 4px;font-size:12px;opacity:.6';
     typeToggle.textContent = col.type === 'number' ? '#' : 'A';
     typeToggle.title = 'Alternar tipo (texto/número)';
     typeToggle.onclick = () => {
@@ -2741,7 +2845,7 @@ function renderCustomCard(card, t) {
 
     const delColBtn = document.createElement('button');
     delColBtn.className = 'btn btn-danger btn-sm';
-    delColBtn.style.cssText = 'padding:1px 5px;font-size:10px';
+    delColBtn.style.cssText = 'padding:1px 5px;font-size:12px';
     delColBtn.innerHTML = ic('x'); /*x*/
     delColBtn.onclick = () => removeTableColumn(t.id, col.id);
 
@@ -2751,7 +2855,7 @@ function renderCustomCard(card, t) {
 
   const addColBtn = document.createElement('button');
   addColBtn.className = 'btn btn-ghost btn-sm';
-  addColBtn.style.cssText = 'padding:2px 8px;font-size:11px;opacity:.7';
+  addColBtn.style.cssText = 'padding:2px 8px;font-size:12px;opacity:.7';
   addColBtn.textContent = '+ Coluna';
   addColBtn.onclick = () => addTableColumn(t.id);
   colEditor.appendChild(addColBtn);
@@ -2848,7 +2952,6 @@ function renderSaldoBuilder() {
   state.balancoTables.forEach(t => {
     if (!t.includeInSaldo || t.sign === 0) return;
     const tableTotal = getTableTotal(t);
-    const signLabel = t.sign === 1 ? '＋' : '−';
     const cls = t.sign === 1 ? 'positive' : 'negative';
     const isOpen = !!_saldoExpanded[t.id];
 
@@ -2962,7 +3065,7 @@ function renderSaldoBuilder() {
           });
         }
         const hint = document.createElement('div');
-        hint.style.cssText = 'padding:8px 18px;font-size:11px;color:var(--muted);font-style:italic';
+        hint.style.cssText = 'padding:8px 18px;font-size:12px;color:var(--muted);font-style:italic';
         hint.textContent = 'Edite valores, fechamento e vencimento direto na aba Faturas.';
         body.appendChild(hint);
       } else if (t.type === 'custom') {
@@ -3558,8 +3661,8 @@ function renderPerfis() {
         const tdTipo = document.createElement('td');
         const isPay = tx.txKind === 'payment';
         tdTipo.innerHTML = isPay
-          ? '<span class="val-cell positive" style="font-size:11px;font-weight:700">Pagamento</span>'
-          : `<span class="val-cell negative" style="font-size:11px;font-weight:700">${tx.faturaName||'Gasto'}</span>`;
+          ? '<span class="val-cell positive" style="font-size:12px;font-weight:700">Pagamento</span>'
+          : `<span class="val-cell negative" style="font-size:12px;font-weight:700">${tx.faturaName||'Gasto'}</span>`;
 
         const tdDesc = document.createElement('td');
         const inDesc = document.createElement('input');

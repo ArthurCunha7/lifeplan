@@ -46,10 +46,6 @@ const WORKOUT_TYPES = [
   },
 ];
 
-const ALL_WORKOUT_OPTIONS = WORKOUT_TYPES.flatMap(wt =>
-  wt.options.map(o => ({ ...o, type: wt.type, color: wt.color, icon: wt.icon }))
-);
-
 // ── CÁLCULO DE DIETA ──────────────────────────────────────────────────────────
 const ACTIVITY_FACTORS = {
   sedentario:    { label:'Sedentário (sem exercício)',       factor:1.2   },
@@ -136,11 +132,11 @@ const S={
   wrap:   {minHeight:'100vh',background:'var(--bg)',color:'var(--text)',fontFamily:'var(--font-body)',paddingBottom:110},
   header: {background:'var(--surface)',borderBottom:'1px solid var(--border)',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:100,boxShadow:'0 1px 6px rgba(0,0,0,0.04)'},
   card:   {background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,margin:'0 16px 12px',padding:'16px'},
-  input:  {width:'100%',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,color:'var(--text)',fontSize:14,padding:'10px 12px',outline:'none',boxSizing:'border-box'},
-  select: {width:'100%',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,color:'var(--text)',fontSize:14,padding:'10px 12px',outline:'none',boxSizing:'border-box'},
-  label:  {fontSize:11,fontWeight:700,color:'var(--muted2)',marginBottom:6,display:'block',letterSpacing:.8},
+  input:  {width:'100%',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,color:'var(--text)',fontSize:14,padding:'10px 12px',minHeight:44,outline:'none',boxSizing:'border-box'},
+  select: {width:'100%',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,color:'var(--text)',fontSize:14,padding:'10px 12px',minHeight:44,outline:'none',boxSizing:'border-box'},
+  label:  {fontSize:12,fontWeight:700,color:'var(--muted2)',marginBottom:6,display:'block',letterSpacing:.8},
   badge:  c=>({background:`color-mix(in srgb, ${c} 16%, transparent)`,color:c,padding:'3px 8px',borderRadius:8,fontWeight:700,fontSize:12}),
-  btn:    (c='var(--accent)')=>({background:c,border:'none',borderRadius:10,color:'var(--on-accent)',padding:'12px 18px',fontSize:14,fontWeight:700,cursor:'pointer'}),
+  btn:    (c='var(--accent)')=>({background:c,border:'none',borderRadius:10,color:'var(--on-accent)',padding:'12px 18px',minHeight:44,fontSize:14,fontWeight:700,cursor:'pointer'}),
   // bottom nav
   nav:    {position:'fixed',bottom:0,left:0,right:0,background:'var(--surface)',borderTop:'1px solid var(--border)',display:'flex',zIndex:100},
   navBtn: active=>({flex:1,background:'none',border:'none',padding:'12px 0 10px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:3,color:active?'var(--accent)':'var(--muted)'}),
@@ -204,7 +200,7 @@ function LoginPage({onSwitch,onLogin}){
       </button>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
         <div style={{flex:1,height:1,background:'var(--border)'}}/>
-        <span style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>OU</span>
+        <span style={{fontSize:12,color:'var(--muted)',fontWeight:600}}>OU</span>
         <div style={{flex:1,height:1,background:'var(--border)'}}/>
       </div>
       <label style={S.label}>E-MAIL</label>
@@ -284,7 +280,7 @@ function RegisterPage({onSwitch,onLogin}){
       </button>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
         <div style={{flex:1,height:1,background:'var(--border)'}}/>
-        <span style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>OU</span>
+        <span style={{fontSize:12,color:'var(--muted)',fontWeight:600}}>OU</span>
         <div style={{flex:1,height:1,background:'var(--border)'}}/>
       </div>
       {[['name','','NOME','Seu nome'],['email','','E-MAIL','seu@email.com'],['password','','SENHA','Mín. 6 caracteres'],['confirm','','CONFIRMAR','Repita a senha']].map(([k,ic,lb,ph])=>(
@@ -367,11 +363,11 @@ function ProfilePage({userId,initialProfile,onSave,onBack,onLogout}){
               <div key={lb} style={{background:'var(--surface)',borderRadius:10,padding:'10px 8px',textAlign:'center'}}>
                 <div style={{marginBottom:4,color:'var(--accent)',display:'flex',justifyContent:'center'}}><Glyph name={ic} size={20}/></div>
                 <div style={{fontSize:14,fontWeight:800,color:'var(--text)'}}>{vl}</div>
-                <div style={{fontSize:9,color:'var(--muted)',marginTop:2}}>{lb}</div>
+                <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{lb}</div>
               </div>
             ))}
           </div>
-          <div style={{fontSize:11,color:'var(--muted)',textAlign:'center'}}>Fórmula Mifflin-St Jeor · 30% proteína · 25% gordura · 45% carboidrato</div>
+          <div style={{fontSize:12,color:'var(--muted)',textAlign:'center'}}>Fórmula Mifflin-St Jeor · 30% proteína · 25% gordura · 45% carboidrato</div>
         </div>
       )}
       {done
@@ -396,16 +392,6 @@ function ProfilePage({userId,initialProfile,onSave,onBack,onLogout}){
 
 // ── MODAL TROCA DE TREINO ─────────────────────────────────────────────────────
 function WorkoutModal({day,onSelect,onClose,profiles=[]}){
-  const [tab,setTab]=useState(day.type);
-  const [mode,setMode]=useState('list');
-  const [customName,setCustomName]=useState(day.typeLabel||''  );
-  const [customDetail,setCustomDetail]=useState(day.detail||''  );
-  const [customExercises,setCustomExercises]=useState(day.exercises||''  );
-  const group=WORKOUT_TYPES.find(w=>w.type===tab)||WORKOUT_TYPES[0];
-  function handleCustomSave(){
-    if(!customName.trim()) return;
-    onSelect({type:tab,color:group.color,typeLabel:customName,detail:customDetail,exercises:customExercises});
-  }
   return(
     <div style={{position:'fixed',inset:0,background:'rgba(16,22,18,0.55)',zIndex:300,display:'flex',alignItems:'flex-end'}} onClick={onClose}>
       <div style={{background:'var(--surface)',borderRadius:'20px 20px 0 0',width:'100%',padding:20,maxHeight:'90vh',overflow:'hidden',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
@@ -416,7 +402,7 @@ function WorkoutModal({day,onSelect,onClose,profiles=[]}){
         {/* Perfis do usuário */}
         {profiles.length>0&&(
           <>
-            <div style={{fontSize:11,color:'var(--muted)',fontWeight:700,marginBottom:8}}>MEUS TREINOS</div>
+            <div style={{fontSize:12,color:'var(--muted)',fontWeight:700,marginBottom:8}}>MEUS TREINOS</div>
             <div style={{overflowY:'auto',flex:1,display:'flex',flexDirection:'column',gap:8}}>
               {profiles.map((p,i)=>{
                 const color=WORKOUT_TYPES.find(w=>w.type===p.type)?.color||'var(--success)';
@@ -424,12 +410,12 @@ function WorkoutModal({day,onSelect,onClose,profiles=[]}){
                 return(
                   <div key={i} onClick={()=>onSelect({type:p.type,color,typeLabel:p.typeLabel,exercises:p.exercises||''})}
                     style={{padding:'12px 14px',borderRadius:12,cursor:'pointer',border:'1px solid',
-                      ...(isActive?{background:color+'18',borderColor:color}:{background:'var(--surface)',borderColor:'var(--surface)'})}}>
+                      ...(isActive?{background:`color-mix(in srgb, ${color} 14%, transparent)`,borderColor:color}:{background:'var(--surface)',borderColor:'var(--surface)'})}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
                       <div style={{fontSize:13,fontWeight:700,color:isActive?color:'var(--text)'}}>{p.typeLabel}</div>
                       {isActive&&<span style={S.badge(color)}>✓ Ativo</span>}
                     </div>
-                    {p.exercises&&<div style={{fontSize:11,color:'var(--muted)',lineHeight:1.6,whiteSpace:'pre-line',marginTop:4}}>{p.exercises}</div>}
+                    {p.exercises&&<div style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,whiteSpace:'pre-line',marginTop:4}}>{p.exercises}</div>}
                   </div>
                 );
               })}
@@ -471,7 +457,7 @@ function FoodModal({onSelect,onClose}){
           {results.map(t=>(
             <div key={t.id} style={{padding:'10px 12px',borderRadius:10,cursor:'pointer',marginBottom:6,background:'var(--surface)',border:'1px solid var(--surface)'}} onClick={()=>onSelect(t)}>
               <div style={{fontSize:13,color:'var(--text)',fontWeight:600,marginBottom:4}}>{t.n}</div>
-              <div style={{display:'flex',gap:6,fontSize:11}}>
+              <div style={{display:'flex',gap:6,fontSize:12}}>
                 <span style={S.badge('var(--warning)')}>{t.e} kcal</span>
                 <span style={S.badge('var(--info)')}>P {t.p}g</span>
                 <span style={S.badge('var(--warning)')}>G {t.l}g</span>
@@ -506,13 +492,13 @@ function ShoppingList({items,onToggle,onRemove,onClear}){
         <>
           {pending.length>0&&(
             <div style={{...S.card,marginTop:16}}>
-              <div style={{fontSize:11,fontWeight:700,color:'var(--muted2)',marginBottom:12,letterSpacing:.8}}>A COMPRAR ({pending.length})</div>
+              <div style={{fontSize:12,fontWeight:700,color:'var(--muted2)',marginBottom:12,letterSpacing:.8}}>A COMPRAR ({pending.length})</div>
               {pending.map(item=>(
                 <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:'1px solid var(--surface)'}}>
                   <button onClick={()=>onToggle(item.id)} style={{width:22,height:22,borderRadius:6,border:'2px solid var(--success)',background:'transparent',cursor:'pointer',flexShrink:0}}/>
                   <div style={{flex:1}}>
                     <div style={{fontSize:14,color:'var(--text)',fontWeight:600}}>{item.name}</div>
-                    <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{item.qty}g · {item.kcal} kcal</div>
+                    <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{item.qty}g · {item.kcal} kcal</div>
                   </div>
                   <button onClick={()=>onRemove(item.id)} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:16,padding:'0 4px'}}><Icon name="x" size={18}/></button>
                 </div>
@@ -521,7 +507,7 @@ function ShoppingList({items,onToggle,onRemove,onClear}){
           )}
           {done.length>0&&(
             <div style={{...S.card,opacity:.6}}>
-              <div style={{fontSize:11,fontWeight:700,color:'var(--muted2)',marginBottom:12,letterSpacing:.8}}>COMPRADO ({done.length})</div>
+              <div style={{fontSize:12,fontWeight:700,color:'var(--muted2)',marginBottom:12,letterSpacing:.8}}>COMPRADO ({done.length})</div>
               {done.map(item=>(
                 <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid var(--surface)'}}>
                   <button onClick={()=>onToggle(item.id)} style={{width:22,height:22,borderRadius:6,border:'2px solid var(--success)',background:'var(--success-soft)',cursor:'pointer',flexShrink:0,fontSize:13}}>✓</button>
@@ -547,7 +533,6 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
   function EditForm({initial,onDone}){
     const [form,setForm]=useState(initial||{id:'wp'+Date.now(),type:'strength',typeLabel:'',exercises:''});
     const set=k=>e=>setForm(f=>({...f,[k]:e.target.value}));
-    const group=WORKOUT_TYPES.find(w=>w.type===form.type)||WORKOUT_TYPES[0];
     return(
       <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:12}}>
         <div style={{marginBottom:10}}>
@@ -555,7 +540,7 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
           <div style={{display:'flex',gap:8}}>
             {WORKOUT_TYPES.map(wt=>(
               <button key={wt.type} onClick={()=>setForm(f=>({...f,type:wt.type}))} style={{flex:1,padding:'8px 0',borderRadius:10,border:'1px solid',cursor:'pointer',fontSize:18,
-                ...(form.type===wt.type?{background:wt.color+'22',borderColor:wt.color}:{background:'var(--surface)',borderColor:'var(--border)'})}}>
+                ...(form.type===wt.type?{background:`color-mix(in srgb, ${wt.color} 14%, transparent)`,borderColor:wt.color}:{background:'var(--surface)',borderColor:'var(--border)'})}}>
                 <Glyph name={wt.icon} size={20}/>
               </button>
             ))}
@@ -569,7 +554,7 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
           <label style={S.label}>EXERCÍCIOS E SÉRIES</label>
           <textarea style={{...S.input,minHeight:130,resize:'vertical',lineHeight:1.8}} value={form.exercises} onChange={set('exercises')}
             placeholder={"Supino reto 4×8\nSupino inclinado 3×10\nCrucifixo 3×12\nTríceps polia 4×10\nTríceps francês 3×10"}/>
-          <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>Um exercício por linha</div>
+          <div style={{fontSize:12,color:'var(--muted)',marginTop:4}}>Um exercício por linha</div>
         </div>
         <div style={{display:'flex',gap:8}}>
           <button style={{...S.btn('var(--success)'),flex:1,padding:11}} onClick={()=>{if(!form.typeLabel.trim())return;onSave({...form,color:WORKOUT_TYPES.find(w=>w.type===form.type)?.color||'var(--success)'});onDone();}}>Salvar</button>
@@ -592,7 +577,7 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
         <div style={{background:'var(--accent-soft)',border:'1px solid var(--border)',borderRadius:14,padding:'12px 14px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
           <div>
             <div style={{fontSize:13,fontWeight:800,color:'var(--text)'}}>Meta de treinos por semana</div>
-            <div style={{fontSize:11,color:'var(--muted2)',marginTop:2}}>Usada no marcador de Insights em Hábitos e Performance</div>
+            <div style={{fontSize:12,color:'var(--muted2)',marginTop:2}}>Usada no marcador de Insights em Hábitos e Performance</div>
           </div>
           <input type="number" min="1" max="14" value={workoutGoal} onChange={e=>setWorkoutGoal(Math.max(1,parseInt(e.target.value,10)||1))}
             style={{width:56,textAlign:'center',border:'1px solid var(--border)',borderRadius:8,padding:'6px 4px',fontSize:14,fontWeight:800}}/>
@@ -617,7 +602,7 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
                 <div>
                   <div style={{fontSize:15,fontWeight:800,color:color}}>{p.typeLabel}</div>
-                  <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{WORKOUT_TYPES.find(w=>w.type===p.type)?.label}</div>
+                  <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{WORKOUT_TYPES.find(w=>w.type===p.type)?.label}</div>
                 </div>
                 <div style={{display:'flex',gap:6}}>
                   <button style={{...S.btn('var(--accent)'),padding:'5px 10px',fontSize:12}} onClick={()=>setEditing(p)} aria-label="Editar"><Icon name="pencil" size={16}/></button>
@@ -625,12 +610,12 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
                 </div>
               </div>
               {p.exercises&&(
-                <div style={{fontSize:12,color:'var(--muted2)',lineHeight:1.8,whiteSpace:'pre-line',marginBottom:10,padding:'8px 10px',background:'rgba(0,0,0,0.2)',borderRadius:8}}>
+                <div style={{fontSize:12,color:'var(--muted2)',lineHeight:1.8,whiteSpace:'pre-line',marginBottom:10,padding:'8px 10px',background:'var(--surface2)',borderRadius:8}}>
                   {p.exercises}
                 </div>
               )}
 
-              <div style={{fontSize:10,fontWeight:800,color:'var(--muted)',marginBottom:6,textTransform:'uppercase'}}>Aplicar em quais dias?</div>
+              <div style={{fontSize:12,fontWeight:800,color:'var(--muted)',marginBottom:6,textTransform:'uppercase'}}>Aplicar em quais dias?</div>
               <div style={{display:'flex',gap:4}}>
                 {DAYS_SHORT.map((d,di)=>{
                   const isUsing=plan[di]?.typeLabel===p.typeLabel;
@@ -638,7 +623,7 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
                     <button key={di} onClick={()=>onApplyToDay(p.id,di,isUsing)}
                       style={{flex:1,padding:'6px 0',borderRadius:8,border:`1px solid ${isUsing?color:'var(--border)'}`,
                         background:isUsing?color:'var(--surface)',color:isUsing?'var(--surface)':'var(--muted2)',
-                        fontSize:11,fontWeight:800,cursor:'pointer'}}>
+                        fontSize:12,fontWeight:800,cursor:'pointer'}}>
                       {d}
                     </button>
                   );
@@ -658,6 +643,9 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
 function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
   const [plan,setPlan]           = useState(null);
   const [tab,setTab]             = useState(initialTab||'plan');   // 'plan' | 'shop' | 'workout'
+  // A barra inferior troca Nutrição/Compras/Treino reaproveitando esta mesma tela
+  // (sem remontar), então a aba precisa acompanhar o que foi pedido.
+  useEffect(()=>{ if(initialTab) setTab(initialTab); },[initialTab]);
   const [dayIdx,setDayIdx]       = useState(new Date().getDay()===0?6:new Date().getDay()-1);
   const [editFood,setEditFood]   = useState(null);
   const [editMeal,setEditMeal]   = useState(null); // {mi, field} field: 'name'|'time'
@@ -684,16 +672,6 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
 
   // Registra os 4 campos que esta tela mantém na fila central de salvamento
   // (sempre via refs, então a fila nunca escreve um valor desatualizado)
-  useEffect(()=>{
-    if(!userId) return;
-    const unregs=[
-      registerPlanDataField('plan',()=>planRef.current),
-      registerPlanDataField('shopping',()=>shoppingRef.current),
-      registerPlanDataField('workoutProfiles',()=>workoutProfilesRef.current),
-      registerPlanDataField('workoutGoalPerWeek',()=>workoutGoalRef.current),
-    ];
-    return ()=>unregs.forEach(u=>u());
-  },[userId]);
 
   // Rede de segurança extra: cobre o caso de recarregar a página (F5) ou
   // fechar a aba de repente, que NÃO passa pela limpeza normal do React
@@ -710,6 +688,21 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
   },[userId]);
 
   const [dataLoaded,setDataLoaded]=useState(false);
+
+  // IMPORTANTE: os campos só entram na fila central DEPOIS que o carregamento
+  // terminou. Antes disso os estados ainda estão vazios, e qualquer gravação
+  // vinda de outro ponto do app (ou da tela anterior ao sair) gravaria esses
+  // vazios por cima dos treinos e compras já salvos.
+  useEffect(()=>{
+    if(!userId||!dataLoaded) return;
+    const unregs=[
+      registerPlanDataField('plan',()=>planRef.current),
+      registerPlanDataField('shopping',()=>shoppingRef.current),
+      registerPlanDataField('workoutProfiles',()=>workoutProfilesRef.current),
+      registerPlanDataField('workoutGoalPerWeek',()=>workoutGoalRef.current),
+    ];
+    return ()=>unregs.forEach(u=>u());
+  },[userId,dataLoaded]);
 
   // Carrega plano e lista do Supabase. Só depois que os DOIS carregamentos
   // terminarem é que os efeitos de auto-save abaixo são liberados — sem
@@ -944,8 +937,8 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
       <div style={S.header}>
         <div style={{fontFamily:'var(--font-display)',fontSize:22,fontWeight:600,color:'var(--accent)'}}>LifePlan</div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          {saveMsg&&<span style={{fontSize:11,color:saveMsg.startsWith('Salvo')?'var(--success)':'var(--danger)'}}>{saveMsg}</span>}
-          {saving&&<span style={{fontSize:11,color:'var(--muted2)'}}>Salvando…</span>}
+          {saveMsg&&<span style={{fontSize:12,color:saveMsg.startsWith('Salvo')?'var(--success)':'var(--danger)'}}>{saveMsg}</span>}
+          {saving&&<span style={{fontSize:12,color:'var(--muted2)'}}>Salvando…</span>}
         </div>
       </div>
 
@@ -956,7 +949,7 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
             ...(i===dayIdx?{background:d.type==='rest'?'var(--surface3)':d.type==='cardio'?'var(--info-soft)':'var(--accent-soft)',borderColor:d.type==='rest'?'var(--muted)':d.type==='cardio'?'var(--info)':'var(--accent)',color:d.type==='rest'?'var(--text-2)':d.type==='cardio'?'var(--info)':'var(--accent-dark)'}:{background:'var(--surface)',borderColor:'var(--border)',color:'var(--muted)'})
           }}>
             <div>{d.short}</div>
-            {(d.type==='rest'||workoutProfiles.some(p=>p.typeLabel===d.typeLabel))&&<div style={{fontSize:11,marginTop:2}}>{d.typeLabel.split('–')[0].trim()}</div>}
+            {(d.type==='rest'||workoutProfiles.some(p=>p.typeLabel===d.typeLabel))&&<div style={{fontSize:12,marginTop:2}}>{d.typeLabel.split('–')[0].trim()}</div>}
           </button>
         ))}
       </div>
@@ -969,22 +962,22 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
             <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
               {(day.type==='rest'||workoutProfiles.some(p=>p.typeLabel===day.typeLabel))&&<div style={{fontSize:13,color:tc,fontWeight:700}}>{day.typeLabel}</div>}
               {/* Botão troca treino */}
-              <button onClick={()=>setShowWorkout(true)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'2px 8px',fontSize:11,cursor:'pointer',fontWeight:600}}>Treino</button>
-              <button onClick={()=>setShowMealCount(true)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'2px 8px',fontSize:11,cursor:'pointer',fontWeight:600}}>Refeições</button>
+              <button onClick={()=>setShowWorkout(true)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'8px 12px',minHeight:40,fontSize:12,cursor:'pointer',fontWeight:600}}>Treino</button>
+              <button onClick={()=>setShowMealCount(true)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'8px 12px',minHeight:40,fontSize:12,cursor:'pointer',fontWeight:600}}>Refeições</button>
             </div>
             {day.exercises&&(day.type==='rest'||workoutProfiles.some(p=>p.typeLabel===day.typeLabel))&&<div style={{fontSize:12,color:'var(--muted2)',marginTop:6,lineHeight:1.7,whiteSpace:'pre-line'}}>{day.exercises.replace(/·/g,'\n')}</div>}
           </div>
           <div style={{textAlign:'right'}}>
             <div style={{fontSize:20,fontWeight:900,color:tc}}>{dayTotals.kcal}</div>
-            <div style={{fontSize:10,color:'var(--muted)',fontWeight:600}}>kcal totais</div>
+            <div style={{fontSize:12,color:'var(--muted)',fontWeight:600}}>kcal totais</div>
           </div>
         </div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
           {[['dumbbell',dayTotals.p+'g','proteína','var(--info)'],['leaf',dayTotals.l+'g','gordura','var(--warning)'],['activity',dayTotals.cb+'g','carbs','var(--accent)'],['flame',day.burned+'kcal','queimado','var(--text-2)']].map(([ic,v,l,c])=>(
-            <div key={l} style={{background:c+'18',border:`1px solid ${c}33`,borderRadius:10,padding:'8px 12px',flex:1,minWidth:60,textAlign:'center'}}>
+            <div key={l} style={{background:`color-mix(in srgb, ${c} 10%, transparent)`,border:`1px solid color-mix(in srgb, ${c} 25%, transparent)`,borderRadius:10,padding:'8px 12px',flex:1,minWidth:60,textAlign:'center'}}>
               <div style={{display:'flex',justifyContent:'center',color:c}}><Glyph name={ic} size={16}/></div>
               <div style={{fontSize:13,fontWeight:800,color:c}}>{v}</div>
-              <div style={{fontSize:9,color:'var(--muted)',fontWeight:600}}>{l}</div>
+              <div style={{fontSize:12,color:'var(--muted)',fontWeight:600}}>{l}</div>
             </div>
           ))}
         </div>
@@ -1001,12 +994,12 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
                 {editMeal?.mi===mi&&editMeal?.field==='name'
                   ?<input autoFocus style={{...S.input,padding:'4px 8px',fontSize:14,fontWeight:700,marginBottom:2}} value={meal.name}
                       onChange={e=>updateMeal(mi,'name',e.target.value)} onBlur={()=>setEditMeal(null)} onKeyDown={e=>e.key==='Enter'&&setEditMeal(null)}/>
-                  :<div style={{fontSize:14,fontWeight:700,color:'var(--text)',cursor:'pointer'}} onClick={()=>setEditMeal({mi,field:'name'})} title="Clique para editar">{meal.name} <span style={{fontSize:10,color:'var(--muted)'}}></span></div>
+                  :<div style={{fontSize:14,fontWeight:700,color:'var(--text)',cursor:'pointer'}} onClick={()=>setEditMeal({mi,field:'name'})} title="Clique para editar">{meal.name} <span style={{fontSize:12,color:'var(--muted)'}}></span></div>
                 }
                 {editMeal?.mi===mi&&editMeal?.field==='time'
-                  ?<input autoFocus style={{...S.input,padding:'2px 6px',fontSize:11,width:80,marginTop:2}} type="time" value={meal.time}
+                  ?<input autoFocus style={{...S.input,padding:'2px 6px',fontSize:12,width:80,marginTop:2}} type="time" value={meal.time}
                       onChange={e=>updateMeal(mi,'time',e.target.value)} onBlur={()=>setEditMeal(null)}/>
-                  :<div style={{fontSize:11,color:'var(--muted)',fontWeight:600,cursor:'pointer',marginTop:2}} onClick={()=>setEditMeal({mi,field:'time'})} title="Clique para editar">{meal.time} <span style={{fontSize:9}}></span></div>
+                  :<div style={{fontSize:12,color:'var(--muted)',fontWeight:600,cursor:'pointer',marginTop:2}} onClick={()=>setEditMeal({mi,field:'time'})} title="Clique para editar">{meal.time} <span style={{fontSize:12}}></span></div>
                 }
               </div>
               <span style={S.badge('var(--warning)')}>{mt.kcal} kcal</span>
@@ -1017,11 +1010,11 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
                 <div key={food.id} style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:8,padding:'10px 0',borderBottom:'1px solid var(--border2)'}}>
                   {editFood===food.id
                     ?<input style={{...S.input,width:70,padding:'4px 8px',fontSize:12}} type="number" value={food.qty} onChange={e=>updateQty(mi,food.id,+e.target.value)} onBlur={()=>setEditFood(null)} autoFocus/>
-                    :<span style={{fontSize:11,color:'var(--info)',fontWeight:700,cursor:'pointer',minWidth:40}} onClick={()=>setEditFood(food.id)}>{food.qty}g</span>
+                    :<span style={{fontSize:12,color:'var(--info)',fontWeight:700,cursor:'pointer',minWidth:40}} onClick={()=>setEditFood(food.id)}>{food.qty}g</span>
                   }
                   <span style={{flex:'1 1 140px',fontSize:14,color:'var(--text)'}}>{food.name}</span>
                   <div style={{display:'flex',gap:4,alignItems:'center'}}>
-                    <div style={{display:'flex',gap:3,fontSize:10}}>
+                    <div style={{display:'flex',gap:3,fontSize:12}}>
                       <span style={S.badge('var(--warning)')}>{food.kcal}</span>
                       <span style={S.badge('var(--info)')}>P{food.p}</span>
                       <span style={S.badge('var(--warning)')}>G{food.l}</span>
@@ -1064,12 +1057,12 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
                     style={{padding:'16px 0',borderRadius:12,border:'1px solid',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:6,
                       ...(active?{background:'var(--success-soft)',borderColor:'var(--success)',color:'var(--success)'}:{background:'var(--surface)',borderColor:'var(--border)',color:'var(--muted2)'})}}>
                     <span style={{fontSize:24,fontWeight:900}}>{n}</span>
-                    <span style={{fontSize:10,fontWeight:700}}>{active?'✓ Atual':'refeições'}</span>
+                    <span style={{fontSize:12,fontWeight:700}}>{active?'✓ Atual':'refeições'}</span>
                   </button>
                 );
               })}
             </div>
-            <div style={{marginTop:16,fontSize:11,color:'var(--muted)',textAlign:'center'}}>* Apenas o dia atual será alterado</div>
+            <div style={{marginTop:16,fontSize:12,color:'var(--muted)',textAlign:'center'}}>* Apenas o dia atual será alterado</div>
           </div>
         </div>
       )}
@@ -1510,94 +1503,14 @@ async function fetchFromOpenMeteo(latitude,longitude,setState){
   });
 }
 
-// Gradiente dinâmico de fundo do balão de clima, de acordo com a condição
-// atual (limpo, nublado, chuva, tempestade, neve, névoa) e se é dia ou noite.
-// Aceita tanto o "type" da Google Weather API (string, ex: "CLEAR") quanto o
-// código WMO do Open-Meteo (número), usado como alternativa sem chave.
-const GW_RAIN_TYPES=['WIND_AND_RAIN','LIGHT_RAIN_SHOWERS','CHANCE_OF_SHOWERS','SCATTERED_SHOWERS','RAIN_SHOWERS','HEAVY_RAIN_SHOWERS','LIGHT_TO_MODERATE_RAIN','MODERATE_TO_HEAVY_RAIN','RAIN','LIGHT_RAIN','HEAVY_RAIN','RAIN_PERIODICALLY_HEAVY','RAIN_AND_SNOW'];
-const GW_SNOW_TYPES=['LIGHT_SNOW_SHOWERS','CHANCE_OF_SNOW_SHOWERS','SCATTERED_SNOW_SHOWERS','SNOW_SHOWERS','HEAVY_SNOW_SHOWERS','LIGHT_TO_MODERATE_SNOW','MODERATE_TO_HEAVY_SNOW','SNOW','LIGHT_SNOW','HEAVY_SNOW','BLOWING_SNOW'];
-const GW_STORM_TYPES=['SNOWSTORM','SNOW_PERIODICALLY_HEAVY','HEAVY_SNOW_STORM','HAIL','HAIL_SHOWERS','THUNDERSTORM','THUNDERSHOWER','LIGHT_THUNDERSTORM_RAIN','SCATTERED_THUNDERSTORMS','HEAVY_THUNDERSTORM'];
-
-function weatherGradient(code,isDay){
-  const day=isDay===1||isDay===undefined;
-  const clearGrad=day?'linear-gradient(135deg,#4f9de0 0%,#8fd0f0 100%)':'linear-gradient(135deg,#1a2a5e 0%,#3b4d8c 100%)';
-
-  if(typeof code==='string'){
-    const t=code;
-    if(t==='CLEAR') return clearGrad;
-    if(['MOSTLY_CLEAR','PARTLY_CLOUDY'].includes(t)) return day?'linear-gradient(135deg,#5b9bd5 0%,#a7d4ef 100%)':'linear-gradient(135deg,#232e52 0%,#4a5a8a 100%)';
-    if(['MOSTLY_CLOUDY','CLOUDY','WINDY'].includes(t)) return 'linear-gradient(135deg,#8a97a3 0%,#c3cdd6 100%)';
-    if(GW_RAIN_TYPES.includes(t)) return 'linear-gradient(135deg,#4a6178 0%,#7891a8 100%)';
-    if(GW_SNOW_TYPES.includes(t)) return 'linear-gradient(135deg,#a9c6e0 0%,#e4eef7 100%)';
-    if(GW_STORM_TYPES.includes(t)) return 'linear-gradient(135deg,#3a3f52 0%,#5f6478 100%)';
-    return clearGrad;
-  }
-
-  // código WMO (Open-Meteo)
-  if(code===0) return clearGrad;
-  if([1,2].includes(code)) return day?'linear-gradient(135deg,#5b9bd5 0%,#a7d4ef 100%)':'linear-gradient(135deg,#232e52 0%,#4a5a8a 100%)';
-  if(code===3) return 'linear-gradient(135deg,#8a97a3 0%,#c3cdd6 100%)';
-  if([45,48].includes(code)) return 'linear-gradient(135deg,#9aa3ab 0%,#c9d1d8 100%)';
-  if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return 'linear-gradient(135deg,#4a6178 0%,#7891a8 100%)';
-  if([71,73,75,77,85,86].includes(code)) return 'linear-gradient(135deg,#a9c6e0 0%,#e4eef7 100%)';
-  if([95,96,99].includes(code)) return 'linear-gradient(135deg,#3a3f52 0%,#5f6478 100%)';
-  return clearGrad;
-}
-
-// Ícone de clima: usa o ícone oficial da Google Weather API quando disponível
-// (iconUri), ou desenha um ícone "blob" flat como alternativa quando estiver
-// usando o Open-Meteo (sem chave configurada).
-function WeatherIcon({code,isDay,iconUri,size=56}){
-  if(iconUri){
-    return <img src={`${iconUri}.svg`} alt="" width={size} height={size} style={{display:'block'}}/>;
-  }
-
-  const day=isDay===1||isDay===undefined;
-  const sunGrad=<defs><radialGradient id="sunG" cx="35%" cy="30%" r="75%"><stop offset="0%" stopColor="#ffe98a"/><stop offset="100%" stopColor="#ffb703"/></radialGradient>
-    <linearGradient id="cloudG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--surface)"/><stop offset="100%" stopColor="#dfe6ee"/></linearGradient>
-    <linearGradient id="moonG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#8bb8ff"/><stop offset="100%" stopColor="#3d63c9"/></linearGradient>
-    <linearGradient id="darkCloudG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c3ccd6"/><stop offset="100%" stopColor="#9aa5b3"/></linearGradient></defs>;
-
-  const Sun=(<circle cx="38" cy="34" r="20" fill="url(#sunG)"/>);
-  const Moon=(<path d="M46 20a18 18 0 1 0 12 30 14 14 0 0 1-12-30z" fill="url(#moonG)"/>);
-  const Cloud=(cx=32,cy=44,scale=1,grad='cloudG')=>(
-    <g transform={`translate(${cx-32} ${cy-44}) scale(${scale})`}>
-      <ellipse cx="30" cy="46" rx="20" ry="14" fill={`url(#${grad})`}/>
-      <ellipse cx="46" cy="42" rx="15" ry="12" fill={`url(#${grad})`}/>
-      <ellipse cx="18" cy="42" rx="12" ry="10" fill={`url(#${grad})`}/>
-    </g>
-  );
-  const Drops=(<g stroke="#4f8ef7" strokeWidth="3" strokeLinecap="round">
-    <line x1="24" y1="60" x2="20" y2="70"/><line x1="38" y1="62" x2="34" y2="74"/><line x1="52" y1="60" x2="48" y2="70"/>
-  </g>);
-  const Bolt=(<path d="M40 58 L30 72 L38 72 L34 84 L48 66 L40 66 Z" fill="#ffd43b"/>);
-  const SnowDots=(<g fill="#eaf4ff"><circle cx="24" cy="66" r="2.5"/><circle cx="38" cy="72" r="2.5"/><circle cx="52" cy="66" r="2.5"/></g>);
-
-  let body;
-  if(code===0){ body=day?Sun:Moon; }
-  else if([1,2].includes(code)){ body=<>{day?Sun:Moon}{Cloud(38,46,0.9,day?'cloudG':'darkCloudG')}</>; }
-  else if(code===3){ body=<>{Cloud(30,42,1.15,'darkCloudG')}</>; }
-  else if([45,48].includes(code)){ body=<>{Cloud(30,44,1.1,'darkCloudG')}<g stroke="#b7c1cc" strokeWidth="3" strokeLinecap="round"><line x1="14" y1="66" x2="50" y2="66"/><line x1="18" y1="74" x2="54" y2="74"/></g></>; }
-  else if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)){ body=<>{Cloud(32,40,1.05,'darkCloudG')}{Drops}</>; }
-  else if([71,73,75,77,85,86].includes(code)){ body=<>{Cloud(32,40,1.05,'cloudG')}{SnowDots}</>; }
-  else if([95,96,99].includes(code)){ body=<>{Cloud(32,40,1.05,'darkCloudG')}{Bolt}</>; }
-  else { body=day?Sun:Moon; }
-
-  return(
-    <svg width={size} height={size} viewBox="0 0 84 84">
-      {sunGrad}
-      {body}
-    </svg>
-  );
-}
 
 function uvInfo(uv){
   if(uv==null) return null;
-  if(uv>=11) return {label:'Extremo',color:'#7a1fa2'};
-  if(uv>=8) return {label:'Muito alto',color:'#d62828'};
-  if(uv>=6) return {label:'Alto',color:'#e85d04'};
-  if(uv>=3) return {label:'Moderado',color:'#f9c74f'};
-  return {label:'Baixo',color:'#588157'};
+  if(uv>=11) return {label:'Extremo',color:'var(--danger)'};
+  if(uv>=8) return {label:'Muito alto',color:'var(--danger)'};
+  if(uv>=6) return {label:'Alto',color:'var(--warning)'};
+  if(uv>=3) return {label:'Moderado',color:'var(--warning)'};
+  return {label:'Baixo',color:'var(--success)'};
 }
 
 // Quadro de horários totalmente personalizável: linhas livres (rótulo editável,
@@ -1823,7 +1736,7 @@ function FocusTimer(){
   function reset(){setRunning(false);clearInterval(intervalRef.current);setMethod(null);}
   function fmt(s){const m=Math.floor(s/60).toString().padStart(2,'0');const ss=(s%60).toString().padStart(2,'0');return `${m}:${ss}`;}
 
-  const cardStyle={margin:'18px 16px 0',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:18,boxShadow:'0 2px 12px rgba(0,0,0,0.05)'};
+  const cardStyle={margin:'18px 16px 0',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:18,boxShadow:'var(--shadow-sm)'};
 
   if(!method) return(
     <div style={cardStyle}>
@@ -1846,7 +1759,7 @@ function FocusTimer(){
       <div style={{fontSize:13,fontWeight:700,color:'var(--muted2)',marginBottom:10}}><span style={{display:'inline-flex',verticalAlign:'-0.2em',marginRight:6}}><Glyph name={STUDY_METHOD_ICONS[method.id]} size={16}/></span>{method.name} — {phase==='focus'?'Foco':'Pausa'}{cycles>0?` · ciclo ${cycles+1}`:''}</div>
       <div style={{
         width:170,height:170,margin:'0 auto 16px',borderRadius:'50%',
-        background:phase==='focus'?'radial-gradient(circle,#eaf7ea 0%,#dff0dc 100%)':'radial-gradient(circle,#eaf3fb 0%,#dcebf8 100%)',
+        background:phase==='focus'?'var(--accent-soft)':'var(--info-soft)',
         border:`3px solid ${phase==='focus'?'var(--accent)':'var(--info)'}`,
         display:'flex',alignItems:'center',justifyContent:'center'
       }}>
@@ -1916,7 +1829,7 @@ function TimetableScreen({onHome,userId}){
 
   return(
     <div style={{minHeight:'100vh',background:T.page,padding:'16px 10px 100px'}}>
-      <div style={{maxWidth:900,margin:'0 auto',background:T.outerCard,borderRadius:24,padding:18,boxShadow:'0 2px 18px rgba(0,0,0,0.06)'}}>
+      <div style={{maxWidth:900,margin:'0 auto',background:T.outerCard,borderRadius:24,padding:18,boxShadow:'var(--shadow-sm)'}}>
         <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
           <button style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:T.ink}} onClick={onHome}>←</button>
           <div style={{fontFamily:"'Caveat',cursive",fontSize:30,fontWeight:700,color:T.ink}}>Grade de Horários</div>
@@ -1928,7 +1841,7 @@ function TimetableScreen({onHome,userId}){
               <tr>
                 <th style={{padding:'10px 8px',background:T.sage,color:T.ink,textAlign:'left',minWidth:140}}>Horário</th>
                 {WEEK_DAYS.map(d=>(
-                  <th key={d} style={{padding:'10px 4px',background:T.sage,color:T.ink,borderLeft:'1px solid rgba(255,255,255,0.5)',minWidth:90}}>{FullDayName(d)}</th>
+                  <th key={d} style={{padding:'10px 4px',background:T.sage,color:T.ink,borderLeft:'1px solid var(--border)',minWidth:90}}>{FullDayName(d)}</th>
                 ))}
                 <th style={{background:T.sage,width:90}}></th>
               </tr>
@@ -1967,7 +1880,7 @@ function TimetableScreen({onHome,userId}){
           + Adicionar linha de horário
         </button>
 
-        <div style={{fontSize:11,color:T.muted,marginTop:10,lineHeight:1.6}}>
+        <div style={{fontSize:12,color:T.muted,marginTop:10,lineHeight:1.6}}>
           Cada linha e cada célula são livres — escreva o rótulo do horário do jeito que quiser (ex: "08:00 - 09:40", "Manhã", "Bloco 1")
           e o nome da disciplina em cada dia. Use os botões ↑ ↓ para reordenar e ✕ para remover uma linha.<br/>
           Dica: se o rótulo começar com um horário no formato <b>HH:MM</b>, o balão de Estudos na tela inicial usa isso para calcular a próxima aula automaticamente.
@@ -2087,7 +2000,7 @@ function BudgetChartPreview(){
                   <div title={`Gasto: R$ ${r.gasto.toFixed(2)}`} style={{width:18,height:Math.max(2,gasH),background:over?'var(--warning)':T.sageDark,borderRadius:'4px 4px 0 0'}}/>
                 </div>
                 <div style={{fontSize:12,fontWeight:600,color:T.ink,textAlign:'center',marginTop:6,maxWidth:70,overflowWrap:'break-word'}}>{r.categoria}</div>
-                <div style={{fontSize:11,color:T.muted,textAlign:'center'}}>{r.profileName}</div>
+                <div style={{fontSize:12,color:T.muted,textAlign:'center'}}>{r.profileName}</div>
               </div>
             );
           })}
@@ -2587,7 +2500,12 @@ function AppInner(){
     </div>
   );
   else{
-    const onLogout=async()=>{await signOut();setScreen('login');};
+    const onLogout=async()=>{
+      await signOut();
+      // As finanças ficam em cache neste aparelho: apaga ao sair para a próxima pessoa não ver.
+      try{localStorage.removeItem('cf_state');localStorage.removeItem('cf_state_uid');sessionStorage.removeItem('cf_cloud_synced');}catch(e){}
+      setScreen('login');
+    };
     const onOpenProfile=()=>setScreen('profile');
 
     if(screen==='profile') screenContent=(
@@ -2600,13 +2518,13 @@ function AppInner(){
     );
     else if(screen==='timetable') screenContent=<TimetableScreen onHome={()=>setScreen('home')} userId={userId}/>;
     else if(screen==='nutrition') screenContent=(
-      <MealPlanApp key="plan" userId={userId} initialTab="plan" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
+      <MealPlanApp userId={userId} initialTab="plan" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
     );
     else if(screen==='shopping') screenContent=(
-      <MealPlanApp key="shop" userId={userId} initialTab="shop" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
+      <MealPlanApp userId={userId} initialTab="shop" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
     );
     else if(screen==='treinos') screenContent=(
-      <MealPlanApp key="workout" userId={userId} initialTab="workout" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
+      <MealPlanApp userId={userId} initialTab="workout" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
     );
     else if(screen==='estudos') screenContent=<StudyTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
     else if(screen==='financas') screenContent=<FinanceTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
@@ -2638,7 +2556,7 @@ class ErrorBoundary extends Component {
     if(this.state.hasError){
       return(
         <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center',padding:24,fontFamily:'system-ui,sans-serif'}}>
-          <div style={{maxWidth:380,textAlign:'center',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:'32px 24px',boxShadow:'0 4px 20px rgba(0,0,0,0.08)'}}>
+          <div style={{maxWidth:380,textAlign:'center',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:'32px 24px',boxShadow:'var(--shadow-md)'}}>
             
             <div style={{fontSize:18,fontWeight:800,color:'var(--text)',marginBottom:8}}>Algo deu errado</div>
             <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:22}}>Essa tela travou de forma inesperada. Seus dados já salvos na nuvem não foram afetados — geralmente um recarregamento resolve.</div>
