@@ -2,8 +2,8 @@
 // Novidades: 🛒 Lista de compras | 🔄 Troca de tipo de treino por dia
 import { useState, useMemo, useRef, useEffect, Component } from "react";
 import { Icon, Glyph, BottomNav, NAV_SCREENS } from "./ui";
-import { LockScreen, PrivacyCover, LockSettings } from "./Privacy";
-import { getPrivacy, clearLock } from "./privacy";
+import { LockScreen, PrivacyCover, LockSettings } from "./LockScreen";
+import { getPrivacy, clearLock } from "./privacySettings";
 import { supabase, signUp, signIn, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 
 // Tema compartilhado (cores + fontes), o mesmo arquivo usado pelas páginas em

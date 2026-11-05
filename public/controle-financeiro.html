@@ -1042,6 +1042,9 @@ async function loadFinanceFromCloud() {
     cloudReady = true;
     bootDone();
 
+    // Conta nova (nada na nuvem ainda): o primeiro perfil leva o nome da conta
+    if (!row?.data) nameFirstProfileFromAccount();
+
     // Gastos que um líder lançou para você (aparecem como fatura "Cartão de ...")
     await loadFamilyCharges();
 
@@ -1073,6 +1076,22 @@ async function loadFinanceFromCloud() {
 // ══════════════════════════════════════════════════════
 function escHtml(v) {
   return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Conta nova: troca "Perfil 1" pelo primeiro nome usado no cadastro (o mesmo da saudação do Início).
+// Só mexe se a pessoa ainda tem um único perfil com o nome padrão; depois disso o nome é dela.
+function nameFirstProfileFromAccount() {
+  const p0 = state.profiles && state.profiles[0];
+  const cur = p0 && (typeof p0 === 'object' ? p0.name : p0);
+  if (state.profiles.length !== 1 || cur !== 'Perfil 1') return;
+  const m = (currentUser && currentUser.user_metadata) || {};
+  const first = String(m.name || m.full_name || m.display_name || '').trim().split(/\s+/)[0];
+  if (!first) return;
+  if (typeof p0 === 'object') p0.name = first; else state.profiles[0] = { name: first, linkedUserId: null };
+  saveState();
+  renderProfilesManager();
+  const act = document.querySelector('.tab.active');
+  if (act) renderActive(act.id.replace('tab-', ''));
 }
 
 let familyMembers = [];            // líder: [{user_id, email}] (sem o líder)
@@ -1298,10 +1317,36 @@ function renderMemberCharges(uid) {
   head.innerHTML = `<button class="btn btn-ghost btn-sm" id="fam-back">← Todos</button><span style="flex:1;min-width:0;overflow-wrap:anywhere;font-weight:600">${escHtml(m.email)}</span><span class="val-cell" style="font-weight:700">${fmt(total)}</span>`;
   body.appendChild(head);
   head.querySelector('#fam-back').onclick = () => { __famRender = renderFamilyOverview; renderFamilyOverview(); };
-  const hint = document.createElement('div');
-  hint.style.cssText = 'padding:10px 18px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border2)';
-  hint.textContent = 'Para lançar mais: na aba Faturas, adicione o gasto e escolha o perfil atrelado a esta pessoa.';
-  body.appendChild(hint);
+  // Atrelar esta pessoa a um dos perfis (é pelo perfil que o gasto chega até ela)
+  const linkBox = document.createElement('div');
+  linkBox.style.cssText = 'padding:12px 18px;border-bottom:1px solid var(--border2);display:flex;flex-direction:column;gap:6px';
+  const linkLab = document.createElement('label');
+  linkLab.textContent = 'Perfil desta pessoa';
+  linkLab.style.cssText = 'font-size:12px;font-weight:700;color:var(--muted)';
+  const linkSel = document.createElement('select');
+  linkSel.setAttribute('aria-label', 'Perfil atrelado a ' + (m.email || 'membro'));
+  linkSel.style.cssText = 'min-height:44px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px;width:100%';
+  const none = document.createElement('option'); none.value = ''; none.textContent = 'Escolha um perfil…'; linkSel.appendChild(none);
+  state.profiles.forEach((p, i) => {
+    const o = document.createElement('option'); o.value = String(i); o.textContent = p.name || ('Perfil ' + (i + 1)); linkSel.appendChild(o);
+  });
+  const curIdx = state.profiles.findIndex(p => p.linkedUserId === uid);
+  linkSel.value = curIdx >= 0 ? String(curIdx) : '';
+  linkSel.onchange = () => {
+    state.profiles.forEach(p => { if (p.linkedUserId === uid) p.linkedUserId = null; });
+    if (linkSel.value !== '') state.profiles[Number(linkSel.value)].linkedUserId = uid;
+    saveState();
+    const act = document.querySelector('.tab.active'); if (act) renderActive(act.id.replace('tab-', ''));
+    renderProfilesManager();
+    __famRender = () => renderMemberCharges(uid); __famRender();
+  };
+  const linkHint = document.createElement('div');
+  linkHint.style.cssText = 'font-size:13px;color:var(--muted)';
+  linkHint.textContent = curIdx >= 0
+    ? 'Na aba Faturas, todo gasto lançado no perfil "' + (state.profiles[curIdx].name || '') + '" vai para esta pessoa.'
+    : 'Escolha um perfil. Depois, na aba Faturas, todo gasto lançado nesse perfil vai para esta pessoa.';
+  linkBox.append(linkLab, linkSel, linkHint);
+  body.appendChild(linkBox);
   if (!list.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'Nenhum gasto lançado ainda.'; body.appendChild(e); return; }
   list.forEach(c => {
     const sub = [c.date ? formatDateBR(c.date) : '', c.category, c.fatura_name].filter(Boolean).map(escHtml).join(' · ');
@@ -1446,11 +1491,8 @@ if (state.profiles.length === 5) {
     else if (p.profileIdx === 3) p.profileIdx = 4;
   });
 }
-if (!state._isFreshDefault) {
-  while (state.profiles.length < 6) {
-    state.profiles.push('Perfil ' + (state.profiles.length + 1));
-  }
-}
+// (Antes, aqui a lista era completada até 6 perfis na segunda abertura. Conta nova agora
+//  fica com 1 perfil; os outros a pessoa adiciona em "Gerenciar perfis".)
 delete state._isFreshDefault; // já cumpriu o papel, não precisa mais ficar salvo
 // activeProfiles is now just an alias for profiles.length (kept for compatibility)
 state.activeProfiles = state.profiles.length;
