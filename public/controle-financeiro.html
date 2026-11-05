@@ -1130,6 +1130,19 @@ function desiredCharges() {
       });
     });
   });
+  // Pix lançados nos perfis atrelados a membros (source_id começa com "pix:")
+  (state.pixRows || []).forEach(p => {
+    if (p.profileIdx == null || !p.id) return;
+    const uid = (state.profiles[p.profileIdx] || {}).linkedUserId;
+    if (!uid || uid === currentUser.id || !memberIds.has(uid)) return;
+    const v = Math.round((parseFloat(p.value) || 0) * 100) / 100;
+    if (!(v > 0)) return;
+    out.set('pix:' + p.id, {
+      family_id: familyId, leader_id: currentUser.id, member_id: uid, source_id: 'pix:' + p.id,
+      leader_label: label, fatura_name: 'Pix', description: p.desc || '', category: p.category || null,
+      parcelas: '', value: v, date: iso(p.date)
+    });
+  });
   return out;
 }
 
@@ -1178,16 +1191,24 @@ function injectFamilyCharges(list) {
   state.faturas = (state.faturas || []).filter(f => !f.family);
   let target = state.profiles.findIndex(p => p.linkedUserId === (currentUser && currentUser.id));
   if (target < 0) target = 0; // sem perfil escolhido: entra no primeiro
-  const byLeader = {};
-  list.forEach(c => { (byLeader[c.leader_id] = byLeader[c.leader_id] || []).push(c); });
-  Object.keys(byLeader).forEach(lid => {
-    const cs = byLeader[lid];
-    state.faturas.push({
-      id: 'family-' + lid, family: true, name: 'Cartão de ' + (cs[0].leader_label || 'família'), fechamento: '', vencimento: '',
-      rows: cs.map(c => ({ id: 'fc-' + c.source_id, date: c.date || '', name: c.description || '', parcelas: c.parcelas || '',
-        value: Number(c.value) || 0, profileIdx: target, category: c.category || null, faturaOrigem: c.fatura_name || '', family: true }))
-    });
+  // Uma fatura somente leitura por líder e por cartão de origem; os Pix ficam num grupo à parte
+  const groups = {};
+  list.forEach(c => {
+    const isPix = String(c.source_id || '').indexOf('pix:') === 0;
+    const origin = isPix ? '\u0000pix' : (c.fatura_name || '');
+    const key = c.leader_id + '|' + origin;
+    (groups[key] = groups[key] || { lid: c.leader_id, label: c.leader_label || 'família', isPix, origin: isPix ? '' : (c.fatura_name || ''), rows: [] }).rows.push(c);
   });
+  Object.values(groups)
+    .sort((x, y) => (x.isPix - y.isPix) || x.origin.localeCompare(y.origin) || x.lid.localeCompare(y.lid))
+    .forEach((g, i) => {
+      state.faturas.push({
+        id: 'family-' + g.lid + '-' + i, family: true, kind: g.isPix ? 'pix' : 'cartao',
+        name: (g.isPix ? 'Pix' : (g.origin || 'Cartão')) + ' (' + g.label + ')', fechamento: '', vencimento: '',
+        rows: g.rows.map(c => ({ id: 'fc-' + c.source_id, date: c.date || '', name: c.description || (g.isPix ? 'Pix' : ''), parcelas: c.parcelas || '',
+          value: Number(c.value) || 0, profileIdx: target, category: c.category || null, family: true }))
+      });
+    });
   // cache local (a prévia do Início usa); não agenda gravação na nuvem
   try { localStorage.setItem('cf_state', JSON.stringify(state)); } catch (e) {}
 }
@@ -1207,7 +1228,7 @@ function buildFamilyFaturaCard(f) {
       <div class="card-title" style="display:flex;align-items:center;gap:8px">${ic('users', 18)}<span style="overflow-wrap:anywhere">${escHtml(f.name)}</span></div>
       <div class="card-total" id="total-${escHtml(f.id)}">${fmt(total)}</div>
     </div>
-    <div style="padding:8px 14px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border)">Gastos que o líder lançou para você. Já contam no seu saldo do mês. Só ele pode alterar.</div>
+    <div style="padding:8px 14px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border)">${f.kind === 'pix' ? 'Pix que o líder lançou para você' : 'Gastos que o líder lançou para você neste cartão'}. Já contam no seu saldo do mês. Só ele pode alterar.</div>
     ${rowsHtml || '<div class="empty">Nenhum gasto lançado para você.</div>'}`;
   return card;
 }
@@ -2227,38 +2248,20 @@ function renderProfilesManager() {
     const linkRow = document.createElement('div');
     linkRow.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;flex-wrap:wrap';
     const linkedUserId = state.profiles[idx].linkedUserId;
-    if (isLeader && familyMembers.length) {
-      // Líder: escolhe a quem os gastos deste perfil pertencem
-      const lab = document.createElement('label');
-      lab.textContent = 'Gastos deste perfil vão para:';
-      lab.style.cssText = 'color:var(--muted);font-weight:600';
-      const sel = document.createElement('select');
-      sel.setAttribute('aria-label', 'Atrelar o perfil ' + (state.profiles[idx].name || idx + 1) + ' a uma conta');
-      sel.style.cssText = 'min-height:44px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;max-width:100%';
-      const opts = [['', 'Só meus (ninguém)'], [currentUser.id, 'Minha conta'], ...familyMembers.map(m => [m.user_id, m.email || 'Membro'])];
-      if (linkedUserId && !opts.some(o => o[0] === linkedUserId)) opts.push([linkedUserId, 'Conta que saiu da família']);
-      opts.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sel.appendChild(o); });
-      sel.value = linkedUserId || '';
-      sel.onchange = () => {
-        const v = sel.value || null;
-        if (v === currentUser.id) state.profiles.forEach(p => { if (p.linkedUserId === currentUser.id) p.linkedUserId = null; });
-        state.profiles[idx].linkedUserId = v;
-        saveState();
-        renderProfilesManager();
-      };
-      linkRow.append(lab, sel);
-      if (linkedUserId && linkedUserId !== currentUser.id && familyMembers.some(m => m.user_id === linkedUserId)) {
+    if (isLeader) {
+      // Líder: só mostra para quem os gastos deste perfil estão indo (quem escolhe é "ver contas da família")
+      const mem = linkedUserId && familyMembers.find(m => m.user_id === linkedUserId);
+      if (mem) {
         let n = 0, sum = 0;
         state.faturas.forEach(f => { if (f.family) return; (f.rows || []).forEach(rw => { if (rw.profileIdx === idx && (parseFloat(rw.value) || 0) > 0) { n++; sum += parseFloat(rw.value) || 0; } }); });
+        (state.pixRows || []).forEach(px => { if (px.profileIdx === idx && (parseFloat(px.value) || 0) > 0) { n++; sum += parseFloat(px.value) || 0; } });
         const st = document.createElement('div');
-        st.style.cssText = 'flex-basis:100%;color:var(--accent2);font-weight:600';
-        st.innerHTML = `${ic('check', 14)} ${n} ${n === 1 ? 'gasto enviado' : 'gastos enviados'} (${escHtml(fmt(sum))}) para a conta dele`;
+        st.style.cssText = 'color:var(--accent2);font-weight:600;overflow-wrap:anywhere';
+        st.innerHTML = `${ic('check', 14)} Os gastos deste perfil vão para ${escHtml(mem.email || 'o membro')} · ${n} ${n === 1 ? 'gasto' : 'gastos'} (${escHtml(fmt(sum))})`;
         linkRow.appendChild(st);
       }
     } else if (linkedUserId && currentUser && linkedUserId === currentUser.id) {
-      linkRow.innerHTML = isLeader
-        ? `<span style="color:var(--accent2);font-weight:700">${ic('check')} Esta é a sua conta</span>`
-        : `<span style="color:var(--accent2);font-weight:700">${ic('check')} Os gastos que o líder lançar para você entram neste perfil</span>`;
+      linkRow.innerHTML = `<span style="color:var(--accent2);font-weight:700">${ic('check')} Os gastos que o líder lançar para você entram neste perfil</span>`;
     } else if (linkedUserId) {
       linkRow.innerHTML = `<span style="color:var(--muted)">Atrelado a outra conta</span>`;
       const unlinkBtn = document.createElement('button');
@@ -2269,11 +2272,11 @@ function renderProfilesManager() {
     } else {
       const linkBtn = document.createElement('button');
       linkBtn.className = 'btn btn-ghost btn-sm';
-      linkBtn.textContent = isLeader ? 'Esta é a minha conta' : 'Receber os gastos da família neste perfil';
+      linkBtn.textContent = 'Receber os gastos da família neste perfil';
       linkBtn.onclick = () => { linkMyAccountToProfile(idx); injectFamilyCharges(familyChargesCache); renderActive('resumo'); };
       linkRow.appendChild(linkBtn);
     }
-    card.appendChild(linkRow);
+    if (linkRow.childNodes.length) card.appendChild(linkRow);
 
     // ── Categories editor ──
     const catSection = document.createElement('div');
