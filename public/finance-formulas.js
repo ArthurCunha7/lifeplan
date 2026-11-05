@@ -32,7 +32,9 @@
     const profiles = state.profiles || [];
     profiles.forEach((p, idx) => {
       if (state.entradasProfiles && state.entradasProfiles[idx] === false) return;
-      const rows = cfGetAllRowsByProfile(state, idx);
+      // Gastos lançados pelo líder do modo família no cartão dele (r.family) são gasto REAL
+      // de quem recebe: nunca viram "entrada a receber", mesmo com o perfil marcado em Entradas.
+      const rows = cfGetAllRowsByProfile(state, idx).filter(r => !r.family);
       const tg = rows.reduce((s, r) => s + (parseFloat(r.value) || 0), 0);
       const pays = (state.payments || []).filter(pay => pay.profileIdx === idx);
       const tp = pays.reduce((s, pay) => s + (parseFloat(pay.value) || 0), 0);

@@ -2,7 +2,9 @@
 // Novidades: 🛒 Lista de compras | 🔄 Troca de tipo de treino por dia
 import { useState, useMemo, useRef, useEffect, Component } from "react";
 import { Icon, Glyph, BottomNav, NAV_SCREENS } from "./ui";
-import { supabase, signUp, signIn, signOut, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
+import { LockScreen, PrivacyCover, LockSettings } from "./Privacy";
+import { getPrivacy, clearLock } from "./privacy";
+import { supabase, signUp, signIn, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 
 // Tema compartilhado (cores + fontes), o mesmo arquivo usado pelas páginas em
 // iframe. Se preferir, mova esse <link> para o index.html para evitar um
@@ -294,7 +296,143 @@ function RegisterPage({onSwitch,onLogin}){
 }
 
 // ── PERFIL ────────────────────────────────────────────────────────────────────
-function ProfilePage({userId,initialProfile,onSave,onBack,onLogout}){
+// ── PRIVACIDADE E DADOS (LGPD): exportar e excluir a conta ───────────────────
+const EXPORT_TABLES=[
+  {key:'perfil',table:'profiles',col:'id'},
+  {key:'plano_semanal',table:'user_plans',col:'user_id'},
+  {key:'treino_e_dieta',table:'app_data',col:'user_id'},
+  {key:'medidas_corporais',table:'body_metrics',col:'user_id'},
+  {key:'estudos',table:'study_data',col:'user_id'},
+  {key:'financas',table:'finance_data',col:'user_id'},
+];
+const PHOTO_BUCKETS=['progress-photos','receipts'];
+
+async function listPhotoFiles(userId){
+  const out=[];
+  for(const bucket of PHOTO_BUCKETS){
+    const {data,error}=await supabase.storage.from(bucket).list(userId,{limit:1000});
+    if(error){ if(/not found/i.test(error.message||'')) continue; throw new Error('Fotos ('+bucket+'): '+error.message); }
+    (data||[]).filter(f=>f.name&&f.name!=='.emptyFolderPlaceholder').forEach(f=>out.push({bucket,path:userId+'/'+f.name}));
+  }
+  return out;
+}
+
+async function buildExport(userId){
+  const result={exportado_em:new Date().toISOString(),aviso:'Estes são os dados da sua conta no LifePlan. Guarde este arquivo em local seguro: ele contém informações pessoais.'};
+  try{const {data:{user}}=await supabase.auth.getUser();result.conta={id:userId,email:user?.email||null,criada_em:user?.created_at||null};}catch(e){result.conta={id:userId};}
+  for(const t of EXPORT_TABLES){
+    const {data,error}=await supabase.from(t.table).select('*').eq(t.col,userId);
+    if(error) result[t.key]={erro:error.message};
+    else result[t.key]=t.key==='medidas_corporais'?(data||[]):(data&&data[0]||null);
+  }
+  try{
+    const {data:gastos,error:gErr}=await supabase.from('family_charges').select('*').or('member_id.eq.'+userId+',leader_id.eq.'+userId);
+    result.gastos_no_cartao_da_familia=gErr?{erro:gErr.message}:(gastos||[]);
+  }catch(e){result.gastos_no_cartao_da_familia={erro:String(e.message||e)};}
+  try{
+    const {data:ms}=await supabase.from('family_members').select('family_id').eq('user_id',userId);
+    const ids=(ms||[]).map(m=>m.family_id);
+    if(ids.length){
+      const {data:fams}=await supabase.from('families').select('id,owner_id').in('id',ids);
+      result.modo_familia=(fams||[]).map(f=>({familia:f.id,papel:f.owner_id===userId?'líder':'membro'}));
+    } else result.modo_familia=[];
+  }catch(e){result.modo_familia={erro:String(e.message||e)};}
+  try{
+    const files=await listPhotoFiles(userId);
+    result.fotos={observacao:'Os arquivos de imagem não vão dentro deste JSON; aqui estão os nomes. Salve as fotos que quiser antes de excluir a conta.',arquivos:files.map(f=>f.bucket+'/'+f.path)};
+  }catch(e){result.fotos={erro:String(e.message||e)};}
+  return result;
+}
+
+function PrivacyCard({userId,onAccountDeleted}){
+  const [open,setOpen]=useState(false),[typed,setTyped]=useState(''),[busy,setBusy]=useState(''),[err,setErr]=useState('');
+  const [leader,setLeader]=useState(false),[exportMsg,setExportMsg]=useState('');
+  const confirmed=typed.trim().toUpperCase()==='EXCLUIR';
+
+  async function doExport(){
+    setErr('');setExportMsg('');setBusy('export');
+    try{
+      const obj=await buildExport(userId);
+      const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download='lifeplan-meus-dados-'+new Date().toISOString().slice(0,10)+'.json';
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      setExportMsg('Arquivo gerado. Confira a pasta de downloads.');
+    }catch(e){setErr('Não foi possível gerar o arquivo: '+(e.message||e));}
+    finally{setBusy('');}
+  }
+
+  async function openDelete(){
+    setTyped('');setErr('');setExportMsg('');setOpen(true);
+    try{
+      const {data}=await supabase.from('families').select('id').eq('owner_id',userId);
+      setLeader(!!(data&&data.length));
+    }catch(e){setLeader(false);}
+  }
+
+  async function doDelete(){
+    if(!confirmed||busy) return;
+    setErr('');setBusy('delete');
+    try{
+      // 1) fotos (o banco não consegue apagar arquivos do Storage por SQL)
+      const files=await listPhotoFiles(userId);
+      for(const bucket of PHOTO_BUCKETS){
+        const paths=files.filter(f=>f.bucket===bucket).map(f=>f.path);
+        for(let i=0;i<paths.length;i+=100){
+          const {error}=await supabase.storage.from(bucket).remove(paths.slice(i,i+100));
+          if(error) throw new Error('Não foi possível apagar as fotos: '+error.message);
+        }
+      }
+      // 2) dados e login
+      const {error}=await supabase.rpc('delete_my_account',{confirmacao:'EXCLUIR'});
+      if(error){
+        if(/could not find the function|does not exist/i.test(error.message||'')) throw new Error('A exclusão ainda não foi ativada no banco de dados. Avise o administrador do app.');
+        throw new Error(error.message);
+      }
+      alert('Sua conta e todos os seus dados foram excluídos.');
+      await onAccountDeleted();
+    }catch(e){setErr(e.message||String(e));setBusy('');}
+  }
+
+  const btnGhost={...S.btn('var(--surface2)'),color:'var(--text)',border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',gap:8,minHeight:48};
+  return(
+    <div style={{...S.card,display:'flex',flexDirection:'column',gap:12}}>
+      <div style={{fontSize:12,fontWeight:700,color:'var(--muted)',letterSpacing:.8}}>PRIVACIDADE E DADOS</div>
+      <div style={{fontSize:14,color:'var(--text-2)',lineHeight:1.5}}>Seus dados são seus. Você pode baixar uma cópia de tudo o que está guardado na sua conta ou excluí-la a qualquer momento.</div>
+      <button onClick={doExport} disabled={!!busy} style={{...btnGhost,opacity:busy?.6:1}}><Icon name="download" size={18}/>{busy==='export'?'Gerando arquivo…':'Baixar meus dados'}</button>
+      {exportMsg&&<div role="status" style={{fontSize:13,color:'var(--success)'}}>{exportMsg}</div>}
+      {!open&&err&&<div role="alert" style={{fontSize:13,color:'var(--warning)'}}>{err}</div>}
+      <button onClick={openDelete} disabled={!!busy} style={{...btnGhost,color:'var(--danger)'}}><Icon name="trash" size={18}/>Excluir minha conta</button>
+      {open&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(16,22,18,0.55)',zIndex:400,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={()=>!busy&&setOpen(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Excluir minha conta" onClick={e=>e.stopPropagation()} style={{background:'var(--surface)',borderRadius:'20px 20px 0 0',width:'100%',maxWidth:520,padding:20,maxHeight:'92vh',overflowY:'auto',boxSizing:'border-box'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+              <span style={{color:'var(--danger)',display:'flex'}}><Icon name="trash" size={22}/></span>
+              <div style={{fontFamily:'var(--font-display)',fontSize:22,fontWeight:500,color:'var(--text)'}}>Excluir minha conta</div>
+            </div>
+            <div style={{fontSize:14,color:'var(--text-2)',lineHeight:1.55,marginBottom:12}}>
+              Isto apaga <strong>para sempre</strong> seu login e tudo o que você registrou: perfil, plano e treinos, medidas e fotos de progresso, estudos, finanças e fotos de recibos. Não dá para desfazer.
+            </div>
+            {leader&&<div style={{background:'var(--warning-soft)',color:'var(--warning)',border:'1px solid var(--warning)',borderRadius:12,padding:'10px 12px',fontSize:13,marginBottom:12,lineHeight:1.5}}>Você é o líder de um modo família. Ao excluir a conta, o modo família é desfeito. Os outros membros continuam com os próprios dados e podem criar ou entrar em outro modo família.</div>}
+            <button onClick={doExport} disabled={!!busy} style={{...btnGhost,marginBottom:6,opacity:busy?.6:1}}><Icon name="download" size={18}/>{busy==='export'?'Gerando arquivo…':'Baixar meus dados antes'}</button>
+            {exportMsg&&<div role="status" style={{fontSize:13,color:'var(--success)',marginBottom:6}}>{exportMsg}</div>}
+            <label htmlFor="del-confirm" style={{...S.label,marginTop:12}}>PARA CONFIRMAR, DIGITE EXCLUIR</label>
+            <input id="del-confirm" style={S.input} value={typed} onChange={e=>setTyped(e.target.value)} autoComplete="off" autoCapitalize="characters" placeholder="EXCLUIR" disabled={!!busy}/>
+            {err&&<div role="alert" style={{fontSize:13,color:'var(--warning)',marginTop:10,lineHeight:1.5}}>{err}</div>}
+            <div style={{display:'flex',gap:10,marginTop:16}}>
+              <button onClick={()=>setOpen(false)} disabled={busy==='delete'} style={{...btnGhost,flex:1}}>Cancelar</button>
+              <button onClick={doDelete} disabled={!confirmed||!!busy} style={{...S.btn('var(--danger)'),flex:1,minHeight:48,opacity:(!confirmed||busy)?.45:1,cursor:(!confirmed||busy)?'not-allowed':'pointer'}}>{busy==='delete'?'Excluindo…':'Excluir tudo'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProfilePage({userId,initialProfile,onSave,onBack,onLogout,onAccountDeleted,onLockNow,onLockWipe}){
   const [form,setForm]=useState(initialProfile||{weight:'',height:'',age:'',sex:'M',activity:'moderado',goal:'manter'});
   const [loading,setLoading]=useState(false),[done,setDone]=useState(false);
 
@@ -386,6 +524,8 @@ function ProfilePage({userId,initialProfile,onSave,onBack,onLogout}){
           </button>
         )}
       </div>
+      {onLockNow&&<LockSettings userId={userId} onLockNow={onLockNow} onWipe={onLockWipe}/>}
+      {onAccountDeleted&&<PrivacyCard userId={userId} onAccountDeleted={onAccountDeleted}/>}
     </div>
   );
 }
@@ -2087,7 +2227,8 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   const [newTime,setNewTime]=useState('');
   const [planPreview,setPlanPreview]=useState(null);
   const [shoppingCount,setShoppingCount]=useState(null);
-  const [saldoVisible,setSaldoVisible]=useState(false);
+  const [saldoVisible,setSaldoVisible]=useState(()=>!getPrivacy().hideValues);
+  useEffect(()=>{const h=()=>setSaldoVisible(false);window.addEventListener('lifeplan:lock',h);return()=>window.removeEventListener('lifeplan:lock',h);},[]);
 
   const [workoutLog,setWorkoutLog]=useState({});
   const [workoutLogLoaded,setWorkoutLogLoaded]=useState(false);
@@ -2446,6 +2587,46 @@ function AppInner(){
   const screenRef=useRef(screen);
   screenRef.current=screen;
 
+  // ── Bloqueio do app (PIN / biometria) ───────────────────────────────────────
+  // Ao abrir o app já nasce bloqueado (se o bloqueio estiver ligado). Ao voltar de
+  // segundo plano, bloqueia se passou o tempo escolhido. Enquanto o app está em
+  // segundo plano, uma capa esconde o conteúdo da visão de apps recentes.
+  const [locked,setLocked]=useState(()=>getPrivacy().lockEnabled);
+  const [covered,setCovered]=useState(false);
+  const hiddenAtRef=useRef(0);
+  const lockNow=()=>{
+    setLocked(true);
+    window.dispatchEvent(new Event('lifeplan:lock'));
+    document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage({lifeplanLock:true},window.location.origin);}catch{}});
+  };
+  const lockNowRef=useRef(lockNow);
+  lockNowRef.current=lockNow;
+  const wipeLock=()=>{
+    // errou o PIN demais, ou esqueceu: sai desta conta neste aparelho e pede a senha
+    clearLock();setLocked(false);setCovered(false);
+    supabase.auth.signOut({scope:'local'}).catch(()=>{});
+    try{localStorage.removeItem('cf_state');localStorage.removeItem('cf_state_uid');sessionStorage.removeItem('cf_cloud_synced');}catch{}
+    setScreen('login');
+  };
+  useEffect(()=>{
+    const onVis=()=>{
+      const pv=getPrivacy();
+      if(!pv.lockEnabled||!userIdRef.current) return;
+      if(document.visibilityState==='hidden'){
+        hiddenAtRef.current=Date.now();
+        setCovered(true);
+        if(pv.lockAfter===0) lockNowRef.current();
+      }else{
+        const away=hiddenAtRef.current?Date.now()-hiddenAtRef.current:0;
+        if(hiddenAtRef.current&&away>=pv.lockAfter*1000) lockNowRef.current();
+        hiddenAtRef.current=0;
+        setCovered(false);
+      }
+    };
+    document.addEventListener('visibilitychange',onVis);
+    return()=>document.removeEventListener('visibilitychange',onVis);
+  },[]);
+
   // Sempre que a tela muda para uma das "retomáveis", lembra qual é —
   // assim um F5 dentro de qualquer aba continua na mesma aba, em vez de
   // voltar pra Início.
@@ -2460,7 +2641,7 @@ function AppInner(){
         const saved=sessionStorage.getItem('lifeplan_screen');
         setScreen(saved&&RESUMABLE_SCREENS.includes(saved)?saved:'home');
       }
-      else setScreen('login');
+      else{setLocked(false);setScreen('login');}
     }).catch(()=>{
       // Se a checagem falhar (rede instável, etc.), não deixa a tela de
       // carregamento travada pra sempre — manda pro login, que tenta de
@@ -2486,6 +2667,7 @@ function AppInner(){
       }else{
         userIdRef.current=null;
         setUserId(null);
+        setLocked(false);
         setScreen('login');
         sessionStorage.removeItem('lifeplan_screen');
       }
@@ -2501,9 +2683,18 @@ function AppInner(){
   );
   else{
     const onLogout=async()=>{
-      await signOut();
+      // scope 'local': sai só neste aparelho. O padrão do Supabase (global) deslogaria a conta em TODOS os dispositivos.
+      try{await supabase.auth.signOut({scope:'local'});}catch(e){console.error(e);}
+      clearLock();setLocked(false); // o PIN é de quem estava logado: sair apaga o PIN deste aparelho
       // As finanças ficam em cache neste aparelho: apaga ao sair para a próxima pessoa não ver.
       try{localStorage.removeItem('cf_state');localStorage.removeItem('cf_state_uid');sessionStorage.removeItem('cf_cloud_synced');}catch(e){}
+      setScreen('login');
+    };
+    const onAccountDeleted=async()=>{
+      // O login já não existe mais: só encerra a sessão local e apaga tudo o que ficou neste aparelho.
+      try{await supabase.auth.signOut({scope:'local'});}catch(e){}
+      try{const th=localStorage.getItem('lifeplan_theme');localStorage.clear();sessionStorage.clear();if(th)localStorage.setItem('lifeplan_theme',th);}catch(e){}
+      setLocked(false);
       setScreen('login');
     };
     const onOpenProfile=()=>setScreen('profile');
@@ -2511,7 +2702,7 @@ function AppInner(){
     if(screen==='profile') screenContent=(
       <ProfilePage userId={userId} initialProfile={profile}
         onSave={(newPlan,newProfile)=>{setProfile(newProfile);setScreen('home');}}
-        onBack={()=>setScreen('home')} onLogout={onLogout}/>
+        onBack={()=>setScreen('home')} onLogout={onLogout} onAccountDeleted={onAccountDeleted} onLockNow={lockNow} onLockWipe={wipeLock}/>
     );
     else if(screen==='home') screenContent=(
       <HomeDashboard userId={userId} onNavigate={setScreen} onOpenProfile={onOpenProfile} onLogout={onLogout} onOpenTimetable={()=>setScreen('timetable')}/>
@@ -2534,13 +2725,19 @@ function AppInner(){
     else screenContent=<LoginPage onSwitch={()=>setScreen('register')} onLogin={()=>setScreen('home')}/>;
   }
 
+  const showLock=!!userId&&(locked||covered);
   // Barra de navegação única (Início, Nutrição, Treino, Estudos, Finanças)
   // em todas as telas principais. O botão de tema fica no topo do Início e
   // em Perfil; ele avisa os iframes via postMessage (setDarkMode).
   return(
     <>
-      {screenContent}
-      {userId&&NAV_SCREENS.includes(screen)&&<BottomNav screen={screen} onNavigate={setScreen}/>}
+      <div style={{display:'contents'}} inert={showLock?'':undefined}>
+        {screenContent}
+        {userId&&NAV_SCREENS.includes(screen)&&<BottomNav screen={screen} onNavigate={setScreen}/>}
+      </div>
+      {showLock&&(locked
+        ?<LockScreen onUnlock={()=>{setLocked(false);setCovered(false);}} onForgot={wipeLock} onWipe={()=>{wipeLock();setTimeout(()=>alert('Muitos erros de PIN. Por segurança você foi desconectado deste aparelho. Entre de novo com a sua senha.'),50);}}/>
+        :<PrivacyCover/>)}
     </>
   );
 }

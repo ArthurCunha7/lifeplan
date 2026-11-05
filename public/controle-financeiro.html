@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="/lifeplan-theme.css">
 <style>
   html.cf-boot body { visibility: hidden; }
+  /* Valores escondidos: campos numéricos ficam borrados até a pessoa tocar para editar. */
+  html.cf-mask input[type="number"]:not(:focus) { color: transparent !important; text-shadow: 0 0 9px var(--text); -webkit-user-select: none; user-select: none; }
   /* Tokens vêm de /lifeplan-theme.css. Aqui só os apelidos usados por esta página. */
   html:root { --accent2: var(--success); --p0: #3F5A38; --p1: #2F5F7E; --p2: #7A4E16; --p3: #7A3E5C; --p4: #5A4A8A; --p5: #8A4A2A; --p6: #2F6B6B; --p7: #66742A; --p8: #8A3E6E; --p9: #5B6659; }
   html:root[data-theme="dark"] { --p0: #A9C29A; --p1: #8FB8D4; --p2: #EBB872; --p3: #D49BB9; --p4: #B7A9E0; --p5: #E0A682; --p6: #8CCBC4; --p7: #C5D08A; --p8: #E0A0CF; --p9: #B8C4B5; }
@@ -642,6 +644,7 @@
   // Aplica o tema salvo o quanto antes, pra não piscar claro antes de escurecer
   (function(){
     document.documentElement.classList.add('cf-boot');
+    try{ if(JSON.parse(localStorage.getItem('lifeplan_privacy')||'{}').hideValues !== false) document.documentElement.classList.add('cf-mask'); }catch(e){ document.documentElement.classList.add('cf-mask'); }
     setTimeout(function(){ document.documentElement.classList.remove('cf-boot'); }, 6000);
     try{
       if(localStorage.getItem('lifeplan_theme') === 'dark'){
@@ -660,6 +663,7 @@
   <div class="head-top">
     <h1 class="page-title">Finanças</h1>
     <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" id="btn-mask" onclick="toggleMask()" aria-pressed="false"></button>
       <button class="btn btn-ghost btn-sm" onclick="openSearchPanel()" title="Buscar em faturas, pagamentos e balanço"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Buscar</button>
       <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar um PDF com faturas, pagamentos, resumo por perfil e balanço"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> Exportar PDF</button>
     </div>
@@ -833,23 +837,41 @@ let state = loadState() || getDefaultState();
 // e cards de perfil estão recolhidos, e se o saldo por perfil está visível.
 let _collapsedFaturas = {};
 let _collapsedProfiles = {};
-let _saldoVisiblePerProfile = {}; // censurado por padrão, individual por perfil
-let _gastosVisiblePerProfile = {}; // censurado por padrão, individual por perfil
+// ── Privacidade: valores escondidos por padrão (ajustável em Perfil → Bloqueio e valores) ──
+let cfMasked = (() => { try { return JSON.parse(localStorage.getItem('lifeplan_privacy') || '{}').hideValues !== false; } catch (e) { return true; } })();
+let cfForceShow = false; // só liga durante a geração do PDF
+// Cada olhinho por perfil guarda só o que a pessoa mudou; o resto segue o estado geral.
+const cfVisMap = () => new Proxy({}, {
+  get: (t, k) => (typeof k === 'string' && /^\d+$/.test(k) && !(k in t)) ? !cfMasked : t[k],
+  set: (t, k, v) => { t[k] = v; return true; }
+});
+let _saldoVisiblePerProfile = cfVisMap(); // segue o estado geral até a pessoa mudar o perfil
+let _gastosVisiblePerProfile = cfVisMap();
 let _collapsedPagamentosPerProfile = {}; // recolhido por padrão, individual por perfil
-let _pagamentosVisiblePerProfile = {}; // censurado por padrão, individual por perfil
+let _pagamentosVisiblePerProfile = cfVisMap();
 
 let __cfSaveTimer = null;
 let __cfSaveChain = Promise.resolve();
-function setCloudWarning(on) {
+const CF_WARN_DEFAULT = 'Sem conexão com a nuvem: suas alterações estão sendo guardadas só neste aparelho e ainda não foram salvas online.';
+function setCloudWarning(on, msg) {
   const el = document.getElementById('cf-cloud-warning') || document.getElementById('cloud-warning');
-  if (el) el.style.display = on ? 'block' : 'none';
+  if (!el) return;
+  if (on) el.textContent = msg || CF_WARN_DEFAULT;
+  el.style.display = on ? 'block' : 'none';
+}
+// O que vai para a nuvem: tudo, menos a fatura "Cartão de ..." que o líder lança para você
+// (essa vem da tabela family_charges a cada abertura e nunca é gravada como sua).
+function stateForCloud() {
+  const c = JSON.parse(JSON.stringify(state));
+  c.faturas = (c.faturas || []).filter(f => !f.family);
+  return c;
 }
 // Cada pessoa grava só no PRÓPRIO registro (finance_data, uma linha por usuário).
 // O banco garante isso: ninguém grava no registro de outra pessoa.
 function flushCloudSave() {
   if (!supa || !currentUser || !cloudReady) return;
   const uid = currentUser.id;
-  const payload = JSON.parse(JSON.stringify(state));
+  const payload = stateForCloud();
   __cfSaveChain = __cfSaveChain.then(async () => {
     try {
       const { data: upd, error: updErr } = await supa.from('finance_data').update({ data: payload }).eq('user_id', uid).select('user_id');
@@ -862,6 +884,13 @@ function flushCloudSave() {
     } catch (e) {
       console.error('Erro ao salvar finanças na nuvem:', e);
       setCloudWarning(true);
+      return;
+    }
+    // Líder: copia para a conta dos membros os gastos atrelados a eles
+    try { await syncFamilyCharges(); }
+    catch (e) {
+      console.error('Erro ao enviar gastos para a família:', e);
+      setCloudWarning(true, 'Não consegui enviar os gastos atrelados aos membros da família; eles ainda não aparecem na conta deles. Tente de novo em instantes.');
     }
   });
 }
@@ -901,7 +930,7 @@ function showFamilyChoiceModal() {
         <button id="fam-create-btn" class="btn btn-primary" style="width:100%;margin-bottom:10px;padding:12px">Não, ativar meu modo família</button>
         <button id="fam-join-toggle-btn" class="btn btn-ghost" style="width:100%;padding:12px">Sim, tenho um código de convite</button>
         <div id="fam-join-form" style="display:none;margin-top:14px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;text-align:left">Ao entrar, o líder do modo família poderá ver suas finanças (somente leitura). Você não vê as de ninguém.</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;text-align:left">Ao entrar, o líder poderá lançar gastos do cartão dele para você. Ele não vê as suas finanças.</div>
           <input id="fam-code-input" type="text" placeholder="FAM-XXXXXX" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;text-align:center;font-family:var(--font-body);font-variant-numeric:tabular-nums;font-size:14px;text-transform:uppercase;box-sizing:border-box;margin-bottom:10px">
           <button id="fam-join-btn" class="btn btn-primary" style="width:100%;padding:12px">Entrar no modo família</button>
         </div>
@@ -955,7 +984,7 @@ async function ensureFamily() {
       alert('Não foi possível entrar com esse código: ' + (error.message || error) + '\n\nConfira com quem te convidou e tente de novo.');
       return await ensureFamily(); // deixa tentar de novo
     }
-    alert('Você entrou no modo família!\n\nSuas finanças continuam só suas. O líder do modo família pode ver as suas (somente leitura); você não vê as de ninguém.');
+    alert('Você entrou no modo família!\n\nSuas finanças continuam só suas: ninguém vê. Quando o líder lançar um gasto do cartão dele para você, ele aparece na aba Faturas e entra no seu saldo do mês.');
   } else {
     const { data: famResult, error: famErr } = await supa.rpc('create_family', { new_name: 'Minha Família' });
     if (famErr) {
@@ -963,7 +992,7 @@ async function ensureFamily() {
       return null;
     }
     const newFamily = Array.isArray(famResult) ? famResult[0] : famResult;
-    alert(`Modo família ativado!\n\nVocê é o líder. Código de convite: ${newFamily.invite_code}\n\nQuem entrar com esse código terá as próprias finanças, só dela. Você poderá ver as contas de todos (somente leitura); os membros não veem as suas nem as dos outros. Você vê esse código de novo em "Resumo".`);
+    alert(`Modo família ativado!\n\nVocê é o líder. Código de convite: ${newFamily.invite_code}\n\nQuem entrar com esse código continua com as finanças só dela. Para lançar um gasto do seu cartão para um membro, atrele um perfil seu à conta dele (Resumo → Gerenciar perfis). Você vê esse código de novo em "Resumo".`);
   }
   const again = await fetchMyFamily();
   return again.family || null;
@@ -1000,7 +1029,7 @@ async function loadFinanceFromCloud() {
     }
     if (row?.data) {
       const cloudJson = JSON.stringify(row.data);
-      const localJson = JSON.stringify(state);
+      const localJson = JSON.stringify(stateForCloud());
       if (cloudJson !== localJson && !sessionStorage.getItem('cf_cloud_synced')) {
         // Dados da nuvem são diferentes do que já carregou localmente:
         // aplica e recarrega uma única vez pra tudo renderizar do zero certinho.
@@ -1013,13 +1042,20 @@ async function loadFinanceFromCloud() {
     cloudReady = true;
     bootDone();
 
+    // Gastos que um líder lançou para você (aparecem como fatura "Cartão de ...")
+    await loadFamilyCharges();
+
     // Modo família (quem é líder, código de convite)
     const fam = await ensureFamily();
     if (fam) {
       familyId = fam.id; familyOwnerId = fam.owner_id; familyInviteCode = fam.invite_code || null;
       isLeader = fam.owner_id === currentUser.id;
     }
+    if (isLeader) await loadFamilyMembers();
     renderFamilyCard();
+    const act0 = document.querySelector('.tab.active');
+    if (act0) renderActive(act0.id.replace('tab-', ''));
+    if (isLeader) { try { await syncFamilyCharges(); } catch (e) { console.error(e); setCloudWarning(true, 'Não consegui enviar os gastos atrelados aos membros da família. Tente de novo em instantes.'); } }
   } catch (e) {
     console.error('Erro ao carregar finanças da nuvem:', e);
     alert('Ocorreu um erro ao carregar os dados financeiros: ' + (e.message || e));
@@ -1028,11 +1064,136 @@ async function loadFinanceFromCloud() {
   }
 }
 
-// ── MODO FAMÍLIA: cartão na aba Resumo + "Contas da família" (só líder) ──────
+// ══════════════════════════════════════════════════════
+//  MODO FAMÍLIA — o líder lança gastos do cartão dele para os membros
+//  • Líder: atrela um perfil a um membro (Resumo → Gerenciar perfis). Todo gasto lançado
+//    em fatura DELE nesse perfil é copiado para family_charges.
+//  • Membro: vê esses gastos numa fatura "Cartão de <líder>" (somente leitura) e eles
+//    entram no saldo do mês dele. Ninguém vê as finanças pessoais de ninguém.
+// ══════════════════════════════════════════════════════
 function escHtml(v) {
   return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+let familyMembers = [];            // líder: [{user_id, email}] (sem o líder)
+let familyMembersLoaded = false;   // só sincroniza depois de saber quem são os membros
+function myLabel() {
+  const n = String((currentUser && currentUser.user_metadata && currentUser.user_metadata.name) || '').trim().split(/\s+/)[0];
+  return n || String((currentUser && currentUser.email) || 'Líder').split('@')[0];
+}
+async function loadFamilyMembers() {
+  familyMembersLoaded = false;
+  const { data, error } = await supa.rpc('family_members_overview');
+  if (error) { console.error('Erro ao listar membros:', error); return; }
+  familyMembers = (data || []).filter(m => !m.is_leader).map(m => ({ user_id: m.user_id, email: m.email }));
+  familyMembersLoaded = true;
+}
+
+// Líder: o que DEVE estar em family_charges agora (linhas de faturas dele, em perfis atrelados a membros)
+function desiredCharges() {
+  const out = new Map();
+  if (!isLeader || !familyId || !currentUser) return out;
+  const memberIds = new Set(familyMembers.map(m => m.user_id));
+  const iso = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d : null;
+  const label = myLabel();
+  state.faturas.forEach(f => {
+    if (f.family) return;
+    (f.rows || []).forEach(r => {
+      if (r.profileIdx == null || !r.id) return;
+      const uid = (state.profiles[r.profileIdx] || {}).linkedUserId;
+      if (!uid || uid === currentUser.id || !memberIds.has(uid)) return;
+      const v = Math.round((parseFloat(r.value) || 0) * 100) / 100;
+      if (!(v > 0)) return;
+      out.set(String(r.id), {
+        family_id: familyId, leader_id: currentUser.id, member_id: uid, source_id: String(r.id),
+        leader_label: label, fatura_name: f.name || '', description: r.name || '', category: r.category || null,
+        parcelas: r.parcelas ? String(r.parcelas) : '', value: v, date: iso(r.date)
+      });
+    });
+  });
+  return out;
+}
+
+async function syncFamilyCharges() {
+  if (!supa || !currentUser || !isLeader || !familyId || !cloudReady || !familyMembersLoaded) return;
+  const want = desiredCharges();
+  const { data: have, error } = await supa.from('family_charges')
+    .select('source_id,member_id,value,description,category,date,fatura_name,parcelas,leader_label')
+    .eq('leader_id', currentUser.id);
+  if (error) throw error;
+  const haveMap = new Map((have || []).map(h => [h.source_id, h]));
+  const up = [], del = [];
+  want.forEach((w, k) => {
+    const h = haveMap.get(k);
+    if (!h || h.member_id !== w.member_id || Number(h.value) !== w.value || (h.description || '') !== w.description ||
+        (h.category || null) !== w.category || (h.date || null) !== w.date || (h.fatura_name || '') !== w.fatura_name ||
+        (h.parcelas || '') !== w.parcelas || (h.leader_label || '') !== w.leader_label) up.push(w);
+  });
+  haveMap.forEach((h, k) => { if (!want.has(k)) del.push(k); });
+  if (up.length) {
+    const { error: e1 } = await supa.from('family_charges').upsert(up, { onConflict: 'leader_id,source_id' });
+    if (e1) throw e1;
+  }
+  if (del.length) {
+    const { error: e2 } = await supa.from('family_charges').delete().eq('leader_id', currentUser.id).in('source_id', del);
+    if (e2) throw e2;
+  }
+}
+
+// Membro: busca os gastos que um líder lançou para mim e mostra como fatura somente leitura
+let __chargesAt = 0;
+let familyChargesCache = []; // última lista recebida (para reaplicar ao trocar o perfil de destino)
+async function loadFamilyCharges() {
+  if (!supa || !currentUser) return;
+  const { data, error } = await supa.from('family_charges').select('*').eq('member_id', currentUser.id).order('date', { ascending: true });
+  if (error) { console.error('Erro ao carregar gastos da família:', error); return; }
+  __chargesAt = Date.now();
+  familyChargesCache = data || [];
+  injectFamilyCharges(familyChargesCache);
+}
+function refreshFamilyChargesSoon() {
+  if (Date.now() - __chargesAt < 20000) return;
+  loadFamilyCharges().then(() => { const act = document.querySelector('.tab.active'); if (act) renderActive(act.id.replace('tab-', '')); });
+}
+function injectFamilyCharges(list) {
+  state.faturas = (state.faturas || []).filter(f => !f.family);
+  let target = state.profiles.findIndex(p => p.linkedUserId === (currentUser && currentUser.id));
+  if (target < 0) target = 0; // sem perfil escolhido: entra no primeiro
+  const byLeader = {};
+  list.forEach(c => { (byLeader[c.leader_id] = byLeader[c.leader_id] || []).push(c); });
+  Object.keys(byLeader).forEach(lid => {
+    const cs = byLeader[lid];
+    state.faturas.push({
+      id: 'family-' + lid, family: true, name: 'Cartão de ' + (cs[0].leader_label || 'família'), fechamento: '', vencimento: '',
+      rows: cs.map(c => ({ id: 'fc-' + c.source_id, date: c.date || '', name: c.description || '', parcelas: c.parcelas || '',
+        value: Number(c.value) || 0, profileIdx: target, category: c.category || null, faturaOrigem: c.fatura_name || '', family: true }))
+    });
+  });
+  // cache local (a prévia do Início usa); não agenda gravação na nuvem
+  try { localStorage.setItem('cf_state', JSON.stringify(state)); } catch (e) {}
+}
+
+// Fatura somente leitura mostrada ao membro
+function buildFamilyFaturaCard(f) {
+  const total = f.rows.reduce((s, r) => s + (parseFloat(r.value) || 0), 0);
+  const card = document.createElement('div');
+  card.className = 'card';
+  const rowsHtml = f.rows.map(r => {
+    const when = r.date ? formatDateBR(r.date) : '';
+    const sub = [when, r.category, r.parcelas ? r.parcelas + 'x' : '', r.faturaOrigem].filter(Boolean).map(escHtml).join(' · ');
+    return `<div class="saldo-line" style="cursor:default;min-height:56px"><div style="flex:1;min-width:0"><div class="row-name" style="overflow-wrap:anywhere">${escHtml(r.name || 'Gasto')}</div><div style="font-size:12px;color:var(--muted);overflow-wrap:anywhere">${sub}</div></div><span class="val-cell negative" style="font-weight:700">${fmt(r.value)}</span></div>`;
+  }).join('');
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-title" style="display:flex;align-items:center;gap:8px">${ic('users', 18)}<span style="overflow-wrap:anywhere">${escHtml(f.name)}</span></div>
+      <div class="card-total" id="total-${escHtml(f.id)}">${fmt(total)}</div>
+    </div>
+    <div style="padding:8px 14px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border)">Gastos que o líder lançou para você. Já contam no seu saldo do mês. Só ele pode alterar.</div>
+    ${rowsHtml || '<div class="empty">Nenhum gasto lançado para você.</div>'}`;
+  return card;
+}
+
+// ── Cartão "Modo família" (aba Resumo) ──
 function renderFamilyCard() {
   const card = document.getElementById('family-card');
   const body = document.getElementById('family-card-body');
@@ -1044,32 +1205,34 @@ function renderFamilyCard() {
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
         <strong style="font-size:16px">Modo família</strong><span class="badge">Você é o líder</span>
       </div>
-      <div style="font-size:14px;color:var(--text-2);margin-bottom:12px">
-        Você pode ver as contas de todos os membros, somente leitura. Cada membro vê apenas a própria.
+      <div style="font-size:14px;color:var(--text-2);margin-bottom:12px;line-height:1.5">
+        Quando um membro comprar no seu cartão, lance na sua fatura e escolha o perfil dele. O gasto vai direto para a conta dele e entra no saldo do mês dele. Para isso, atrele um perfil seu a cada membro em <strong>Gerenciar perfis</strong>. Você não vê as outras finanças dele.
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
         <span style="font-size:13px;color:var(--muted)">Código de convite:</span>
         <span id="family-invite-code" style="font-weight:700;font-size:15px;color:var(--accent-dark);font-variant-numeric:tabular-nums">${escHtml(familyInviteCode || '—')}</span>
         <button class="btn btn-ghost btn-sm" onclick="copyInviteCode()">Copiar</button>
       </div>
-      <button class="btn btn-primary" onclick="openFamilyAccounts()">Ver contas da família</button>`;
+      <button class="btn btn-primary" onclick="openFamilyAccounts()">Ver gastos lançados</button>`;
   } else {
     body.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
         <strong style="font-size:16px">Modo família</strong><span class="badge">Membro</span>
       </div>
-      <div style="font-size:14px;color:var(--text-2)">
-        Suas finanças são só suas: você não vê as de ninguém. O líder do modo família pode ver as suas, somente leitura.
+      <div style="font-size:14px;color:var(--text-2);line-height:1.5">
+        Quando o líder lançar um gasto do cartão dele para você, ele aparece na aba Faturas e entra no seu saldo do mês. Suas outras finanças são só suas: ninguém vê.
       </div>`;
   }
 }
 
 function closeFamilyView() {
+  __famRender = null;
   const el = document.getElementById('family-view');
   if (el) el.remove();
 }
+let __famRender = null; // função que redesenha a janela aberta (para mostrar/ocultar valores)
 
-function openFamilyView(title, innerHtml) {
+function openFamilyView(title, withEye) {
   closeFamilyView();
   const ov = document.createElement('div');
   ov.id = 'family-view';
@@ -1079,89 +1242,75 @@ function openFamilyView(title, innerHtml) {
     <div role="dialog" aria-modal="true" aria-label="${escHtml(title)}" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:640px;box-shadow:var(--shadow-md)">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 12px 12px 18px;border-bottom:1px solid var(--border)">
         <div style="font-family:var(--font-display);font-size:20px;font-weight:500;min-width:0;overflow-wrap:anywhere">${escHtml(title)}</div>
-        <button class="btn btn-ghost btn-sm" onclick="closeFamilyView()" aria-label="Fechar">${ic('x')}</button>
+        <div style="display:flex;gap:4px;flex-shrink:0">${withEye ? `<button class="btn btn-ghost btn-sm" id="fam-eye" onclick="toggleFamilyMask()"></button>` : ''}<button class="btn btn-ghost btn-sm" onclick="closeFamilyView()" aria-label="Fechar">${ic('x')}</button></div>
       </div>
-      <div id="family-view-body">${innerHtml}</div>
+      <div id="family-view-body"></div>
     </div>`;
   document.body.appendChild(ov);
+  refreshFamilyEye();
+}
+function refreshFamilyEye() {
+  const b = document.getElementById('fam-eye');
+  if (!b) return;
+  b.innerHTML = ic(cfMasked ? 'eyeOff' : 'eye');
+  b.setAttribute('aria-label', cfMasked ? 'Mostrar valores' : 'Ocultar valores');
+}
+function toggleFamilyMask() {
+  setMasked(!cfMasked);
+  refreshFamilyEye();
+  if (__famRender) __famRender();
 }
 
-async function openFamilyAccounts() {
-  if (!isLeader) return; // a tela só existe para o líder (e o banco também só devolve para ele)
-  openFamilyView('Contas da família', '<div class="empty">Carregando…</div>');
-  const { data, error } = await supa.rpc('family_members_overview');
+// Líder: lista de membros com o total que ele já lançou para cada um
+function openFamilyAccounts() {
+  if (!isLeader) return;
+  openFamilyView('Gastos lançados', true);
+  __famRender = renderFamilyOverview;
+  renderFamilyOverview();
+}
+function renderFamilyOverview() {
   const body = document.getElementById('family-view-body');
   if (!body) return;
-  if (error) { body.innerHTML = '<div class="empty">Não foi possível carregar a lista agora.</div>'; return; }
-  const rows = data || [];
-  if (!rows.length) { body.innerHTML = '<div class="empty">Ainda não há membros.</div>'; return; }
-  body.innerHTML = '';
-  const note = document.createElement('div');
-  note.style.cssText = 'padding:12px 18px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border2)';
-  note.textContent = 'Somente leitura. Cada membro vê apenas as próprias finanças.';
-  body.appendChild(note);
-  rows.forEach(m => {
-    const me = m.user_id === currentUser.id;
+  if (!familyMembers.length) { body.innerHTML = '<div class="empty">Ainda não há membros. Envie o código de convite para alguém entrar.</div>'; return; }
+  const by = {};
+  desiredCharges().forEach(c => { const x = by[c.member_id] = by[c.member_id] || { n: 0, sum: 0 }; x.n++; x.sum += c.value; });
+  body.innerHTML = '<div style="padding:12px 18px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border2)">Os gastos que você lançou nos perfis atrelados a cada membro.</div>';
+  familyMembers.forEach(m => {
+    const x = by[m.user_id] || { n: 0, sum: 0 };
+    const linked = state.profiles.some(p => p.linkedUserId === m.user_id);
     const b = document.createElement('button');
     b.className = 'saldo-line';
     b.style.cssText = 'width:100%;background:none;border:none;border-bottom:1px solid var(--border2);text-align:left;font-family:inherit;color:inherit';
-    b.innerHTML = `<span class="row-ic">${ic('users', 20)}</span><span class="row-name" style="flex:1;min-width:0;overflow-wrap:anywhere">${escHtml(m.email || 'Sem e-mail')}</span><span class="badge">${me ? 'Você · líder' : 'Membro'}</span>`;
-    b.onclick = () => me ? closeFamilyView() : openMemberAccount(m.user_id, m.email);
+    b.innerHTML = `<span class="row-ic">${ic('users', 20)}</span><span style="flex:1;min-width:0"><span class="row-name" style="display:block;overflow-wrap:anywhere">${escHtml(m.email || 'Sem e-mail')}</span><span style="display:block;font-size:12px;color:var(--muted)">${linked ? (x.n + (x.n === 1 ? ' gasto' : ' gastos')) : 'Nenhum perfil atrelado ainda'}</span></span><span class="val-cell" style="font-weight:700">${fmt(x.sum)}</span>`;
+    b.onclick = () => { __famRender = () => renderMemberCharges(m.user_id); __famRender(); };
     body.appendChild(b);
   });
 }
-
-async function openMemberAccount(uid, email) {
-  openFamilyView(email || 'Conta do membro', '<div class="empty">Carregando…</div>');
-  const { data: row, error } = await supa.from('finance_data').select('data').eq('user_id', uid).maybeSingle();
+function renderMemberCharges(uid) {
   const body = document.getElementById('family-view-body');
   if (!body) return;
-  if (error) { body.innerHTML = '<div class="empty">Não foi possível carregar esta conta.</div>'; return; }
-  if (!row?.data) { body.innerHTML = '<div class="empty">Este membro ainda não registrou nada.</div>'; return; }
-  let html = '';
-  try { html = memberSummaryHTML(row.data); }
-  catch (e) { console.error(e); html = '<div class="empty">Não foi possível ler os dados desta conta.</div>'; }
-  body.innerHTML = '<div style="padding:10px 18px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border2)">Somente leitura</div>' + html;
-}
-
-// Resumo somente-leitura das finanças de um membro (tudo escapado: o conteúdo é de outra pessoa).
-function memberSummaryHTML(ms) {
-  const F = window.FinanceFormulas;
-  const money = v => escHtml(fmt(v));
-  const sum = arr => (arr || []).reduce((s, r) => s + (parseFloat(r.value) || 0), 0);
-  const tables = Array.isArray(ms.balancoTables) ? ms.balancoTables : [];
-  const faturas = Array.isArray(ms.faturas) ? ms.faturas : [];
-  const pix = Array.isArray(ms.pixRows) ? ms.pixRows : [];
-  const profName = i => { const p = (ms.profiles || [])[i]; return p == null ? '' : (typeof p === 'object' ? p.name : p) || ''; };
-
-  let saldo = 0; const lines = [];
-  tables.forEach(t => {
-    if (!t.includeInSaldo || t.sign === 0) return;
-    let total = 0; try { total = F.cfGetTableTotal(ms, t) || 0; } catch (e) {}
-    saldo += total * t.sign;
-    lines.push(`<div class="saldo-line" style="cursor:default"><span class="row-ic">${ic(tableIconName(t), 20)}</span><span class="row-name" style="flex:1;overflow-wrap:anywhere">${escHtml(t.name)}</span><span class="val-cell ${t.sign === 1 ? 'positive' : 'negative'}" style="font-weight:700">${t.sign === 1 ? '+' : '− '}${money(total)}</span></div>`);
+  const m = familyMembers.find(x => x.user_id === uid) || { email: 'Membro' };
+  const list = [...desiredCharges().values()].filter(c => c.member_id === uid).sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  const total = list.reduce((s, c) => s + c.value, 0);
+  body.innerHTML = '';
+  const head = document.createElement('div');
+  head.style.cssText = 'padding:10px 12px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px;flex-wrap:wrap';
+  head.innerHTML = `<button class="btn btn-ghost btn-sm" id="fam-back">← Todos</button><span style="flex:1;min-width:0;overflow-wrap:anywhere;font-weight:600">${escHtml(m.email)}</span><span class="val-cell" style="font-weight:700">${fmt(total)}</span>`;
+  body.appendChild(head);
+  head.querySelector('#fam-back').onclick = () => { __famRender = renderFamilyOverview; renderFamilyOverview(); };
+  const hint = document.createElement('div');
+  hint.style.cssText = 'padding:10px 18px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border2)';
+  hint.textContent = 'Para lançar mais: na aba Faturas, adicione o gasto e escolha o perfil atrelado a esta pessoa.';
+  body.appendChild(hint);
+  if (!list.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'Nenhum gasto lançado ainda.'; body.appendChild(e); return; }
+  list.forEach(c => {
+    const sub = [c.date ? formatDateBR(c.date) : '', c.category, c.fatura_name].filter(Boolean).map(escHtml).join(' · ');
+    const row = document.createElement('div');
+    row.className = 'saldo-line';
+    row.style.cssText = 'cursor:default;min-height:56px';
+    row.innerHTML = `<div style="flex:1;min-width:0"><div class="row-name" style="overflow-wrap:anywhere">${escHtml(c.description || 'Gasto')}</div><div style="font-size:12px;color:var(--muted);overflow-wrap:anywhere">${sub}</div></div><span class="val-cell negative" style="font-weight:700">${fmt(c.value)}</span>`;
+    body.appendChild(row);
   });
-  const neg = saldo < 0;
-  let html = `<div class="saldo-hero${neg ? ' neg' : ''}"><div class="saldo-hero-label">Saldo do mês</div><div class="saldo-hero-val">${neg ? '− ' : ''}${money(Math.abs(saldo))}</div></div>${lines.join('')}`;
-
-  html += '<div style="padding:14px 18px 4px;font-family:var(--font-display);font-size:18px">Faturas</div>';
-  html += faturas.length ? faturas.map(f => `<div class="saldo-line" style="cursor:default;min-height:48px"><span class="row-name" style="flex:1;overflow-wrap:anywhere">${escHtml(f.name)}</span><span class="val-cell" style="font-weight:700">${money(sum(f.rows))}</span></div>`).join('') : '<div class="empty">Nenhuma fatura.</div>';
-  html += `<div class="saldo-line" style="cursor:default;min-height:48px"><span class="row-name" style="flex:1">Pix (fora das faturas)</span><span class="val-cell" style="font-weight:700">${money(sum(pix))}</span></div>`;
-
-  const plans = tables.filter(t => t.type === 'planejamento');
-  plans.forEach(t => {
-    const rows = (t.rows || []).filter(r => r.categoria && r.profileIdx != null);
-    if (!rows.length) return;
-    html += `<div style="padding:14px 18px 4px;font-family:var(--font-display);font-size:18px">${escHtml(t.name || 'Planejamento')}</div>`;
-    rows.forEach(r => {
-      const valor = parseFloat(r.valor) || 0;
-      let gasto = 0; try { gasto = F.cfComputeGastoCategoria(ms, r.profileIdx, r.categoria) || 0; } catch (e) {}
-      const rest = valor - gasto, over = rest < 0;
-      const pct = valor > 0 ? Math.min(100, gasto / valor * 100) : (gasto > 0 ? 100 : 0);
-      html += `<div class="plan-row"><div class="plan-head"><span class="plan-ic${over ? ' over' : ''}">${ic(catIconName(r.categoria), 20)}</span><div class="plan-mid"><div class="plan-name">${escHtml(r.categoria)}</div><div class="plan-sub">${money(gasto)} de ${money(valor)}${profName(r.profileIdx) ? ' · ' + escHtml(profName(r.profileIdx)) : ''}</div></div><div class="plan-rest${over ? ' over' : ''}">${over ? 'estourou ' + money(-rest) : 'restam ' + money(rest)}</div></div><div class="plan-track"><div class="plan-fill${over ? ' over' : ''}" style="width:${pct}%"></div></div></div>`;
-    });
-  });
-  return html + '<div style="height:8px"></div>';
 }
 
 loadFinanceFromCloud();
@@ -1517,6 +1666,10 @@ function performSearch(query) {
 }
 
 function exportFinanceReportPDF() {
+  cfForceShow = true; // o relatório é uma ação deliberada: sai com os valores reais
+  try { buildAndPrintFinanceReport(); } finally { cfForceShow = false; }
+}
+function buildAndPrintFinanceReport() {
   const today = new Date().toLocaleDateString('pt-BR');
   let html = `<h1>Relatório Financeiro</h1><div class="pdf-subtitle">Gerado em ${today} — LifePlan</div>`;
 
@@ -1636,6 +1789,7 @@ function showTab(name) {
   const map = ['faturas','resumo','balanco'];
   btns[map.indexOf(name)].classList.add('active');
   renderActive(name);
+  refreshFamilyChargesSoon();
 }
 
 let _pagamentosCollapsed = true; // seção recolhida por padrão, igual às faturas
@@ -1644,6 +1798,32 @@ function togglePagamentosSection() {
   document.getElementById('pagamentos-body').style.display = _pagamentosCollapsed ? 'none' : '';
   document.getElementById('pagamentos-toggle-btn').textContent = _pagamentosCollapsed ? '▸' : '▾';
 }
+
+// ── Esconder/mostrar todos os valores (olhinho geral do cabeçalho) ──
+function applyMask() {
+  document.documentElement.classList.toggle('cf-mask', cfMasked);
+  const b = document.getElementById('btn-mask');
+  if (!b) return;
+  b.innerHTML = ic(cfMasked ? 'eyeOff' : 'eye') + (cfMasked ? ' Mostrar' : ' Ocultar');
+  b.setAttribute('aria-label', cfMasked ? 'Mostrar valores' : 'Ocultar valores');
+  b.setAttribute('aria-pressed', String(!cfMasked));
+  b.title = cfMasked ? 'Mostrar todos os valores' : 'Ocultar todos os valores';
+}
+function setMasked(m) {
+  cfMasked = !!m;
+  // o estado geral manda: zera as escolhas individuais dos olhinhos por perfil
+  _saldoVisiblePerProfile = cfVisMap();
+  _gastosVisiblePerProfile = cfVisMap();
+  _pagamentosVisiblePerProfile = cfVisMap();
+  applyMask();
+  const act = document.querySelector('.tab.active');
+  if (act) renderActive(act.id.replace('tab-', ''));
+}
+function toggleMask() { setMasked(!cfMasked); }
+// O LifePlan avisa quando o app é bloqueado: volta a esconder tudo.
+window.addEventListener('message', e => {
+  if (e.origin === window.location.origin && e.data && e.data.lifeplanLock) setMasked(true);
+});
 
 function renderActive(name) {
   if (name === 'faturas') { renderFaturas(); renderPix(); renderPagamentos(); }
@@ -1654,9 +1834,13 @@ function renderActive(name) {
 // ══════════════════════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════════════════════
-function fmt(v) {
+function fmtRaw(v) {
   const n = parseFloat(v) || 0;
   return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+// Formatação para a tela: com valores escondidos, mostra só os pontinhos.
+function fmt(v) {
+  return (cfMasked && !cfForceShow) ? 'R$ ••••' : fmtRaw(v);
 }
 
 function attachElasticWidth(el, minPx, maxPx, charPx) {
@@ -1997,14 +2181,44 @@ function renderProfilesManager() {
 
     card.appendChild(row);
 
-    // ── Vincular a uma conta de login de verdade ──
+    // ── Atrelar o perfil a uma conta de verdade ──
     const linkRow = document.createElement('div');
-    linkRow.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px';
+    linkRow.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;flex-wrap:wrap';
     const linkedUserId = state.profiles[idx].linkedUserId;
-    if (linkedUserId && currentUser && linkedUserId === currentUser.id) {
-      linkRow.innerHTML = `<span style="color:var(--accent2);font-weight:700">${ic('check')} Esta é a sua conta</span>`;
+    if (isLeader && familyMembers.length) {
+      // Líder: escolhe a quem os gastos deste perfil pertencem
+      const lab = document.createElement('label');
+      lab.textContent = 'Gastos deste perfil vão para:';
+      lab.style.cssText = 'color:var(--muted);font-weight:600';
+      const sel = document.createElement('select');
+      sel.setAttribute('aria-label', 'Atrelar o perfil ' + (state.profiles[idx].name || idx + 1) + ' a uma conta');
+      sel.style.cssText = 'min-height:44px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;max-width:100%';
+      const opts = [['', 'Só meus (ninguém)'], [currentUser.id, 'Minha conta'], ...familyMembers.map(m => [m.user_id, m.email || 'Membro'])];
+      if (linkedUserId && !opts.some(o => o[0] === linkedUserId)) opts.push([linkedUserId, 'Conta que saiu da família']);
+      opts.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sel.appendChild(o); });
+      sel.value = linkedUserId || '';
+      sel.onchange = () => {
+        const v = sel.value || null;
+        if (v === currentUser.id) state.profiles.forEach(p => { if (p.linkedUserId === currentUser.id) p.linkedUserId = null; });
+        state.profiles[idx].linkedUserId = v;
+        saveState();
+        renderProfilesManager();
+      };
+      linkRow.append(lab, sel);
+      if (linkedUserId && linkedUserId !== currentUser.id && familyMembers.some(m => m.user_id === linkedUserId)) {
+        let n = 0, sum = 0;
+        state.faturas.forEach(f => { if (f.family) return; (f.rows || []).forEach(rw => { if (rw.profileIdx === idx && (parseFloat(rw.value) || 0) > 0) { n++; sum += parseFloat(rw.value) || 0; } }); });
+        const st = document.createElement('div');
+        st.style.cssText = 'flex-basis:100%;color:var(--accent2);font-weight:600';
+        st.innerHTML = `${ic('check', 14)} ${n} ${n === 1 ? 'gasto enviado' : 'gastos enviados'} (${escHtml(fmt(sum))}) para a conta dele`;
+        linkRow.appendChild(st);
+      }
+    } else if (linkedUserId && currentUser && linkedUserId === currentUser.id) {
+      linkRow.innerHTML = isLeader
+        ? `<span style="color:var(--accent2);font-weight:700">${ic('check')} Esta é a sua conta</span>`
+        : `<span style="color:var(--accent2);font-weight:700">${ic('check')} Os gastos que o líder lançar para você entram neste perfil</span>`;
     } else if (linkedUserId) {
-      linkRow.innerHTML = `<span style="color:var(--muted)">Vinculado a outro membro do modo família</span>`;
+      linkRow.innerHTML = `<span style="color:var(--muted)">Atrelado a outra conta</span>`;
       const unlinkBtn = document.createElement('button');
       unlinkBtn.className = 'btn btn-ghost btn-sm';
       unlinkBtn.textContent = 'Desvincular';
@@ -2013,8 +2227,8 @@ function renderProfilesManager() {
     } else {
       const linkBtn = document.createElement('button');
       linkBtn.className = 'btn btn-ghost btn-sm';
-      linkBtn.textContent = 'Vincular minha conta a este perfil';
-      linkBtn.onclick = () => linkMyAccountToProfile(idx);
+      linkBtn.textContent = isLeader ? 'Esta é a minha conta' : 'Receber os gastos da família neste perfil';
+      linkBtn.onclick = () => { linkMyAccountToProfile(idx); injectFamilyCharges(familyChargesCache); renderActive('resumo'); };
       linkRow.appendChild(linkBtn);
     }
     card.appendChild(linkRow);
@@ -3250,6 +3464,7 @@ function renderFaturas() {
   _rowNeedsReposition = {}; // uma renderização completa já ordena tudo do zero
 
   state.faturas.forEach(f => {
+    if (f.family) { container.appendChild(buildFamilyFaturaCard(f)); return; }
     const total = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
 
     const card = document.createElement('div');
@@ -3613,7 +3828,7 @@ function renderPerfis() {
 
     const totalEl = document.createElement('div');
     totalEl.className = 'card-total';
-    totalEl.textContent = visible ? (saldo>=0?'+':'') + fmt(saldo) : '••••';
+    totalEl.textContent = visible ? (saldo>=0?'+':'') + fmtRaw(saldo) : '••••';
     totalEl.style.color = saldo >= 0 ? 'var(--accent2)' : 'var(--warning)';
 
     const eyeBtn = document.createElement('button');
@@ -3782,7 +3997,7 @@ function renderPagamentos() {
 
     const totalEl = document.createElement('div');
     totalEl.className = 'card-total positive';
-    totalEl.textContent = visible ? `${fmt(totalPaid)} pagos` : '•••• pagos';
+    totalEl.textContent = visible ? `${fmtRaw(totalPaid)} pagos` : '•••• pagos';
 
     header.append(toggleBtn, titleEl, eyeBtn, totalEl);
     card.appendChild(header);
@@ -3810,7 +4025,7 @@ function renderPagamentos() {
         const tdDel = document.createElement('td');
         tdDel.appendChild(delBtn);
 
-        tr.innerHTML = `<td>${formatDateBR(p.date)||'—'}</td><td>${p.desc}</td><td class="val-cell positive">${visible?fmt(p.value):'••••'}</td>`;
+        tr.innerHTML = `<td>${formatDateBR(p.date)||'—'}</td><td>${p.desc}</td><td class="val-cell positive">${visible?fmtRaw(p.value):'••••'}</td>`;
         tr.appendChild(tdDel);
         tbody.appendChild(tr);
       });
@@ -3849,7 +4064,7 @@ function renderPagamentos() {
 //  SALDO FINAL
 // ══════════════════════════════════════════════════════
 function fmtSaldo(val, pIdx) {
-  return _saldoVisiblePerProfile[pIdx] ? fmt(val) : '••••';
+  return _saldoVisiblePerProfile[pIdx] ? fmtRaw(val) : '••••';
 }
 
 function renderSaldo() {
@@ -3946,7 +4161,7 @@ function renderSaldo() {
   const gtSaldo = gtPago - gtGastos;
   const gtClass = gtSaldo >= 0 ? 'positive' : 'negative';
   const gtSign = (allVisible && gtSaldo >= 0) ? '+' : '';
-  const gtFmt = v => allVisible ? fmt(v) : '••••';
+  const gtFmt = v => allVisible ? fmtRaw(v) : '••••';
   tfoot.innerHTML = `<tr>
     <td>Total Geral</td>
     <td class="val-cell negative">${allVisible?'−':''}${gtFmt(gtGastos)}</td>
@@ -3964,6 +4179,7 @@ function renderSaldo() {
 // ══════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════
+applyMask();
 renderFaturas();
 renderPix();
 renderPagamentos();
