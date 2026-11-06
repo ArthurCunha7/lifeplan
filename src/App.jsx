@@ -4,6 +4,8 @@ import { useState, useMemo, useRef, useEffect, Component } from "react";
 import { Icon, Glyph, BottomNav, NAV_SCREENS } from "./ui";
 import { LockScreen, PrivacyCover, LockSettings } from "./LockScreen";
 import { getPrivacy, clearLock } from "./privacySettings";
+import { NotificationBell, NotificationSettings } from "./Notifications";
+import { disablePush } from "./notificationsApi";
 import { supabase, signUp, signIn, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 
 // Tema compartilhado (cores + fontes), o mesmo arquivo usado pelas páginas em
@@ -524,6 +526,7 @@ function ProfilePage({userId,initialProfile,onSave,onBack,onLogout,onAccountDele
           </button>
         )}
       </div>
+      {userId&&<NotificationSettings userId={userId}/>}
       {onLockNow&&<LockSettings userId={userId} onLockNow={onLockNow} onWipe={onLockWipe}/>}
       {onAccountDeleted&&<PrivacyCard userId={userId} onAccountDeleted={onAccountDeleted}/>}
     </div>
@@ -2342,6 +2345,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
         <header style={{display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:20,minHeight:44}}>
           <span style={{fontFamily:'var(--font-display)',fontSize:22,fontWeight:600,letterSpacing:'-0.01em',color:'var(--accent)',paddingLeft:4}}>LifePlan</span>
           <div style={{display:'flex',gap:8}}>
+            <NotificationBell userId={userId} onNavigate={onNavigate}/>
             <ThemeToggleButton/>
             <button onClick={onOpenProfile} aria-label="Perfil e configurações" style={{width:44,height:44,borderRadius:22,border:'none',background:'var(--accent-soft)',color:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0}}>
               <Icon name="user"/>
@@ -2683,6 +2687,8 @@ function AppInner(){
   );
   else{
     const onLogout=async()=>{
+      // Antes de sair, tira ESTE aparelho da lista de push: senão os avisos desta conta continuariam chegando aqui.
+      await disablePush();
       // scope 'local': sai só neste aparelho. O padrão do Supabase (global) deslogaria a conta em TODOS os dispositivos.
       try{await supabase.auth.signOut({scope:'local'});}catch(e){console.error(e);}
       clearLock();setLocked(false); // o PIN é de quem estava logado: sair apaga o PIN deste aparelho
@@ -2692,6 +2698,7 @@ function AppInner(){
     };
     const onAccountDeleted=async()=>{
       // O login já não existe mais: só encerra a sessão local e apaga tudo o que ficou neste aparelho.
+      await disablePush();
       try{await supabase.auth.signOut({scope:'local'});}catch(e){}
       try{const th=localStorage.getItem('lifeplan_theme');localStorage.clear();sessionStorage.clear();if(th)localStorage.setItem('lifeplan_theme',th);}catch(e){}
       setLocked(false);

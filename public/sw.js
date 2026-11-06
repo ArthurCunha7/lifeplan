@@ -1,69 +1,38 @@
-// Service Worker do LifePlan — deixa o app instalável e funcionando (pelo
-// menos pra abrir) mesmo sem internet. IMPORTANTE: nunca guarda dados do
-// Supabase em cache (login, plano, finanças etc.) — só o "esqueleto" do
-// app (HTML/JS/CSS/ícones), pra nunca mostrar informação desatualizada.
+/* LifePlan — service worker. Só recebe push e abre o app ao tocar no aviso.
+   Não guarda nada em cache (assim uma versão nova do app nunca fica "presa"). */
 
-const CACHE_VERSION = 'lifeplan-v1';
-const APP_SHELL = [
-  '/',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/estudos.html',
-  '/controle-financeiro.html',
-  '/my-fit-era.html',
-];
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(APP_SHELL)).catch(() => {})
-  );
-  self.skipWaiting();
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; }
+  catch (e) { d = { title: 'LifePlan', body: event.data ? event.data.text() : '' }; }
+
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // Avisa o app aberto para atualizar o sino na hora
+    wins.forEach((w) => w.postMessage({ lifeplanPush: true, id: d.id }));
+    // Com o app visível na tela, o sino já mostra o aviso: não repete no sistema
+    if (wins.some((w) => w.visibilityState === 'visible')) return;
+    await self.registration.showNotification(d.title || 'LifePlan', {
+      body: d.body || '',
+      tag: d.tag || 'lifeplan',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: d.url || '/' },
+    });
+  })());
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-
-  // Nunca mexe em chamadas pro Supabase (ou qualquer domínio externo) —
-  // essas sempre precisam de dados frescos da rede, nunca do cache.
-  if (url.origin !== self.location.origin) return;
-  if (request.method !== 'GET') return;
-
-  // Navegação (abrir uma página/aba): tenta a rede primeiro (pra sempre
-  // pegar a versão mais nova), cai pro cache só se estiver offline.
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((res) => {
-          caches.open(CACHE_VERSION).then((c) => c.put(request, res.clone()));
-          return res;
-        })
-        .catch(() => caches.match(request).then((r) => r || caches.match('/')))
-    );
-    return;
-  }
-
-  // Arquivos estáticos (JS/CSS com hash no nome, ícones): cache primeiro,
-  // já que uma build nova sempre gera nomes de arquivo diferentes.
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request)
-        .then((res) => {
-          if (res && res.ok) caches.open(CACHE_VERSION).then((c) => c.put(request, res.clone()));
-          return res;
-        })
-        .catch(() => cached);
-    })
-  );
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const w of wins) {
+      if ('focus' in w) { await w.focus(); w.postMessage({ lifeplanOpenNotifications: true }); return; }
+    }
+    if (self.clients.openWindow) await self.clients.openWindow(url);
+  })());
 });

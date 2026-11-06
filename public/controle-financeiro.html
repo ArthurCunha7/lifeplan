@@ -415,6 +415,7 @@
     display: flex;
     gap: 8px;
   }
+  .add-row-bar.top { border-top: none; border-bottom: 1px solid var(--border); }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -1054,7 +1055,7 @@ async function loadFinanceFromCloud() {
       familyId = fam.id; familyOwnerId = fam.owner_id; familyInviteCode = fam.invite_code || null;
       isLeader = fam.owner_id === currentUser.id;
     }
-    if (isLeader) await loadFamilyMembers();
+    if (isLeader) { await loadFamilyMembers(); await loadFamilyClosings(); }
     renderFamilyCard();
     const act0 = document.querySelector('.tab.active');
     if (act0) renderActive(act0.id.replace('tab-', ''));
@@ -1106,6 +1107,47 @@ async function loadFamilyMembers() {
   if (error) { console.error('Erro ao listar membros:', error); return; }
   familyMembers = (data || []).filter(m => !m.is_leader).map(m => ({ user_id: m.user_id, email: m.email }));
   familyMembersLoaded = true;
+}
+
+// ── Meses fechados (fechamento de fatura dos gastos lançados para membros) ──────
+// O líder fecha o mês de um membro escolhendo uma DATA DE CORTE: gastos com data até o corte
+// ficam naquele mês; os de depois caem no próximo. Mês fechado continua "a pagar" (conta no
+// saldo do membro) até o líder marcar como pago.
+let familyClosings = [];      // líder: fechamentos que eu fiz
+let familyClosingsOk = true;  // false = a tabela ainda não existe (SQL parte D não foi rodado)
+let memberClosings = [];      // membro: fechamentos que recebi
+let familyPaidPeriods = [];   // membro: meses já pagos (ficam só no histórico, fora do saldo)
+const MES_ABR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+function monthLabelFromISO(iso) {
+  const m = /^(\d{4})-(\d{2})/.exec(iso || '');
+  return m ? MES_ABR[Number(m[2]) - 1] + '/' + m[1] : '';
+}
+function todayLocalISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function closingsOf(list, leaderId, memberId) {
+  return list.filter(c => c.member_id === memberId && (leaderId == null || c.leader_id === leaderId))
+    .slice().sort((a, b) => String(a.cutoff).localeCompare(String(b.cutoff)));
+}
+function isPixCharge(c) { return String(c.source_id || '').indexOf('pix:') === 0; }
+// Devolve [em aberto, ...fechados do mais novo ao mais antigo]. Sem data = sempre em aberto.
+function groupByPeriod(charges, sortedClosings) {
+  const open = { closing: null, rows: [] };
+  const by = new Map(sortedClosings.map(c => [c.id, { closing: c, rows: [] }]));
+  charges.forEach(ch => {
+    const d = ch.date || '';
+    const c = d ? sortedClosings.find(x => d <= String(x.cutoff)) : null;
+    (c ? by.get(c.id) : open).rows.push(ch);
+  });
+  return [open, ...sortedClosings.slice().reverse().map(c => by.get(c.id))];
+}
+async function loadFamilyClosings() {
+  familyClosings = []; familyClosingsOk = true;
+  if (!supa || !currentUser || !isLeader) return;
+  const { data, error } = await supa.from('family_closings').select('*').eq('leader_id', currentUser.id).order('cutoff', { ascending: true });
+  if (error) { console.error('Fechamentos indisponíveis (rode o SQL da Parte D):', error); familyClosingsOk = false; return; }
+  familyClosings = data || [];
 }
 
 // Líder: o que DEVE estar em family_charges agora (linhas de faturas dele, em perfis atrelados a membros)
@@ -1179,6 +1221,9 @@ async function loadFamilyCharges() {
   if (!supa || !currentUser) return;
   const { data, error } = await supa.from('family_charges').select('*').eq('member_id', currentUser.id).order('date', { ascending: true });
   if (error) { console.error('Erro ao carregar gastos da família:', error); return; }
+  const cl = await supa.from('family_closings').select('*').eq('member_id', currentUser.id);
+  if (cl.error) console.error('Fechamentos indisponíveis:', cl.error);
+  memberClosings = cl.error ? [] : (cl.data || []);
   __chargesAt = Date.now();
   familyChargesCache = data || [];
   injectFamilyCharges(familyChargesCache);
@@ -1191,46 +1236,85 @@ function injectFamilyCharges(list) {
   state.faturas = (state.faturas || []).filter(f => !f.family);
   let target = state.profiles.findIndex(p => p.linkedUserId === (currentUser && currentUser.id));
   if (target < 0) target = 0; // sem perfil escolhido: entra no primeiro
-  // Uma fatura somente leitura por líder e por cartão de origem; os Pix ficam num grupo à parte
-  const groups = {};
-  list.forEach(c => {
-    const isPix = String(c.source_id || '').indexOf('pix:') === 0;
-    const origin = isPix ? '\u0000pix' : (c.fatura_name || '');
-    const key = c.leader_id + '|' + origin;
-    (groups[key] = groups[key] || { lid: c.leader_id, label: c.leader_label || 'família', isPix, origin: isPix ? '' : (c.fatura_name || ''), rows: [] }).rows.push(c);
-  });
-  Object.values(groups)
-    .sort((x, y) => (x.isPix - y.isPix) || x.origin.localeCompare(y.origin) || x.lid.localeCompare(y.lid))
-    .forEach((g, i) => {
+  // Uma fatura somente leitura por líder e por período: em aberto, ou mês fechado (a pagar).
+  // Meses já pagos saem do saldo e ficam só no histórico (familyPaidPeriods).
+  familyPaidPeriods = [];
+  const byLeader = {};
+  list.forEach(c => (byLeader[c.leader_id] = byLeader[c.leader_id] || []).push(c));
+  Object.keys(byLeader).sort().forEach(lid => {
+    const cs = byLeader[lid];
+    const who = cs[0].leader_label || 'família';
+    groupByPeriod(cs, closingsOf(memberClosings, lid, currentUser.id)).forEach(per => {
+      if (!per.rows.length) return;
+      const rows = per.rows.map(c => ({
+        id: 'fc-' + c.source_id, date: c.date || '', name: c.description || (isPixCharge(c) ? 'Pix' : ''), parcelas: c.parcelas || '',
+        value: Number(c.value) || 0, profileIdx: target, category: c.category || null, family: true,
+        faturaOrigem: isPixCharge(c) ? 'Pix' : (c.fatura_name || 'Cartão')
+      }));
+      const cl = per.closing;
+      if (cl && cl.paid_at) { familyPaidPeriods.push({ who, closing: cl, rows }); return; }
       state.faturas.push({
-        id: 'family-' + g.lid + '-' + i, family: true, kind: g.isPix ? 'pix' : 'cartao',
-        name: (g.isPix ? 'Pix' : (g.origin || 'Cartão')) + ' (' + g.label + ')', fechamento: '', vencimento: '',
-        rows: g.rows.map(c => ({ id: 'fc-' + c.source_id, date: c.date || '', name: c.description || (g.isPix ? 'Pix' : ''), parcelas: c.parcelas || '',
-          value: Number(c.value) || 0, profileIdx: target, category: c.category || null, family: true }))
+        id: 'family-' + lid + '-' + (cl ? cl.id : 'aberto'), family: true, kind: 'periodo', who,
+        closing: cl ? { id: cl.id, cutoff: cl.cutoff, label: cl.label } : null,
+        name: (cl ? (cl.label || 'Mês fechado') : 'Em aberto') + ' · ' + who, fechamento: '', vencimento: '', rows
       });
     });
+  });
   // cache local (a prévia do Início usa); não agenda gravação na nuvem
   try { localStorage.setItem('cf_state', JSON.stringify(state)); } catch (e) {}
 }
 
-// Fatura somente leitura mostrada ao membro
+// Linhas de um período agrupadas por cartão de origem (Pix por último), com subtotal de cada grupo
+function familyRowsHtml(rows) {
+  const groups = {};
+  rows.forEach(r => { const k = r.faturaOrigem || 'Cartão'; (groups[k] = groups[k] || []).push(r); });
+  const keys = Object.keys(groups).sort((x, y) => (x === 'Pix') - (y === 'Pix') || x.localeCompare(y));
+  return keys.map(k => {
+    const sub = groups[k].reduce((t, r) => t + (parseFloat(r.value) || 0), 0);
+    const lines = groups[k].slice().sort((x, y) => String(x.date || '').localeCompare(String(y.date || ''))).map(r => {
+      const when = r.date ? formatDateBR(r.date) : '';
+      const meta = [when, r.category, r.parcelas ? r.parcelas + 'x' : ''].filter(Boolean).map(escHtml).join(' · ');
+      return `<div class="saldo-line" style="cursor:default;min-height:56px"><div style="flex:1;min-width:0"><div class="row-name" style="overflow-wrap:anywhere">${escHtml(r.name || 'Gasto')}</div><div style="font-size:12px;color:var(--muted);overflow-wrap:anywhere">${meta}</div></div><span class="val-cell negative" style="font-weight:700">${fmt(r.value)}</span></div>`;
+    }).join('');
+    return `<div class="family-origin" style="display:flex;justify-content:space-between;gap:8px;padding:8px 14px;background:var(--surface-2,rgba(0,0,0,0.03));border-bottom:1px solid var(--border2);font-size:12px;font-weight:700;color:var(--muted)"><span>${escHtml(k)}</span><span class="val-cell">${fmt(sub)}</span></div>${lines}`;
+  }).join('');
+}
+
+// Fatura somente leitura mostrada ao membro (um período: em aberto ou mês fechado a pagar)
 function buildFamilyFaturaCard(f) {
   const total = f.rows.reduce((s, r) => s + (parseFloat(r.value) || 0), 0);
   const card = document.createElement('div');
   card.className = 'card';
-  const rowsHtml = f.rows.map(r => {
-    const when = r.date ? formatDateBR(r.date) : '';
-    const sub = [when, r.category, r.parcelas ? r.parcelas + 'x' : '', r.faturaOrigem].filter(Boolean).map(escHtml).join(' · ');
-    return `<div class="saldo-line" style="cursor:default;min-height:56px"><div style="flex:1;min-width:0"><div class="row-name" style="overflow-wrap:anywhere">${escHtml(r.name || 'Gasto')}</div><div style="font-size:12px;color:var(--muted);overflow-wrap:anywhere">${sub}</div></div><span class="val-cell negative" style="font-weight:700">${fmt(r.value)}</span></div>`;
-  }).join('');
+  const closed = !!f.closing;
+  const chip = closed
+    ? `Fechada${f.closing.cutoff ? ' · até ' + escHtml(formatDateBR(f.closing.cutoff)) : ''} · a pagar`
+    : 'Em aberto';
+  const note = closed
+    ? 'Mês fechado pelo líder. Continua no seu saldo até ele marcar como pago.'
+    : 'Gastos que o líder lançou para você. Novos gastos entram aqui até ele fechar o mês.';
   card.innerHTML = `
     <div class="card-header">
       <div class="card-title" style="display:flex;align-items:center;gap:8px">${ic('users', 18)}<span style="overflow-wrap:anywhere">${escHtml(f.name)}</span></div>
       <div class="card-total" id="total-${escHtml(f.id)}">${fmt(total)}</div>
     </div>
-    <div style="padding:8px 14px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border)">${f.kind === 'pix' ? 'Pix que o líder lançou para você' : 'Gastos que o líder lançou para você neste cartão'}. Já contam no seu saldo do mês. Só ele pode alterar.</div>
-    ${rowsHtml || '<div class="empty">Nenhum gasto lançado para você.</div>'}`;
+    <div style="padding:8px 14px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border)"><span class="badge" style="margin-right:6px">${chip}</span>${note} Já conta no seu saldo. Só o líder pode alterar.</div>
+    ${familyRowsHtml(f.rows) || '<div class="empty">Nenhum gasto lançado para você.</div>'}`;
   return card;
+}
+
+// Membro: meses já pagos (fora do saldo), só para consulta
+function appendFamilyPaidHistory(container) {
+  if (!familyPaidPeriods.length) return;
+  const det = document.createElement('details');
+  det.className = 'card';
+  det.id = 'family-paid-history';
+  const sum = familyPaidPeriods.reduce((t, p) => t + p.rows.reduce((u, r) => u + r.value, 0), 0);
+  const items = familyPaidPeriods.slice().sort((x, y) => String(y.closing.cutoff).localeCompare(String(x.closing.cutoff))).map(p => {
+    const tot = p.rows.reduce((u, r) => u + r.value, 0);
+    return `<div style="border-top:1px solid var(--border2)"><div style="display:flex;justify-content:space-between;gap:8px;padding:10px 14px;font-weight:700"><span style="overflow-wrap:anywhere">${escHtml((p.closing.label || 'Mês fechado') + ' · ' + p.who)} <span class="badge">Pago${p.closing.paid_at ? ' em ' + escHtml(formatDateBR(String(p.closing.paid_at).slice(0, 10))) : ''}</span></span><span class="val-cell">${fmt(tot)}</span></div>${familyRowsHtml(p.rows)}</div>`;
+  }).join('');
+  det.innerHTML = `<summary class="card-header" style="cursor:pointer"><div class="card-title" style="display:flex;align-items:center;gap:8px">${ic('check', 18)}<span>Meses pagos (${familyPaidPeriods.length})</span></div><div class="card-total">${fmt(sum)}</div></summary><div style="padding:8px 14px;font-size:13px;color:var(--muted)">Já pagos ao líder. Não contam mais no seu saldo.</div>${items}`;
+  container.appendChild(det);
 }
 
 // ── Cartão "Modo família" (aba Resumo) ──
@@ -1313,7 +1397,15 @@ function renderFamilyOverview() {
   if (!body) return;
   if (!familyMembers.length) { body.innerHTML = '<div class="empty">Ainda não há membros. Envie o código de convite para alguém entrar.</div>'; return; }
   const by = {};
-  desiredCharges().forEach(c => { const x = by[c.member_id] = by[c.member_id] || { n: 0, sum: 0 }; x.n++; x.sum += c.value; });
+  const allCh = [...desiredCharges().values()];
+  familyMembers.forEach(m => {
+    const x = by[m.user_id] = { n: 0, sum: 0, closedUnpaid: 0 };
+    groupByPeriod(allCh.filter(c => c.member_id === m.user_id), closingsOf(familyClosings, currentUser.id, m.user_id)).forEach(per => {
+      if (per.closing && per.closing.paid_at) return;
+      if (per.closing) x.closedUnpaid++;
+      per.rows.forEach(c => { x.n++; x.sum += c.value; });
+    });
+  });
   body.innerHTML = '<div style="padding:12px 18px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border2)">Os gastos que você lançou nos perfis atrelados a cada membro.</div>';
   familyMembers.forEach(m => {
     const x = by[m.user_id] || { n: 0, sum: 0 };
@@ -1321,7 +1413,7 @@ function renderFamilyOverview() {
     const b = document.createElement('button');
     b.className = 'saldo-line';
     b.style.cssText = 'width:100%;background:none;border:none;border-bottom:1px solid var(--border2);text-align:left;font-family:inherit;color:inherit';
-    b.innerHTML = `<span class="row-ic">${ic('users', 20)}</span><span style="flex:1;min-width:0"><span class="row-name" style="display:block;overflow-wrap:anywhere">${escHtml(m.email || 'Sem e-mail')}</span><span style="display:block;font-size:12px;color:var(--muted)">${linked ? (x.n + (x.n === 1 ? ' gasto' : ' gastos')) : 'Nenhum perfil atrelado ainda'}</span></span><span class="val-cell" style="font-weight:700">${fmt(x.sum)}</span>`;
+    b.innerHTML = `<span class="row-ic">${ic('users', 20)}</span><span style="flex:1;min-width:0"><span class="row-name" style="display:block;overflow-wrap:anywhere">${escHtml(m.email || 'Sem e-mail')}</span><span style="display:block;font-size:12px;color:var(--muted)">${linked ? (x.n + (x.n === 1 ? ' gasto' : ' gastos') + (x.closedUnpaid ? ' · ' + x.closedUnpaid + (x.closedUnpaid === 1 ? ' mês fechado a pagar' : ' meses fechados a pagar') : '')) : 'Nenhum perfil atrelado ainda'}</span></span><span class="val-cell" style="font-weight:700">${fmt(x.sum)}</span>`;
     b.onclick = () => { __famRender = () => renderMemberCharges(m.user_id); __famRender(); };
     body.appendChild(b);
   });
@@ -1368,15 +1460,120 @@ function renderMemberCharges(uid) {
     : 'Escolha um perfil. Depois, na aba Faturas, todo gasto lançado nesse perfil vai para esta pessoa.';
   linkBox.append(linkLab, linkSel, linkHint);
   body.appendChild(linkBox);
-  if (!list.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'Nenhum gasto lançado ainda.'; body.appendChild(e); return; }
-  list.forEach(c => {
+  const closings = closingsOf(familyClosings, currentUser.id, uid);
+  const periods = groupByPeriod(list, closings);
+  const latest = closings.length ? closings[closings.length - 1] : null;
+  const pending = periods.reduce((t, per) => t + ((per.closing && per.closing.paid_at) ? 0 : per.rows.reduce((u, c) => u + c.value, 0)), 0);
+  head.querySelector('.val-cell').textContent = fmt(pending);
+  head.querySelector('.val-cell').title = 'A receber: em aberto + meses fechados ainda não pagos';
+  if (!familyClosingsOk) {
+    const w = document.createElement('div');
+    w.style.cssText = 'padding:10px 18px;font-size:13px;color:var(--danger,#b3261e);border-bottom:1px solid var(--border2)';
+    w.textContent = 'Fechar mês ainda não está disponível: rode o SQL "modo-familia-parte-D" no Supabase.';
+    body.appendChild(w);
+  }
+  const lineFor = c => {
     const sub = [c.date ? formatDateBR(c.date) : '', c.category, c.fatura_name].filter(Boolean).map(escHtml).join(' · ');
     const row = document.createElement('div');
     row.className = 'saldo-line';
     row.style.cssText = 'cursor:default;min-height:56px';
     row.innerHTML = `<div style="flex:1;min-width:0"><div class="row-name" style="overflow-wrap:anywhere">${escHtml(c.description || 'Gasto')}</div><div style="font-size:12px;color:var(--muted);overflow-wrap:anywhere">${sub}</div></div><span class="val-cell negative" style="font-weight:700">${fmt(c.value)}</span>`;
-    body.appendChild(row);
+    return row;
+  };
+  const rerender = () => { __famRender = () => renderMemberCharges(uid); __famRender(); };
+  const btn = (txt, cls, fn) => { const b = document.createElement('button'); b.className = 'btn btn-sm ' + cls; b.textContent = txt; b.onclick = fn; return b; };
+  periods.forEach((per, pi) => {
+    const cl = per.closing;
+    const sec = document.createElement('div');
+    sec.className = 'family-period';
+    sec.dataset.period = cl ? cl.id : 'aberto';
+    sec.style.cssText = 'border-bottom:1px solid var(--border2)';
+    const tot = per.rows.reduce((t, c) => t + c.value, 0);
+    const title = cl ? (cl.label || 'Mês fechado') : 'Em aberto';
+    const meta = cl ? ('até ' + formatDateBR(cl.cutoff) + (cl.paid_at ? ' · pago em ' + formatDateBR(String(cl.paid_at).slice(0, 10)) : ' · a pagar'))
+                    : (latest ? 'gastos depois de ' + formatDateBR(latest.cutoff) : 'ainda sem fechamento');
+    const hd = document.createElement('div');
+    hd.style.cssText = 'display:flex;align-items:center;gap:8px;padding:12px 18px 6px';
+    hd.innerHTML = `<div style="flex:1;min-width:0"><div style="font-weight:700;overflow-wrap:anywhere">${escHtml(title)}</div><div style="font-size:12px;color:var(--muted)">${escHtml(meta)}</div></div><span class="val-cell" style="font-weight:700">${fmt(tot)}</span>`;
+    sec.appendChild(hd);
+    const act = document.createElement('div');
+    act.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 10px';
+    if (!cl) {
+      if (familyClosingsOk) act.appendChild(btn('Fechar mês…', 'btn-ghost', () => openCloseForm(uid, per, latest, sec, rerender)));
+    } else if (cl.paid_at) {
+      act.appendChild(btn('Desfazer pago', 'btn-ghost', () => setClosingPaid(cl, false, rerender)));
+    } else {
+      act.appendChild(btn('Marcar como pago', 'btn-primary', () => setClosingPaid(cl, true, rerender)));
+      if (latest && cl.id === latest.id) act.appendChild(btn('Reabrir mês', 'btn-ghost', () => reopenClosing(cl, rerender)));
+    }
+    if (act.childNodes.length) sec.appendChild(act);
+    if (per.rows.length) {
+      per.rows.slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))).forEach(c => sec.appendChild(lineFor(c)));
+    } else {
+      const e = document.createElement('div'); e.className = 'empty'; e.textContent = cl ? 'Nenhum gasto neste mês.' : 'Nenhum gasto em aberto.'; sec.appendChild(e);
+    }
+    body.appendChild(sec);
   });
+}
+
+// Formulário de "Fechar mês": escolhe a data de corte e vê quantos gastos entram
+function openCloseForm(uid, per, latest, sec, rerender) {
+  if (sec.querySelector('.close-form')) return;
+  const f = document.createElement('div');
+  f.className = 'close-form';
+  f.style.cssText = 'margin:0 18px 12px;padding:12px;border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;gap:8px;background:var(--surface-2,rgba(0,0,0,0.03))';
+  const today = todayLocalISO();
+  f.innerHTML = `
+    <label style="font-size:12px;font-weight:700;color:var(--muted)">Fechar o mês até (data de corte)</label>
+    <input type="date" class="cf-cut" value="${today}" style="min-height:44px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
+    <label style="font-size:12px;font-weight:700;color:var(--muted)">Nome do mês</label>
+    <input type="text" class="cf-lab" maxlength="40" value="${escHtml(monthLabelFromISO(today))}" style="min-height:44px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px">
+    <div class="cf-prev" style="font-size:13px;color:var(--muted)"></div>
+    <div class="cf-err" style="font-size:13px;color:var(--danger,#b3261e)"></div>
+    <div style="display:flex;gap:8px"><button class="btn btn-primary btn-sm cf-ok">Fechar mês</button><button class="btn btn-ghost btn-sm cf-cancel">Cancelar</button></div>`;
+  const cut = f.querySelector('.cf-cut'), lab = f.querySelector('.cf-lab'), prev = f.querySelector('.cf-prev'), err = f.querySelector('.cf-err');
+  let labTouched = false;
+  lab.oninput = () => { labTouched = true; };
+  const refresh = () => {
+    const d = cut.value;
+    err.textContent = '';
+    if (!labTouched) lab.value = monthLabelFromISO(d);
+    const inside = per.rows.filter(c => c.date && c.date <= d);
+    const undated = per.rows.filter(c => !c.date).length;
+    prev.textContent = !d ? '' : inside.length + (inside.length === 1 ? ' gasto entra' : ' gastos entram') + ' neste mês (' + fmt(inside.reduce((t, c) => t + c.value, 0)) + ').'
+      + (per.rows.length - inside.length - undated > 0 ? ' Os de depois de ' + formatDateBR(d) + ' ficam no próximo mês.' : '')
+      + (undated ? ' ' + undated + ' sem data continuam em aberto.' : '');
+  };
+  cut.oninput = refresh; refresh();
+  f.querySelector('.cf-cancel').onclick = () => f.remove();
+  f.querySelector('.cf-ok').onclick = async () => {
+    const d = cut.value;
+    if (!d) { err.textContent = 'Escolha a data de corte.'; return; }
+    if (latest && d <= String(latest.cutoff)) { err.textContent = 'Já existe um fechamento até ' + formatDateBR(latest.cutoff) + '. Escolha uma data depois dela.'; return; }
+    const ok = f.querySelector('.cf-ok'); ok.disabled = true;
+    const { data, error } = await supa.from('family_closings').insert({ family_id: familyId, leader_id: currentUser.id, member_id: uid, cutoff: d, label: (lab.value || '').trim() || monthLabelFromISO(d) }).select();
+    ok.disabled = false;
+    if (error) { err.textContent = 'Não foi possível fechar o mês: ' + (error.message || 'erro desconhecido'); return; }
+    const row = Array.isArray(data) ? data[0] : data;
+    familyClosings.push(row || { id: 'tmp-' + Date.now(), leader_id: currentUser.id, member_id: uid, cutoff: d, label: lab.value, paid_at: null });
+    rerender();
+  };
+  sec.insertBefore(f, sec.children[2] || null);
+  cut.focus();
+}
+async function setClosingPaid(cl, paid, rerender) {
+  const when = paid ? new Date().toISOString() : null;
+  const { error } = await supa.from('family_closings').update({ paid_at: when }).eq('id', cl.id);
+  if (error) { alert('Não foi possível atualizar: ' + (error.message || 'erro desconhecido')); return; }
+  cl.paid_at = when;
+  rerender();
+}
+async function reopenClosing(cl, rerender) {
+  if (!confirm('Reabrir "' + (cl.label || 'este mês') + '"? Os gastos dele voltam para o mês em aberto.')) return;
+  const { error } = await supa.from('family_closings').delete().eq('id', cl.id);
+  if (error) { alert('Não foi possível reabrir: ' + (error.message || 'erro desconhecido')); return; }
+  familyClosings = familyClosings.filter(c => c.id !== cl.id);
+  rerender();
 }
 
 loadFinanceFromCloud();
@@ -3583,7 +3780,7 @@ function renderFaturas() {
 
     if (f.rows.length === 0) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="8"><div class="empty">Nenhum gasto ainda. Clique em "Adicionar linha".</div></td>`;
+      tr.innerHTML = `<td colspan="8"><div class="empty">Nenhum gasto ainda. Clique em "Adicionar linha" acima.</div></td>`;
       tbody.appendChild(tr);
     } else {
       sortedRowsForDisplay(f.rows).forEach(r => {
@@ -3677,7 +3874,7 @@ function renderFaturas() {
     wrap.appendChild(table);
 
     const addBar = document.createElement('div');
-    addBar.className = 'add-row-bar';
+    addBar.className = 'add-row-bar top';
     const addBtn = document.createElement('button');
     addBtn.className = 'btn btn-ghost btn-sm';
     addBtn.textContent = '＋ Adicionar linha';
@@ -3688,8 +3885,8 @@ function renderFaturas() {
     // padrão; só fica aberto se o usuário explicitamente expandir (=== false)
     const body = document.createElement('div');
     body.id = 'fatura-body-' + f.id;
+    body.appendChild(addBar);   // botão no topo: a linha nova também nasce no topo da tabela
     body.appendChild(wrap);
-    body.appendChild(addBar);
     if (_collapsedFaturas[f.id] !== false) body.style.display = 'none';
     card.appendChild(body);
 
@@ -3705,6 +3902,7 @@ function renderFaturas() {
 
     container.appendChild(card);
   });
+  appendFamilyPaidHistory(container);
 }
 
 
