@@ -760,7 +760,7 @@
   </div>
 </div>
 
-<script src="/finance-formulas.js"></script>
+<script src="/finance-formulas.js?v=2"></script>
 <script>
 // ══════════════════════════════════════════════════════
 //  CONSTANTS
@@ -2577,6 +2577,12 @@ function getBTById(id) {
 function getTableTotal(t) {
   // A conta de verdade agora mora em public/finance-formulas.js (fonte
   // única, compartilhada com a prévia da Início) — aqui só repassamos.
+  // Cópia antiga do arquivo em cache (sem "version")? Então refaz a conta de Faturas aqui:
+  // só as faturas, sem Pix (o Pix já saiu da conta e não há nada a pagar depois).
+  if (t.type === 'faturas_auto' && !(FinanceFormulas.version >= 2)) {
+    return (state.faturas || []).reduce((s, f) =>
+      s + (f.rows || []).reduce((s2, r) => s2 + (parseFloat(r.value) || 0), 0), 0);
+  }
   return FinanceFormulas.cfGetTableTotal(state, t);
 }
 

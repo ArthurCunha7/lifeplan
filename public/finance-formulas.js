@@ -61,8 +61,10 @@
     if (t.type === 'faturas_auto') {
       const faturasTotal = (state.faturas || []).reduce((s, f) =>
         s + (f.rows || []).reduce((s2, r) => s2 + (parseFloat(r.value) || 0), 0), 0);
-      const pixTotal = (state.pixRows || []).reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
-      return faturasTotal + pixTotal;
+      // Pix já saiu da conta: conta no gasto do perfil (cfGetAllRowsByProfile), mas NÃO entra no
+      // total das faturas — não há nada a pagar depois. (Antes somava aqui e o Balanço mostrava
+      // "Faturas" com um valor maior que a soma das faturas listadas.)
+      return faturasTotal;
     }
     if (t.type === 'planejamento') {
       return (t.rows || []).filter(r => r.categoria && r.profileIdx != null)
@@ -75,6 +77,9 @@
   }
 
   global.FinanceFormulas = {
+    // versão 2: o total de "Faturas" não soma Pix. As telas conferem este número para não
+    // errar a conta caso o navegador ainda tenha uma cópia antiga deste arquivo em cache.
+    version: 2,
     cfGetAllRowsByProfile,
     cfComputeEntradasTotal,
     cfComputeGastoCategoria,

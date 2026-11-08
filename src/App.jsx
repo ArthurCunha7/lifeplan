@@ -1804,7 +1804,11 @@ function getSaldoPreview(){
     let saldoFinal=0;
     state.balancoTables.forEach(t=>{
       if(!t.includeInSaldo||t.sign===0) return;
-      saldoFinal += window.FinanceFormulas.cfGetTableTotal(state,t)*t.sign;
+      // cópia antiga de finance-formulas.js em cache (sem "version"): refaz Faturas sem somar Pix
+      const total=(t.type==='faturas_auto'&&!(window.FinanceFormulas.version>=2))
+        ?(state.faturas||[]).reduce((s,f)=>s+(f.rows||[]).reduce((s2,r)=>s2+(parseFloat(r.value)||0),0),0)
+        :window.FinanceFormulas.cfGetTableTotal(state,t);
+      saldoFinal += total*t.sign;
     });
     return saldoFinal;
   }catch{return null;}
