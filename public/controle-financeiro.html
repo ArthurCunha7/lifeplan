@@ -666,7 +666,7 @@
     <div class="header-actions">
       <button class="btn btn-ghost btn-sm" id="btn-mask" onclick="toggleMask()" aria-pressed="false"></button>
       <button class="btn btn-ghost btn-sm" onclick="openSearchPanel()" title="Buscar em faturas, pagamentos e balanço"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Buscar</button>
-      <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar um PDF com faturas, pagamentos, resumo por perfil e balanço"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> Exportar PDF</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar o extrato em PDF, com faturas, pagamentos, extrato por perfil e balanço"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> Exportar PDF</button>
     </div>
   </div>
   <nav id="nav">
@@ -713,7 +713,7 @@
   <div class="card" id="pagamentos-card">
     <div class="card-header">
       <button class="btn btn-ghost btn-sm" id="pagamentos-toggle-btn" onclick="togglePagamentosSection()">▸</button>
-      <div class="card-title">Registro de pagamentos</div>
+      <div class="card-title">Extrato de pagamentos</div>
     </div>
     <div id="pagamentos-body" style="display:none">
       <div id="pagamentos-container"></div>
@@ -909,7 +909,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 // ── FAMÍLIA ────────────────────────────────────────────────────────────────
 function copyInviteCode() {
-  if (!familyInviteCode) { alert('Código ainda não carregou — espera um instante e tenta de novo.'); return; }
+  if (!familyInviteCode) { alert('O código ainda não carregou. Aguarde um instante e tente de novo.'); return; }
   navigator.clipboard.writeText(familyInviteCode).then(() => {
     alert('Código copiado! Envie para quem você quer convidar para o modo família.');
   }).catch(() => {
@@ -1256,7 +1256,7 @@ function injectFamilyCharges(list) {
       state.faturas.push({
         id: 'family-' + lid + '-' + (cl ? cl.id : 'aberto'), family: true, kind: 'periodo', who,
         closing: cl ? { id: cl.id, cutoff: cl.cutoff, label: cl.label } : null,
-        name: (cl ? (cl.label || 'Mês fechado') : 'Em aberto') + ' · ' + who, fechamento: '', vencimento: '', rows
+        name: (cl ? (cl.label || 'Fechamento') : 'Em aberto') + ' · ' + who, fechamento: '', vencimento: '', rows
       });
     });
   });
@@ -1290,7 +1290,7 @@ function buildFamilyFaturaCard(f) {
     ? `Fechada${f.closing.cutoff ? ' · até ' + escHtml(formatDateBR(f.closing.cutoff)) : ''} · a pagar`
     : 'Em aberto';
   const note = closed
-    ? 'Mês fechado pelo líder. Continua no seu saldo até ele marcar como pago.'
+    ? 'Fechamento feito pelo líder. Continua no seu saldo até ele marcar como pago.'
     : 'Gastos que o líder lançou para você. Novos gastos entram aqui até ele fechar o mês.';
   card.innerHTML = `
     <div class="card-header">
@@ -1298,7 +1298,7 @@ function buildFamilyFaturaCard(f) {
       <div class="card-total" id="total-${escHtml(f.id)}">${fmt(total)}</div>
     </div>
     <div style="padding:8px 14px 10px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border)"><span class="badge" style="margin-right:6px">${chip}</span>${note} Já conta no seu saldo. Só o líder pode alterar.</div>
-    ${familyRowsHtml(f.rows) || '<div class="empty">Nenhum gasto lançado para você.</div>'}`;
+    ${familyRowsHtml(f.rows) || '<div class="empty">Nenhum lançamento para você.</div>'}`;
   return card;
 }
 
@@ -1311,7 +1311,7 @@ function appendFamilyPaidHistory(container) {
   const sum = familyPaidPeriods.reduce((t, p) => t + p.rows.reduce((u, r) => u + r.value, 0), 0);
   const items = familyPaidPeriods.slice().sort((x, y) => String(y.closing.cutoff).localeCompare(String(x.closing.cutoff))).map(p => {
     const tot = p.rows.reduce((u, r) => u + r.value, 0);
-    return `<div style="border-top:1px solid var(--border2)"><div style="display:flex;justify-content:space-between;gap:8px;padding:10px 14px;font-weight:700"><span style="overflow-wrap:anywhere">${escHtml((p.closing.label || 'Mês fechado') + ' · ' + p.who)} <span class="badge">Pago${p.closing.paid_at ? ' em ' + escHtml(formatDateBR(String(p.closing.paid_at).slice(0, 10))) : ''}</span></span><span class="val-cell">${fmt(tot)}</span></div>${familyRowsHtml(p.rows)}</div>`;
+    return `<div style="border-top:1px solid var(--border2)"><div style="display:flex;justify-content:space-between;gap:8px;padding:10px 14px;font-weight:700"><span style="overflow-wrap:anywhere">${escHtml((p.closing.label || 'Fechamento') + ' · ' + p.who)} <span class="badge">Pago${p.closing.paid_at ? ' em ' + escHtml(formatDateBR(String(p.closing.paid_at).slice(0, 10))) : ''}</span></span><span class="val-cell">${fmt(tot)}</span></div>${familyRowsHtml(p.rows)}</div>`;
   }).join('');
   det.innerHTML = `<summary class="card-header" style="cursor:pointer"><div class="card-title" style="display:flex;align-items:center;gap:8px">${ic('check', 18)}<span>Meses pagos (${familyPaidPeriods.length})</span></div><div class="card-total">${fmt(sum)}</div></summary><div style="padding:8px 14px;font-size:13px;color:var(--muted)">Já pagos ao líder. Não contam mais no seu saldo.</div>${items}`;
   container.appendChild(det);
@@ -1337,7 +1337,7 @@ function renderFamilyCard() {
         <span id="family-invite-code" style="font-weight:700;font-size:15px;color:var(--accent-dark);font-variant-numeric:tabular-nums">${escHtml(familyInviteCode || '—')}</span>
         <button class="btn btn-ghost btn-sm" onclick="copyInviteCode()">Copiar</button>
       </div>
-      <button class="btn btn-primary" onclick="openFamilyAccounts()">Ver gastos lançados</button>`;
+      <button class="btn btn-primary" onclick="openFamilyAccounts()">Ver extrato</button>`;
   } else {
     body.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
@@ -1413,7 +1413,7 @@ function renderFamilyOverview() {
     const b = document.createElement('button');
     b.className = 'saldo-line';
     b.style.cssText = 'width:100%;background:none;border:none;border-bottom:1px solid var(--border2);text-align:left;font-family:inherit;color:inherit';
-    b.innerHTML = `<span class="row-ic">${ic('users', 20)}</span><span style="flex:1;min-width:0"><span class="row-name" style="display:block;overflow-wrap:anywhere">${escHtml(m.email || 'Sem e-mail')}</span><span style="display:block;font-size:12px;color:var(--muted)">${linked ? (x.n + (x.n === 1 ? ' gasto' : ' gastos') + (x.closedUnpaid ? ' · ' + x.closedUnpaid + (x.closedUnpaid === 1 ? ' mês fechado a pagar' : ' meses fechados a pagar') : '')) : 'Nenhum perfil atrelado ainda'}</span></span><span class="val-cell" style="font-weight:700">${fmt(x.sum)}</span>`;
+    b.innerHTML = `<span class="row-ic">${ic('users', 20)}</span><span style="flex:1;min-width:0"><span class="row-name" style="display:block;overflow-wrap:anywhere">${escHtml(m.email || 'Sem e-mail')}</span><span style="display:block;font-size:12px;color:var(--muted)">${linked ? (x.n + (x.n === 1 ? ' lançamento' : ' lançamentos') + (x.closedUnpaid ? ' · ' + x.closedUnpaid + (x.closedUnpaid === 1 ? ' fechamento a pagar' : ' fechamentos a pagar') : '')) : 'Nenhum perfil atrelado ainda'}</span></span><span class="val-cell" style="font-weight:700">${fmt(x.sum)}</span>`;
     b.onclick = () => { __famRender = () => renderMemberCharges(m.user_id); __famRender(); };
     body.appendChild(b);
   });
@@ -1489,7 +1489,7 @@ function renderMemberCharges(uid) {
     sec.dataset.period = cl ? cl.id : 'aberto';
     sec.style.cssText = 'border-bottom:1px solid var(--border2)';
     const tot = per.rows.reduce((t, c) => t + c.value, 0);
-    const title = cl ? (cl.label || 'Mês fechado') : 'Em aberto';
+    const title = cl ? (cl.label || 'Fechamento') : 'Em aberto';
     const meta = cl ? ('até ' + formatDateBR(cl.cutoff) + (cl.paid_at ? ' · pago em ' + formatDateBR(String(cl.paid_at).slice(0, 10)) : ' · a pagar'))
                     : (latest ? 'gastos depois de ' + formatDateBR(latest.cutoff) : 'ainda sem fechamento');
     const hd = document.createElement('div');
@@ -1510,7 +1510,7 @@ function renderMemberCharges(uid) {
     if (per.rows.length) {
       per.rows.slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))).forEach(c => sec.appendChild(lineFor(c)));
     } else {
-      const e = document.createElement('div'); e.className = 'empty'; e.textContent = cl ? 'Nenhum gasto neste mês.' : 'Nenhum gasto em aberto.'; sec.appendChild(e);
+      const e = document.createElement('div'); e.className = 'empty'; e.textContent = cl ? 'Nenhum lançamento neste fechamento.' : 'Nenhum lançamento em aberto.'; sec.appendChild(e);
     }
     body.appendChild(sec);
   });
@@ -1931,7 +1931,7 @@ function exportFinanceReportPDF() {
 }
 function buildAndPrintFinanceReport() {
   const today = new Date().toLocaleDateString('pt-BR');
-  let html = `<h1>Relatório Financeiro</h1><div class="pdf-subtitle">Gerado em ${today} — LifePlan</div>`;
+  let html = `<h1>Extrato financeiro</h1><div class="pdf-subtitle">Gerado em ${today} — LifePlan</div>`;
 
   // ── FATURAS ──
   html += `<h2>Faturas</h2>`;
@@ -1958,7 +1958,7 @@ function buildAndPrintFinanceReport() {
   html += `<h2>Pagamentos</h2>`;
   const totalPagoGeral = state.payments.reduce((s,p) => s + (parseFloat(p.value)||0), 0);
   if (!state.payments.length) {
-    html += `<div class="pdf-empty">Nenhum pagamento registrado.</div>`;
+    html += `<div class="pdf-empty">Nenhum pagamento no extrato.</div>`;
   } else {
     html += `<table><thead><tr><th>Data</th><th>Descrição</th><th>Perfil</th><th>Valor</th></tr></thead><tbody>`;
     [...state.payments].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(p => {
@@ -1970,7 +1970,7 @@ function buildAndPrintFinanceReport() {
   }
 
   // ── RESUMO POR PERFIL (mesma fórmula real da aba Resumo & Perfis) ──
-  html += `<h2>Resumo por Perfil</h2>`;
+  html += `<h2>Extrato por perfil</h2>`;
   html += `<table><thead><tr><th>Perfil</th><th>Total Gastos</th><th>Total Pago</th><th>Saldo</th></tr></thead><tbody>`;
   let gtGastos = 0, gtPago = 0;
   getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
@@ -2184,7 +2184,7 @@ function buildReceiptCell(r, fId) {
 }
 
 function triggerReceiptUpload(fId, rId) {
-  if (!currentUser || !supa) { alert('Faça login pra anexar fotos.'); return; }
+  if (!currentUser || !supa) { alert('Faça login para anexar fotos.'); return; }
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -2919,7 +2919,7 @@ function renderBancoCard(card, t) {
   if (t.rows.length === 0) {
     const hint = document.createElement('div');
     hint.style.cssText = 'font-size:12px;color:var(--muted);padding:0 0 12px 2px';
-    hint.textContent = 'Clique em "＋ Nova conta" para adicionar.';
+    hint.textContent = 'Toque em "＋ Nova conta" para adicionar.';
     grid.insertBefore(hint, addBox);
   }
 
@@ -2940,7 +2940,7 @@ function renderEntradasCard(card, t) {
   // Header hint
   const hint = document.createElement('div');
   hint.style.cssText = 'padding:6px 14px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2)';
-  hint.textContent = 'Clique no perfil para incluir ou excluir do total de Entradas.';
+  hint.textContent = 'Toque no perfil para incluir ou excluir do total de Entradas.';
   card.appendChild(hint);
 
   const wrap = document.createElement('div'); wrap.className = 'table-wrap';
@@ -2973,7 +2973,7 @@ function renderEntradasCard(card, t) {
     const tdName = document.createElement('td');
     tdName.innerHTML = `${dot}${name}`;
     tdName.style.cursor = 'pointer';
-    tdName.title = included ? 'Clique para excluir' : 'Clique para incluir';
+    tdName.title = included ? 'Toque para excluir' : 'Toque para incluir';
 
     const tdVal = document.createElement('td');
     tdVal.className = `val-cell ${cls}`;
@@ -3068,6 +3068,15 @@ function renderFaturasAutoCard(card, t) {
     const tfoot = document.createElement('tfoot');
     tfoot.innerHTML = `<tr><td colspan="3">Total</td><td class="val-cell negative">${fmt(total)}</td></tr>`;
     table.appendChild(tfoot);
+  }
+
+  // Pix já saiu da conta: não entra no total das faturas, mas aparece aqui para ninguém achar que sumiu
+  const pixSum = (state.pixRows || []).reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+  if (pixSum > 0) {
+    const tr = document.createElement('tr');
+    tr.className = 'balanco-pix-info';
+    tr.innerHTML = `<td colspan="3" style="color:var(--muted);font-style:italic">Pix — fora do total (já saiu da conta)</td><td class="val-cell" style="color:var(--muted);font-style:italic">${fmt(pixSum)}</td>`;
+    tbody.appendChild(tr);
   }
 
   table.appendChild(tbody);
@@ -3499,7 +3508,7 @@ function renderSaldoBuilder() {
           const row = document.createElement('div');
           row.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:7px 22px;border-bottom:1px solid var(--border2);opacity:${included ? 1 : .4};cursor:pointer;transition:opacity .15s`;
           row.innerHTML = `<span style="font-size:13px">${dot}${name}</span><span class="val-cell ${saldoCls}" style="font-size:12px">${saldo >= 0 ? '+' : ''}${fmt(saldo)}</span>`;
-          row.title = included ? 'Clique para excluir das Entradas' : 'Clique para incluir nas Entradas';
+          row.title = included ? 'Toque para excluir das Entradas' : 'Toque para incluir nas Entradas';
           row.onclick = () => { state.entradasProfiles[idx] = !included; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
           body.appendChild(row);
         });
@@ -3519,6 +3528,15 @@ function renderSaldoBuilder() {
             rowEl.innerHTML = `<span>${f.name}</span><span class="val-cell negative">${fmt(val)}</span>`;
             body.appendChild(rowEl);
           });
+        }
+        // Pix não entra no total das faturas (já saiu da conta), mas fica visível aqui para não "sumir"
+        const pixSum = (state.pixRows || []).reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+        if (pixSum > 0) {
+          const pixEl = document.createElement('div');
+          pixEl.className = 'balanco-pix-info';
+          pixEl.style.cssText = 'display:flex;justify-content:space-between;gap:8px;padding:7px 18px;border-bottom:1px solid var(--border2);font-size:12px;color:var(--muted)';
+          pixEl.innerHTML = `<span style="min-width:0;overflow-wrap:anywhere">Pix (fora deste total — já saiu da conta)</span><span class="val-cell" style="font-style:italic;white-space:nowrap">${fmt(pixSum)}</span>`;
+          body.appendChild(pixEl);
         }
         const hint = document.createElement('div');
         hint.style.cssText = 'padding:8px 18px;font-size:12px;color:var(--muted);font-style:italic';
@@ -3780,7 +3798,7 @@ function renderFaturas() {
 
     if (f.rows.length === 0) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="8"><div class="empty">Nenhum gasto ainda. Clique em "Adicionar linha" acima.</div></td>`;
+      tr.innerHTML = `<td colspan="8"><div class="empty">Nenhum lançamento ainda. Toque em "Adicionar linha" acima.</div></td>`;
       tbody.appendChild(tr);
     } else {
       sortedRowsForDisplay(f.rows).forEach(r => {
@@ -3932,7 +3950,7 @@ function renderPix() {
 
   const rows = [...(state.pixRows || [])].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   if (!rows.length) {
-    body.innerHTML = '<div class="empty">Nenhum Pix registrado ainda.</div>';
+    body.innerHTML = '<div class="empty">Nenhum Pix lançado ainda.</div>';
     return;
   }
 
@@ -4100,7 +4118,7 @@ function renderPerfis() {
     const tbody = document.createElement('tbody');
 
     if (txs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhum gasto ou pagamento neste perfil ainda.</div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhum lançamento no extrato deste perfil ainda.</div></td></tr>`;
     } else {
       txs.forEach(tx => {
         const tr = document.createElement('tr');
@@ -4256,7 +4274,7 @@ function renderPagamentos() {
 
     const tbody = document.createElement('tbody');
     if (pays.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4"><div class="empty">Nenhum pagamento registrado.</div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty">Nenhum pagamento no extrato.</div></td></tr>`;
     } else {
       pays.forEach(p => {
         const tr = document.createElement('tr');

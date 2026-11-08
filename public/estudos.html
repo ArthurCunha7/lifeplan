@@ -619,7 +619,7 @@ function todayStr() { const d=new Date(); return `${d.getFullYear()}-${String(d.
 function openSearchPanel() {
   document.getElementById('search-overlay').style.display = 'flex';
   document.getElementById('search-input').value = '';
-  document.getElementById('search-results').innerHTML = '<div class="empty">Digite algo pra buscar.</div>';
+  document.getElementById('search-results').innerHTML = '<div class="empty">Digite algo para buscar.</div>';
   setTimeout(() => document.getElementById('search-input').focus(), 50);
 }
 function closeSearchPanel() {
@@ -632,7 +632,7 @@ document.addEventListener('keydown', (e) => {
 function performSearch(query) {
   const q = query.trim().toLowerCase();
   const resultsEl = document.getElementById('search-results');
-  if (!q) { resultsEl.innerHTML = '<div class="empty">Digite algo pra buscar.</div>'; return; }
+  if (!q) { resultsEl.innerHTML = '<div class="empty">Digite algo para buscar.</div>'; return; }
 
   const results = [];
 

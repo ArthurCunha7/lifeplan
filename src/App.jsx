@@ -6,6 +6,7 @@ import { LockScreen, PrivacyCover, LockSettings } from "./LockScreen";
 import { getPrivacy, clearLock } from "./privacySettings";
 import { NotificationBell, NotificationSettings } from "./Notifications";
 import { disablePush } from "./notificationsApi";
+import { resumoSemanal } from "./weeklySummary";
 import { supabase, signUp, signIn, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 
 // Tema compartilhado (cores + fontes), o mesmo arquivo usado pelas páginas em
@@ -180,7 +181,7 @@ function LoginPage({onSwitch,onLogin}){
       <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:20,fontWeight:800,color:'var(--text)'}}>Recuperar senha</div></div>
       {forgotSent?(
         <div style={{textAlign:'center'}}>
-          <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:22}}>Se <b>{forgotEmail}</b> tiver uma conta, enviamos um link pra você criar uma senha nova. Confira sua caixa de entrada (e o spam).</div>
+          <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:22}}>Se <b>{forgotEmail}</b> tiver uma conta, enviamos um link para você criar uma senha nova. Confira sua caixa de entrada (e o spam).</div>
           <button style={{...S.btn('var(--success)'),width:'100%',padding:13}} onClick={()=>{setForgotMode(false);setForgotSent(false);}}>Voltar para o login</button>
         </div>
       ):(
@@ -232,7 +233,7 @@ function ResetPasswordPage({onDone}){
     <AuthWrap>
       <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:20,fontWeight:800,color:'var(--text)'}}>Defina sua nova senha</div></div>
       {done?(
-        <div style={{textAlign:'center',fontSize:14,color:'var(--accent-dark)',fontWeight:700}}>Senha alterada! Levando você pro app...</div>
+        <div style={{textAlign:'center',fontSize:14,color:'var(--accent-dark)',fontWeight:700}}>Senha alterada! Levando você para o app...</div>
       ):(
         <>
           <label style={S.label}>NOVA SENHA</label>
@@ -269,7 +270,7 @@ function RegisterPage({onSwitch,onLogin}){
       <div style={{textAlign:'center'}}>
         
         <div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:10}}>Confirme seu e-mail</div>
-        <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:20}}>Enviamos um link de confirmação para <b>{form.email}</b>. Clique nele para ativar sua conta e depois volte para entrar.</div>
+        <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:20}}>Enviamos um link de confirmação para <b>{form.email}</b>. Toque nele para ativar sua conta e depois volte para entrar.</div>
         <button style={{...S.btn('var(--success)'),width:'100%',padding:13}} onClick={onSwitch}>Ir para o login</button>
       </div>
     </AuthWrap>
@@ -1137,12 +1138,12 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
                 {editMeal?.mi===mi&&editMeal?.field==='name'
                   ?<input autoFocus style={{...S.input,padding:'4px 8px',fontSize:14,fontWeight:700,marginBottom:2}} value={meal.name}
                       onChange={e=>updateMeal(mi,'name',e.target.value)} onBlur={()=>setEditMeal(null)} onKeyDown={e=>e.key==='Enter'&&setEditMeal(null)}/>
-                  :<div style={{fontSize:14,fontWeight:700,color:'var(--text)',cursor:'pointer'}} onClick={()=>setEditMeal({mi,field:'name'})} title="Clique para editar">{meal.name} <span style={{fontSize:12,color:'var(--muted)'}}></span></div>
+                  :<div style={{fontSize:14,fontWeight:700,color:'var(--text)',cursor:'pointer'}} onClick={()=>setEditMeal({mi,field:'name'})} title="Toque para editar">{meal.name} <span style={{fontSize:12,color:'var(--muted)'}}></span></div>
                 }
                 {editMeal?.mi===mi&&editMeal?.field==='time'
                   ?<input autoFocus style={{...S.input,padding:'2px 6px',fontSize:12,width:80,marginTop:2}} type="time" value={meal.time}
                       onChange={e=>updateMeal(mi,'time',e.target.value)} onBlur={()=>setEditMeal(null)}/>
-                  :<div style={{fontSize:12,color:'var(--muted)',fontWeight:600,cursor:'pointer',marginTop:2}} onClick={()=>setEditMeal({mi,field:'time'})} title="Clique para editar">{meal.time} <span style={{fontSize:12}}></span></div>
+                  :<div style={{fontSize:12,color:'var(--muted)',fontWeight:600,cursor:'pointer',marginTop:2}} onClick={()=>setEditMeal({mi,field:'time'})} title="Toque para editar">{meal.time} <span style={{fontSize:12}}></span></div>
                 }
               </div>
               <span style={S.badge('var(--warning)')}>{mt.kcal} kcal</span>
@@ -2012,7 +2013,7 @@ function TimetableScreen({onHome,userId}){
                 </tr>
               ))}
               {!data.rows.length&&(
-                <tr><td colSpan={9} style={{padding:'24px 10px',textAlign:'center',color:T.muted,background:'var(--surface)'}}>Nenhum horário ainda. Clique em "+ Adicionar linha" para começar a montar sua grade.</td></tr>
+                <tr><td colSpan={9} style={{padding:'24px 10px',textAlign:'center',color:T.muted,background:'var(--surface)'}}>Nenhum horário ainda. Toque em "+ Adicionar linha" para começar a montar sua grade.</td></tr>
               )}
             </tbody>
           </table>
@@ -2235,6 +2236,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
 
   const [workoutLog,setWorkoutLog]=useState({});
   const [workoutLogLoaded,setWorkoutLogLoaded]=useState(false);
+  const [weeklyGoal,setWeeklyGoal]=useState(null);
   const workoutDoneToday=!!workoutLog[localDateKey()];
 
   useEffect(()=>{
@@ -2249,6 +2251,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
         const shopping=data?.plan_data?.shopping;
         setShoppingCount(Array.isArray(shopping)?shopping.filter(i=>!i.checked).length:null);
         setWorkoutLog(data?.plan_data?.workoutLog||{});
+        setWeeklyGoal(data?.plan_data?.workoutGoalPerWeek||null);
       }).catch(()=>{}).finally(()=>setWorkoutLogLoaded(true));
   },[userId]);
 
@@ -2278,6 +2281,16 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   const nextExam=getNextExam();
   const nextClass=getNextClass(timetableData);
   const saldo=getSaldoPreview();
+  // Resumo da semana: junta treinos (nuvem) com hábitos/dieta, estudos e faturas lidos do aparelho
+  const dayKeyNow=localDateKey(now);
+  const weekly=useMemo(()=>{
+    if(!workoutLogLoaded) return null;
+    const read=k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}};
+    return resumoSemanal({
+      hoje:new Date(),workoutLog,workoutGoal:weeklyGoal,
+      habitsDb:read('habitsAppV4'),studyData:read('studyApp'),faturas:read('cf_state')?.faturas||[]
+    });
+  },[workoutLogLoaded,workoutLog,weeklyGoal,dayKeyNow]);
   const timeStr=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const agendaItems=gcal.connected?gcal.events:manual.items;
   const T=HOME_THEME;
@@ -2398,6 +2411,35 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
               onClick:()=>onNavigate('habitos'),last:true})}
           </div>
         </section>
+
+        {weekly&&(
+          <section aria-label="Resumo da semana" data-testid="weekly-summary">
+            <h2 style={eyebrow}>Resumo da semana · <span className="lp-num">{weekly.periodo}</span></h2>
+            <div style={{...card,padding:16,display:'flex',flexDirection:'column',gap:14}}>
+              {[['Você cumpriu',weekly.cumpriu,'Nada registrado ainda.',true],['Ficou pendente',weekly.pendente,'Nada pendente.',false]].map(([title,items,empty,done])=>(
+                <div key={title}>
+                  <h3 style={{margin:'0 0 6px',fontSize:13,lineHeight:'16px',fontWeight:700,color:'var(--muted)'}}>{title}</h3>
+                  {items.length?(
+                    <ul style={{margin:0,padding:0,listStyle:'none',display:'flex',flexDirection:'column',gap:6}}>
+                      {items.map((t,i)=>(
+                        <li key={i} style={{display:'flex',alignItems:'flex-start',gap:8,fontSize:15,lineHeight:'21px',color:'var(--text)'}}>
+                          <span aria-hidden="true" style={{flexShrink:0,marginTop:2,width:18,height:18,display:'flex',alignItems:'center',justifyContent:'center',color:done?'var(--accent)':'var(--muted)'}}>
+                            {done?<Icon name="check" size={16} stroke={2.25}/>:<span style={{width:6,height:6,borderRadius:3,background:'currentColor'}}/>}
+                          </span>
+                          <span>{t}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ):<p style={{margin:0,fontSize:14,lineHeight:'20px',color:'var(--muted)'}}>{empty}</p>}
+                </div>
+              ))}
+              <div style={{background:'var(--accent-soft)',borderRadius:14,padding:'12px 14px'}}>
+                <h3 style={{margin:'0 0 4px',fontSize:13,lineHeight:'16px',fontWeight:700,color:'var(--accent)'}}>Recomendação</h3>
+                <p style={{margin:0,fontSize:15,lineHeight:'21px',color:'var(--text)'}}>{weekly.recomendacao}</p>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section style={{...card,padding:16,display:'flex',flexDirection:'column',gap:12}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',minHeight:24}}>

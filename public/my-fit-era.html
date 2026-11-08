@@ -833,7 +833,7 @@ body.hide-chrome .page-header{display:none!important;}
   </div>
 
   <div class="card">
-    <h2>Histórico de medições</h2>
+    <h2>Prontuário de medições</h2>
     <div id="bodyHistoryList"></div>
   </div>
 </div>
@@ -1367,7 +1367,7 @@ window.addEventListener('message', (e) => {
 function openSearchPanel() {
   document.getElementById('search-overlay').style.display = 'flex';
   document.getElementById('search-input').value = '';
-  document.getElementById('search-results').innerHTML = '<div class="empty">Digite algo pra buscar.</div>';
+  document.getElementById('search-results').innerHTML = '<div class="empty">Digite algo para buscar.</div>';
   setTimeout(() => document.getElementById('search-input').focus(), 50);
 }
 function closeSearchPanel() {
@@ -1380,7 +1380,7 @@ document.addEventListener('keydown', (e) => {
 function performSearch(query) {
   const q = query.trim().toLowerCase();
   const resultsEl = document.getElementById('search-results');
-  if (!q) { resultsEl.innerHTML = '<div class="empty">Digite algo pra buscar.</div>'; return; }
+  if (!q) { resultsEl.innerHTML = '<div class="empty">Digite algo para buscar.</div>'; return; }
 
   const results = [];
 
@@ -1519,7 +1519,8 @@ function showLoginError(msg, isError = true) {
 
 async function logout() {
   if (!confirm('Sair da conta?')) return;
-  if (supa) await supa.auth.signOut();
+  // scope 'local': sai só neste aparelho (o padrão encerraria a conta em todos os dispositivos)
+  if (supa) { try { await supa.auth.signOut({ scope: 'local' }); } catch (e) { console.error(e); } }
   currentUser = null;
   bodyMetrics = [];
   location.reload();
@@ -3587,7 +3588,7 @@ function renderBodyPanel() {
 
   const listEl = document.getElementById('bodyHistoryList');
   if (!sorted.length) {
-    listEl.innerHTML = '<div class="empty">Nenhuma medição ainda. Adicione a primeira acima.</div>';
+    listEl.innerHTML = '<div class="empty">Prontuário vazio. Registre a primeira medição acima.</div>';
   } else {
     listEl.innerHTML = [...sorted].reverse().map(m => `
       <div style="background:var(--surface2); padding:12px; border-radius:10px; margin-bottom:8px; border:1px solid var(--border);">

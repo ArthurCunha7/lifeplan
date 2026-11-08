@@ -5,7 +5,7 @@ import { getPrivacy } from "./privacySettings";
 import {
   KIND_ICON, fetchNotifications, markRead, markAllRead, cleanupOld, subscribeNotifications, syncVencimentos,
   sendTestNotification, timeAgo, brl, noticeAmount, getPushStatus, enablePush, disablePush,
-  ensureServiceWorker, ensurePwaTags,
+  ensureServiceWorker,
 } from "./notificationsApi";
 
 const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, margin: "0 16px 12px", padding: 16 };
@@ -38,7 +38,7 @@ export function NotificationBell({ userId, onNavigate }) {
 
   useEffect(() => {
     if (!userId) return undefined;
-    ensurePwaTags(); ensureServiceWorker();
+    ensureServiceWorker();
     load().then(() => syncVencimentos(userId).then((n) => { if (n) load(); }));
     cleanupOld(userId);
     const off = subscribeNotifications(userId, (n) => setItems((prev) => [n, ...prev.filter((x) => x.id !== n.id)]));
@@ -187,7 +187,7 @@ export function NotificationSettings({ userId }) {
   return (
     <div style={{ ...card, display: "flex", flexDirection: "column", gap: 10 }} id="notif-settings">
       <div style={labelStyle}>NOTIFICAÇÕES</div>
-      <div style={hint}>Você é avisado quando alguém lança um gasto para você, fecha ou marca um mês como pago, entra na sua família ou quando uma fatura está perto de vencer. Os avisos nunca mostram valores no texto.</div>
+      <div style={hint}>Você é avisado quando alguém faz um lançamento para você, faz um fechamento ou marca um fechamento como pago, entra na sua família ou quando uma fatura está perto de vencer. Os avisos nunca mostram valores no texto.</div>
       {texts[status] && <div style={hint}>{texts[status]}</div>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {status === "desligado" && <button onClick={on} disabled={busy} style={mainBtn}>Ativar push neste aparelho</button>}
