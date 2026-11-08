@@ -21,7 +21,7 @@ export function semanaDe(hoje) {
   return { datas: Array.from({ length: 7 }, (_, i) => dataLocal(addDias(seg, i))), idx };
 }
 
-function dietaDaSemana(habitsDb, datas) {
+export function dietaDaSemana(habitsDb, datas) {
   let soma = 0, n = 0;
   const recs = habitsDb?.records || {};
   datas.forEach(d => {

@@ -1291,7 +1291,7 @@ function buildFamilyFaturaCard(f) {
     : 'Em aberto';
   const note = closed
     ? 'Fechamento feito pelo líder. Continua no seu saldo até ele marcar como pago.'
-    : 'Gastos que o líder lançou para você. Novos gastos entram aqui até ele fechar o mês.';
+    : 'Lançamentos que o líder fez para você. Novos lançamentos entram aqui até ele fechar o mês.';
   card.innerHTML = `
     <div class="card-header">
       <div class="card-title" style="display:flex;align-items:center;gap:8px">${ic('users', 18)}<span style="overflow-wrap:anywhere">${escHtml(f.name)}</span></div>
@@ -1317,6 +1317,41 @@ function appendFamilyPaidHistory(container) {
   container.appendChild(det);
 }
 
+// ── "Quem vê o quê": explica o compartilhamento (muda conforme o papel) ──
+function familyExplainHtml(leader) {
+  const li = t => `<li style="margin:3px 0">${t}</li>`;
+  const h = t => `<div style="font-weight:700;font-size:13px;margin:10px 0 2px;color:var(--text)">${t}</div>`;
+  const ul = items => `<ul style="margin:0;padding-left:18px">${items.map(li).join('')}</ul>`;
+  const shared = leader ? [
+    'Cada lançamento que você atrela a um membro: ele vê, só para leitura.',
+    'O fechamento do mês e se já foi marcado como pago.',
+    'Os avisos de novo lançamento, de fechamento e de pagamento chegam para o membro.'
+  ] : [
+    'Cada lançamento que o líder atrela a você: aparece na aba Faturas, só para leitura.',
+    'O fechamento do mês e se o líder já marcou como pago.',
+    'Você recebe um aviso quando o líder lança, fecha ou marca como pago.'
+  ];
+  const mine = leader ? [
+    'Suas outras faturas, entradas, saldo, planejamento e Pix.',
+    'Tudo o que o membro tem na conta dele: você não vê.',
+    'O membro só aparece para você pelo e-mail e pelo total que você já lançou.'
+  ] : [
+    'Suas outras faturas, entradas, saldo, planejamento e Pix.',
+    'O líder não vê as suas finanças. Ele só vê que você entrou e o total que ele mesmo lançou.',
+    'Hábitos, dieta, treinos e estudos nunca são compartilhados.'
+  ];
+  const who = leader
+    ? 'Só você, como líder, lança, edita, fecha o mês e marca como pago. O membro apenas lê.'
+    : 'Só o líder lança, edita, fecha o mês e marca como pago. Você apenas lê. Para corrigir algo, fale com ele.';
+  return `<details class="fam-explain" style="margin-top:12px;border-top:1px solid var(--border2);padding-top:10px">
+    <summary style="cursor:pointer;font-weight:700;font-size:14px">Quem vê o quê</summary>
+    <div style="font-size:13px;color:var(--text-2);line-height:1.5">
+      ${h('O que é compartilhado')}${ul(shared)}
+      ${h('O que continua só seu')}${ul(mine)}
+      ${h('Quem pode alterar')}<div>${who}</div>
+    </div></details>`;
+}
+
 // ── Cartão "Modo família" (aba Resumo) ──
 function renderFamilyCard() {
   const card = document.getElementById('family-card');
@@ -1329,23 +1364,28 @@ function renderFamilyCard() {
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
         <strong style="font-size:16px">Modo família</strong><span class="badge">Você é o líder</span>
       </div>
-      <div style="font-size:14px;color:var(--text-2);margin-bottom:12px;line-height:1.5">
-        Quando um membro comprar no seu cartão, lance na sua fatura e escolha o perfil dele. O gasto vai direto para a conta dele e entra no saldo do mês dele. Para isso, atrele um perfil seu a cada membro em <strong>Gerenciar perfis</strong>. Você não vê as outras finanças dele.
-      </div>
+      <ol style="font-size:14px;color:var(--text-2);margin:0 0 12px;padding-left:20px;line-height:1.5">
+        <li>Envie o código de convite para a pessoa entrar.</li>
+        <li>Em <strong>Gerenciar perfis</strong>, atrele um perfil seu a cada membro.</li>
+        <li>Quando ele comprar no seu cartão, lance na sua fatura e escolha o perfil dele.</li>
+        <li>No fim do mês, feche o mês dele e marque como pago quando ele quitar.</li>
+      </ol>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
         <span style="font-size:13px;color:var(--muted)">Código de convite:</span>
         <span id="family-invite-code" style="font-weight:700;font-size:15px;color:var(--accent-dark);font-variant-numeric:tabular-nums">${escHtml(familyInviteCode || '—')}</span>
         <button class="btn btn-ghost btn-sm" onclick="copyInviteCode()">Copiar</button>
       </div>
-      <button class="btn btn-primary" onclick="openFamilyAccounts()">Ver extrato</button>`;
+      <button class="btn btn-primary" onclick="openFamilyAccounts()">Ver extrato da família</button>
+      ${familyExplainHtml(true)}`;
   } else {
     body.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
         <strong style="font-size:16px">Modo família</strong><span class="badge">Membro</span>
       </div>
       <div style="font-size:14px;color:var(--text-2);line-height:1.5">
-        Quando o líder lançar um gasto do cartão dele para você, ele aparece na aba Faturas e entra no seu saldo do mês. Suas outras finanças são só suas: ninguém vê.
-      </div>`;
+        Quando o líder lançar um gasto do cartão dele para você, ele aparece na aba Faturas e entra no seu saldo do mês. Quando ele fechar o mês, o valor fica a pagar até ele marcar como pago.
+      </div>
+      ${familyExplainHtml(false)}`;
   }
 }
 
@@ -1388,7 +1428,7 @@ function toggleFamilyMask() {
 // Líder: lista de membros com o total que ele já lançou para cada um
 function openFamilyAccounts() {
   if (!isLeader) return;
-  openFamilyView('Gastos lançados', true);
+  openFamilyView('Extrato da família', true);
   __famRender = renderFamilyOverview;
   renderFamilyOverview();
 }

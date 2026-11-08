@@ -7,6 +7,8 @@ import { getPrivacy, clearLock } from "./privacySettings";
 import { NotificationBell, NotificationSettings } from "./Notifications";
 import { disablePush } from "./notificationsApi";
 import { resumoSemanal } from "./weeklySummary";
+import { cruzarSaudeDinheiro } from "./crossInsights";
+import { MODELOS, treinosDeForca, montarModelo } from "./workoutTemplates";
 import { supabase, signUp, signIn, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 
 // Tema compartilhado (cores + fontes), o mesmo arquivo usado pelas páginas em
@@ -669,10 +671,71 @@ function ShoppingList({items,onToggle,onRemove,onClear}){
 }
 
 
+// ── MODELOS DE TREINO ─────────────────────────────────────────────────────────
+// Lista de programas prontos; ao tocar em um, mostra a semana inteira antes de aplicar.
+function WorkoutTemplates({onApply,onClose}){
+  const [sel,setSel]=useState(null);
+  const DIAS=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const modelo=MODELOS.find(m=>m.id===sel);
+  const cardBase={background:'var(--surface)',border:'1px solid var(--border)',borderRadius:14,padding:'14px 16px',marginBottom:10,textAlign:'left',width:'100%',cursor:'pointer',color:'var(--text)',fontFamily:'inherit',display:'block'};
+  if(modelo){
+    const n=treinosDeForca(modelo);
+    return(
+      <div data-testid="template-preview" style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:12,textAlign:'left'}}>
+        <div style={{fontSize:16,fontWeight:800,color:'var(--text)'}}>{modelo.nome}</div>
+        <div style={{fontSize:13,color:'var(--muted)',margin:'4px 0 12px',lineHeight:1.5}}>{modelo.resumo}</div>
+        {modelo.semana.map((d,i)=>(
+          <details key={i} style={{borderTop:'1px solid var(--border)',padding:'8px 0'}}>
+            <summary style={{cursor:'pointer',fontSize:14,fontWeight:700,color:d.tipo==='rest'?'var(--muted)':'var(--text)',listStyle:'revert'}}>
+              <span style={{display:'inline-block',width:36,verticalAlign:'top',color:'var(--muted2)',fontWeight:800}}>{DIAS[i]}</span><span style={{display:'inline-block',verticalAlign:'top',maxWidth:'calc(100% - 48px)'}}>{d.rotulo}</span>
+            </summary>
+            <div style={{whiteSpace:'pre-line',fontSize:13,lineHeight:1.7,color:'var(--muted2)',padding:'6px 0 2px 36px'}}>{d.exercicios}</div>
+          </details>
+        ))}
+        {modelo.notas&&(
+          <details style={{borderTop:'1px solid var(--border)',padding:'8px 0'}}>
+            <summary style={{cursor:'pointer',fontSize:14,fontWeight:700,color:'var(--text)'}}>Progressão e dicas</summary>
+            <ul style={{margin:'6px 0 0',paddingLeft:20,fontSize:13,lineHeight:1.6,color:'var(--muted2)'}}>
+              {modelo.notas.map((t,i)=><li key={i} style={{margin:'4px 0'}}>{t}</li>)}
+            </ul>
+            {modelo.fonte&&<div style={{fontSize:12,color:'var(--muted)',marginTop:8,lineHeight:1.5}}>{modelo.fonte}</div>}
+          </details>
+        )}
+        <div style={{background:'var(--accent-soft)',borderRadius:12,padding:'10px 12px',margin:'12px 0',fontSize:13,lineHeight:1.5,color:'var(--text)'}}>
+          Ao usar este modelo, os 7 dias do seu plano de treino são substituídos e a meta semanal vira {n} {n===1?'treino':'treinos'}. Os treinos que você já salvou continuam na lista.
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <button style={{...S.btn('var(--success)'),flex:1,padding:11}} onClick={()=>onApply(modelo)}>Usar este modelo</button>
+          <button style={{...S.btn('var(--muted)'),padding:11}} onClick={()=>setSel(null)}>Voltar</button>
+        </div>
+      </div>
+    );
+  }
+  return(
+    <div data-testid="template-list" style={{marginBottom:12}}>
+      {MODELOS.map(m=>(
+        <button key={m.id} style={cardBase} onClick={()=>setSel(m.id)}>
+          <div style={{fontSize:15,fontWeight:800}}>{m.nome}</div>
+          <div style={{fontSize:13,color:'var(--muted)',marginTop:4,lineHeight:1.5}}>{m.resumo}</div>
+        </button>
+      ))}
+      {onClose&&<button style={{...S.btn('var(--muted)'),padding:'9px 16px',fontSize:13}} onClick={onClose}>Fechar modelos</button>}
+    </div>
+  );
+}
+
 // ── WORKOUT PROFILES PAGE ─────────────────────────────────────────────────────
-function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,tab,setTab,cartCount,onOpenProfile,onLogout,onHome,workoutGoal,setWorkoutGoal}){
+function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onApplyTemplate,onBack,tab,setTab,cartCount,onOpenProfile,onLogout,onHome,workoutGoal,setWorkoutGoal}){
   const [editing,setEditing]=useState(null); // null | profile object
   const [showNew,setShowNew]=useState(false);
+  const [showTemplates,setShowTemplates]=useState(false);
+  const [applied,setApplied]=useState(null); // texto de confirmação depois de usar um modelo
+  function usarModelo(m){
+    onApplyTemplate(m); setShowTemplates(false);
+    const n=treinosDeForca(m);
+    setApplied(`Modelo "${m.nome}" aplicado. Seus 7 dias foram atualizados e a meta virou ${n} ${n===1?'treino':'treinos'} por semana.`);
+    try{window.scrollTo({top:0,behavior:'smooth'});}catch{/* sem scroll */}
+  }
 
   function EditForm({initial,onDone}){
     const [form,setForm]=useState(initial||{id:'wp'+Date.now(),type:'strength',typeLabel:'',exercises:''});
@@ -714,7 +777,10 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
     <div style={S.wrap}>
       <div style={S.header}>
         <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>Meus Treinos</div>
-        <button style={{...S.btn('var(--success)'),padding:'7px 14px',fontSize:13}} onClick={()=>setShowNew(true)}>+ Novo</button>
+        <div style={{display:'flex',gap:8}}>
+          {profiles.length>0&&<button style={{...S.btn('var(--accent)'),padding:'7px 14px',fontSize:13}} onClick={()=>{setShowTemplates(v=>!v);setApplied(null);}} aria-expanded={showTemplates}>Modelos</button>}
+          <button style={{...S.btn('var(--success)'),padding:'7px 14px',fontSize:13}} onClick={()=>setShowNew(true)}>+ Novo</button>
+        </div>
       </div>
 
       <div style={{padding:'16px 16px 100px'}}>
@@ -727,14 +793,20 @@ function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onBack,
             style={{width:56,textAlign:'center',border:'1px solid var(--border)',borderRadius:8,padding:'6px 4px',fontSize:14,fontWeight:800}}/>
         </div>
 
+        {applied&&<div role="status" data-testid="template-applied" style={{background:'var(--success-soft)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 14px',marginBottom:12,fontSize:13,lineHeight:1.5,color:'var(--text)'}}>{applied}</div>}
+
         {showNew&&<EditForm initial={null} onDone={()=>setShowNew(false)}/>}
 
+        {showTemplates&&profiles.length>0&&!showNew&&<WorkoutTemplates onApply={usarModelo} onClose={()=>setShowTemplates(false)}/>}
+
         {profiles.length===0&&!showNew&&(
-          <div style={{textAlign:'center',padding:'48px 0'}}>
+          <div data-testid="treino-vazio" style={{textAlign:'center',padding:'32px 0 8px'}}>
             <div style={{marginBottom:12,color:'var(--muted)',display:'flex',justifyContent:'center'}}><Icon name="dumbbell" size={52} stroke={1.5}/></div>
-            <div style={{fontSize:16,fontWeight:700,color:'var(--text)',marginBottom:8}}>Nenhum perfil criado</div>
-            <div style={{color:'var(--muted)',fontSize:13,marginBottom:24}}>Crie perfis de treino e aplique a qualquer dia da semana.</div>
-            <button style={{...S.btn('var(--success)'),padding:'12px 28px'}} onClick={()=>setShowNew(true)}>+ Criar primeiro treino</button>
+            <div style={{fontSize:16,fontWeight:700,color:'var(--text)',marginBottom:8}}>Nenhum treino criado ainda</div>
+            <div style={{color:'var(--muted)',fontSize:13,marginBottom:20,lineHeight:1.5}}>Comece por um modelo pronto: ele monta a semana inteira e você ajusta o que quiser depois.</div>
+            <WorkoutTemplates onApply={usarModelo}/>
+            <div style={{color:'var(--muted)',fontSize:13,margin:'4px 0 12px'}}>ou</div>
+            <button style={{...S.btn('var(--success)'),padding:'12px 28px'}} onClick={()=>setShowNew(true)}>+ Criar do zero</button>
           </div>
         )}
 
@@ -970,6 +1042,14 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
     setWorkoutProfiles(prev=>prev.filter(p=>p.id!==id));
   }
 
+  // ── usar um modelo de treino pronto: monta a semana, salva os treinos e ajusta a meta
+  function applyTemplate(modelo){
+    const r=montarModelo(modelo,plan,workoutProfiles);
+    setPlan(r.plan);
+    setWorkoutProfiles(r.profiles);
+    setWorkoutGoal(r.meta);
+  }
+
   // ── redistribuir refeições
   function redistributeMeals(count){
     const TEMPLATES={
@@ -1052,6 +1132,7 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
       plan={plan}
       onSave={saveProfile}
       onDelete={deleteProfile}
+      onApplyTemplate={applyTemplate}
       onApplyToDay={(profileId,dayI,isUsing)=>{
         if(isUsing){
           // Desmarcar: volta para descanso
@@ -2295,6 +2376,12 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
       habitsDb:read('habitsAppV4'),studyData:read('studyApp'),faturas:read('cf_state')?.faturas||[]
     });
   },[workoutLogLoaded,workoutLog,weeklyGoal,dayKeyNow]);
+  // Saúde e dinheiro: dieta por semana contra o gasto de cada categoria (só aparece se houver dados)
+  const cross=useMemo(()=>{
+    const read=k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}};
+    try{return cruzarSaudeDinheiro({hoje:new Date(),habitsDb:read('habitsAppV4'),state:read('cf_state')});}
+    catch{return {status:'sem-dados'};}
+  },[dayKeyNow]);
   const timeStr=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const agendaItems=gcal.connected?gcal.events:manual.items;
   const T=HOME_THEME;
@@ -2441,6 +2528,34 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
                 <h3 style={{margin:'0 0 4px',fontSize:13,lineHeight:'16px',fontWeight:700,color:'var(--accent)'}}>Recomendação</h3>
                 <p style={{margin:0,fontSize:15,lineHeight:'21px',color:'var(--text)'}}>{weekly.recomendacao}</p>
               </div>
+            </div>
+          </section>
+        )}
+
+        {cross&&cross.status!=='sem-dados'&&(
+          <section aria-label="Saúde e dinheiro" data-testid="cross-insight">
+            <h2 style={eyebrow}>Saúde e dinheiro</h2>
+            <div style={{...card,padding:16,display:'flex',flexDirection:'column',gap:12}}>
+              {cross.status==='achado'&&(<>
+                <p style={{margin:0,fontSize:16,lineHeight:'23px',fontWeight:600,color:'var(--text)'}}>{cross.frase}</p>
+                {[['Semanas de gasto alto',cross.dietaAlta,'var(--warning)'],['Semanas de gasto baixo',cross.dietaBaixa,'var(--accent)']].map(([label,pct,color])=>(
+                  <div key={label}>
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:13,lineHeight:'18px',color:'var(--muted)',marginBottom:4}}>
+                      <span>{label} em {cross.categoria}</span><span className="lp-num" style={{color:'var(--text)',fontWeight:600}}>Dieta {pct}%</span>
+                    </div>
+                    <div role="img" aria-label={`${label}: dieta em ${pct}%`} style={{height:8,borderRadius:4,background:'var(--accent-soft)',overflow:'hidden'}}>
+                      <div style={{width:pct+'%',height:'100%',borderRadius:4,background:color}}/>
+                    </div>
+                  </div>
+                ))}
+                <p style={{margin:0,fontSize:13,lineHeight:'18px',color:'var(--muted)'}}>Baseado em {cross.semanas} semanas. Isso mostra que os dois andam juntos, não que um causou o outro.</p>
+              </>)}
+              {cross.status==='sem-relacao'&&(
+                <p style={{margin:0,fontSize:15,lineHeight:'21px',color:'var(--text)'}}>Nas últimas {cross.semanas} semanas, nenhuma categoria de gasto apareceu junto com queda na dieta.</p>
+              )}
+              {cross.status==='faltam-dados'&&(
+                <p style={{margin:0,fontSize:15,lineHeight:'21px',color:'var(--text)'}}>Para cruzar saúde e dinheiro, o app precisa de pelo menos {cross.minimo} semanas completas com a dieta registrada. Você tem {cross.semanasComDieta}. Registre também a categoria dos gastos em Finanças.</p>
+              )}
             </div>
           </section>
         )}
