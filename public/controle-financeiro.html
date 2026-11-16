@@ -53,7 +53,9 @@
     color: var(--text);
   }
 
-  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .embed-only { display: none !important; }
+  html.lp-embed .embed-only { display: inline-flex !important; }
 
   nav { display: flex; gap: 4px; overflow-x: auto; }
 
@@ -358,6 +360,37 @@
   }
 
   .profile-card-row:last-child { border-bottom: none; }
+  .profile-card-toggle {
+    flex: 1; min-width: 0; min-height: 44px;
+    display: flex; align-items: center; gap: 8px;
+    background: transparent; border: none; padding: 0; margin-bottom: 4px;
+    color: inherit; font: inherit; text-align: left; cursor: pointer;
+    border-radius: 8px;
+  }
+  .profile-card-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .profile-card-toggle .row-chev { color: var(--muted); font-size: 13px; }
+  .profile-card-summary { cursor: pointer; }
+  .profile-card-hint { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+  .profile-card:hover .profile-card-hint { color: var(--text-2, var(--text)); }
+  .profile-card-extrato { margin: 14px -20px -20px; border-top: 1px solid var(--border); background: var(--surface); }
+  /* Celular: mesma tabela em colunas (Data, Tipo, Descrição, Valor), só mais compacta para caber sem rolar */
+  @media (max-width: 560px) {
+    .profile-card-extrato table { table-layout: fixed; width: 100%; }
+    .profile-card-extrato th, .profile-card-extrato td { padding: 8px 3px; min-width: 0; }
+    .profile-card-extrato th:first-child, .profile-card-extrato td:first-child { padding-left: 12px; }
+    .profile-card-extrato th:last-child, .profile-card-extrato td:last-child { padding-right: 8px; }
+    .profile-card-extrato th:nth-child(1), .profile-card-extrato td:nth-child(1) { width: 106px; }
+    .profile-card-extrato th:nth-child(2), .profile-card-extrato td:nth-child(2) { width: 54px; }
+    .profile-card-extrato th:nth-child(4), .profile-card-extrato td:nth-child(4) { width: 66px; }
+    .profile-card-extrato th:nth-child(5), .profile-card-extrato td:nth-child(5) { width: 44px; }
+    .profile-card-extrato td:nth-child(2) { overflow: hidden; text-overflow: ellipsis; padding-left: 8px; }
+    .profile-card-extrato td:nth-child(2) span { font-size: 11px !important; }
+    .profile-card-extrato input { font-size: 12px !important; padding: 6px 4px !important; width: 100% !important; box-sizing: border-box; min-height: 40px; }
+    .profile-card-extrato input[type="date"] { padding-right: 0 !important; }
+    .profile-card-extrato input[type="date"]::-webkit-calendar-picker-indicator { display: none; }
+    .profile-card-extrato td:nth-child(5) .btn { min-width: 40px; min-height: 40px; padding: 0; }
+    .profile-card-extrato td[colspan] { width: auto; }
+  }
   .profile-card-row .label { color: var(--muted); }
 
   .profile-card-final {
@@ -667,6 +700,7 @@
       <button class="btn btn-ghost btn-sm" id="btn-mask" onclick="toggleMask()" aria-pressed="false"></button>
       <button class="btn btn-ghost btn-sm" onclick="openSearchPanel()" title="Buscar em faturas, pagamentos e balanço"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Buscar</button>
       <button class="btn btn-ghost btn-sm" onclick="exportFinanceReportPDF()" title="Baixar o extrato em PDF, com faturas, pagamentos, extrato por perfil e balanço"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> Exportar PDF</button>
+      <button class="btn btn-ghost btn-sm embed-only" id="lp-profile-btn" aria-label="Perfil e configurações" title="Perfil e configurações" style="border-radius:22px;background:var(--accent-soft);color:var(--accent);border-color:transparent"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>
     </div>
   </div>
   <nav id="nav">
@@ -712,7 +746,7 @@
 
   <div class="card" id="pagamentos-card">
     <div class="card-header">
-      <button class="btn btn-ghost btn-sm" id="pagamentos-toggle-btn" onclick="togglePagamentosSection()">▸</button>
+      <button class="btn btn-ghost btn-sm" id="pagamentos-toggle-btn" onclick="togglePagamentosSection()" aria-expanded="false" aria-label="Abrir extrato de pagamentos" title="Abrir"><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
       <div class="card-title">Extrato de pagamentos</div>
     </div>
     <div id="pagamentos-body" style="display:none">
@@ -721,17 +755,12 @@
   </div>
 </div>
 
-<!-- TAB 2 — RESUMO & PERFIS (Saldo Final + Resumo por Perfil + Gerenciar Perfis) -->
+<!-- TAB 2 — RESUMO & PERFIS (Saldo final por perfil, que abre e mostra os lançamentos de cada perfil + Gerenciar Perfis) -->
 <div id="tab-resumo" class="tab">
   <div class="section-head">
     <div class="section-title">Saldo final por perfil</div>
   </div>
   <div id="saldo-container"></div>
-
-  <div class="section-head" style="margin-top:16px">
-    <div class="section-title">Gastos por perfil</div>
-  </div>
-  <div id="perfis-summary"></div>
 
   <div class="section-head" style="margin-top:16px">
     <div class="section-title">Gerenciar perfis</div>
@@ -760,7 +789,7 @@
   </div>
 </div>
 
-<script src="/finance-formulas.js?v=2"></script>
+<script src="/finance-formulas.js?v=3"></script>
 <script>
 // ══════════════════════════════════════════════════════
 //  CONSTANTS
@@ -768,6 +797,18 @@
 
 // ── Ícones de linha (SVG inline, herdam a cor do texto) ──
 const IC_PATHS = {"search": "<circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/>", "x": "<path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/>", "plus": "<path d=\"M5 12h14\"/><path d=\"M12 5v14\"/>", "check": "<path d=\"M20 6 9 17l-5-5\"/>", "eye": "<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>", "eyeOff": "<path d=\"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49\"/><path d=\"M14.084 14.158a3 3 0 0 1-4.242-4.242\"/><path d=\"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143\"/><path d=\"m2 2 20 20\"/>", "trash": "<path d=\"M3 6h18\"/><path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/>", "copy": "<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/>", "camera": "<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/>", "image": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/><circle cx=\"9\" cy=\"9\" r=\"2\"/><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\"/>", "fileText": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/><path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/><path d=\"M10 9H8\"/><path d=\"M16 13H8\"/><path d=\"M16 17H8\"/>", "users": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/><path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>", "trendUp": "<path d=\"M22 7 13.5 15.5 8.5 10.5 2 17\"/><path d=\"M16 7h6v6\"/>", "trendDown": "<path d=\"M22 17 13.5 8.5 8.5 13.5 2 7\"/><path d=\"M16 17h6v-6\"/>", "landmark": "<path d=\"M3 22h18\"/><path d=\"M6 18v-7\"/><path d=\"M10 18v-7\"/><path d=\"M14 18v-7\"/><path d=\"M18 18v-7\"/><path d=\"m12 2 9 5H3z\"/>", "card": "<rect width=\"20\" height=\"14\" x=\"2\" y=\"5\" rx=\"2\"/><path d=\"M2 10h20\"/>", "utensils": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\"/><path d=\"M7 2v20\"/><path d=\"M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/>", "car": "<path d=\"M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2\"/><circle cx=\"7\" cy=\"17\" r=\"2\"/><path d=\"M9 17h6\"/><circle cx=\"17\" cy=\"17\" r=\"2\"/>", "scissors": "<circle cx=\"6\" cy=\"6\" r=\"3\"/><path d=\"M8.12 8.12 12 12\"/><path d=\"M20 4 8.12 15.88\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M14.8 14.8 20 20\"/>", "gift": "<rect x=\"3\" y=\"8\" width=\"18\" height=\"4\" rx=\"1\"/><path d=\"M12 8v13\"/><path d=\"M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7\"/><path d=\"M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5\"/>", "dots": "<circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/><circle cx=\"5\" cy=\"12\" r=\"1\"/>", "home": "<path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/>", "book": "<path d=\"M12 7v14\"/><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\"/>", "leaf": "<path d=\"M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z\"/><path d=\"M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12\"/>", "dumbbell": "<path d=\"M6.5 6.5v11\"/><path d=\"M17.5 6.5v11\"/><path d=\"M3.5 9v6\"/><path d=\"M20.5 9v6\"/><path d=\"M6.5 12h11\"/>", "wallet": "<path d=\"M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1\"/><path d=\"M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4\"/>", "link": "<path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\"/><path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\"/>"};
+// Seta de abrir/fechar (no lugar dos caracteres ▸ ▾, que ficam pequenos e
+// mudam de cara conforme a fonte). Gira 90° quando aberto.
+function chevSvg(open) {
+  return `<svg class="ic chev${open ? ' open' : ''}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transition:transform .15s;transform:rotate(${open ? 90 : 0}deg)"><path d="m9 18 6-6-6-6"/></svg>`;
+}
+function setToggle(btn, open, what) {
+  btn.innerHTML = chevSvg(open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  btn.setAttribute('aria-label', (open ? 'Recolher ' : 'Abrir ') + what);
+  btn.title = open ? 'Recolher' : 'Abrir';
+}
+
 function ic(name, size, label) {
   size = size || 18;
   const body = IC_PATHS[name] || IC_PATHS.dots;
@@ -837,7 +878,6 @@ let state = loadState() || getDefaultState();
 // Preferências de exibição (só na tela, não salvas na nuvem): quais faturas
 // e cards de perfil estão recolhidos, e se o saldo por perfil está visível.
 let _collapsedFaturas = {};
-let _collapsedProfiles = {};
 // ── Privacidade: valores escondidos por padrão (ajustável em Perfil → Bloqueio e valores) ──
 let cfMasked = (() => { try { return JSON.parse(localStorage.getItem('lifeplan_privacy') || '{}').hideValues !== false; } catch (e) { return true; } })();
 let cfForceShow = false; // só liga durante a geração do PDF
@@ -847,7 +887,6 @@ const cfVisMap = () => new Proxy({}, {
   set: (t, k, v) => { t[k] = v; return true; }
 });
 let _saldoVisiblePerProfile = cfVisMap(); // segue o estado geral até a pessoa mudar o perfil
-let _gastosVisiblePerProfile = cfVisMap();
 let _collapsedPagamentosPerProfile = {}; // recolhido por padrão, individual por perfil
 let _pagamentosVisiblePerProfile = cfVisMap();
 
@@ -917,30 +956,34 @@ function copyInviteCode() {
   });
 }
 
-// Modal bloqueante (só continua quando o usuário escolhe) perguntando se é
-// pra criar uma família nova ou entrar numa existente com código.
+// Cartão no topo da aba Faturas (antes era um pop-up que cobria a tela na
+// primeira visita). A pessoa vê as finanças normalmente e responde quando quiser.
 function showFamilyChoiceModal() {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.id = 'family-choice-card';
+    overlay.style.cssText = 'margin:0 0 16px';
     overlay.innerHTML = `
-      <div style="background:var(--surface);border-radius:16px;max-width:400px;width:100%;padding:24px;text-align:center">
+      <div class="card" style="padding:20px;text-align:center;background:var(--accent-soft);border-color:transparent">
         <div style="color:var(--accent);margin-bottom:8px;display:flex;justify-content:center"><svg class="ic" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Bem-vindo ao Finanças</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Você já faz parte do modo família de alguém?</div>
-        <button id="fam-create-btn" class="btn btn-primary" style="width:100%;margin-bottom:10px;padding:12px">Não, ativar meu modo família</button>
-        <button id="fam-join-toggle-btn" class="btn btn-ghost" style="width:100%;padding:12px">Sim, tenho um código de convite</button>
-        <div id="fam-join-form" style="display:none;margin-top:14px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;text-align:left">Ao entrar, o líder poderá lançar gastos do cartão dele para você. Ele não vê as suas finanças.</div>
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:500;color:var(--text);margin-bottom:6px">Modo família</div>
+        <div style="font-size:14px;color:var(--text-2);margin-bottom:16px;max-width:420px;margin-left:auto;margin-right:auto">Divida gastos de cartão com alguém da família. Cada pessoa continua vendo só as próprias finanças. Alguém já te mandou um código de convite?</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+          <button id="fam-create-btn" class="btn btn-primary" style="padding:12px 18px">Ativar meu modo família</button>
+          <button id="fam-join-toggle-btn" class="btn btn-ghost" style="padding:12px 18px;background:var(--surface)">Tenho um código de convite</button>
+        </div>
+        <div id="fam-join-form" style="display:none;max-width:360px;margin:14px auto 0">
+          <div style="font-size:14px;color:var(--muted);margin-bottom:10px">Ao entrar, o líder poderá lançar gastos do cartão dele para você. Ele não vê as suas finanças.</div>
           <input id="fam-code-input" type="text" placeholder="FAM-XXXXXX" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;text-align:center;font-family:var(--font-body);font-variant-numeric:tabular-nums;font-size:14px;text-transform:uppercase;box-sizing:border-box;margin-bottom:10px">
           <button id="fam-join-btn" class="btn btn-primary" style="width:100%;padding:12px">Entrar no modo família</button>
         </div>
       </div>
     `;
-    document.body.appendChild(overlay);
+    const host = document.getElementById('tab-faturas');
+    if (host) host.insertBefore(overlay, host.firstChild); else document.body.appendChild(overlay);
 
     overlay.querySelector('#fam-create-btn').onclick = () => {
-      document.body.removeChild(overlay);
+      overlay.remove();
       resolve({ action: 'create' });
     };
     overlay.querySelector('#fam-join-toggle-btn').onclick = () => {
@@ -950,7 +993,7 @@ function showFamilyChoiceModal() {
     overlay.querySelector('#fam-join-btn').onclick = () => {
       const code = overlay.querySelector('#fam-code-input').value.trim();
       if (!code) return;
-      document.body.removeChild(overlay);
+      overlay.remove();
       resolve({ action: 'join', code });
     };
   });
@@ -997,6 +1040,12 @@ async function ensureFamily() {
   }
   const again = await fetchMyFamily();
   return again.family || null;
+}
+
+if (window.parent !== window) {
+  document.documentElement.classList.add('lp-embed');
+  const pb = document.getElementById('lp-profile-btn');
+  if (pb) pb.onclick = () => window.parent.postMessage({ lifeplanNav: 'profile' }, window.location.origin);
 }
 
 function bootDone() { document.documentElement.classList.remove('cf-boot'); }
@@ -1897,7 +1946,7 @@ function performSearch(query) {
         icon: 'trendUp', title: p.desc || '(sem descrição)',
         subtitle: `Pagamento · ${formatDateBR(p.date)||'—'} · ${profileName||'sem perfil'}`,
         value: fmt(p.value),
-        onClick: () => { closeSearchPanel(); showTab('resumo'); if (p.profileIdx!=null) _collapsedProfiles[p.profileIdx]=false; renderPerfis(); }
+        onClick: () => { closeSearchPanel(); showTab('resumo'); if (p.profileIdx!=null) { _perfilAberto[p.profileIdx]=true; renderSaldo(); const el=document.querySelector('.profile-card[data-p="'+p.profileIdx+'"]'); if (el) el.scrollIntoView({block:'start'}); } }
       });
     }
   });
@@ -2096,7 +2145,7 @@ let _pagamentosCollapsed = true; // seção recolhida por padrão, igual às fat
 function togglePagamentosSection() {
   _pagamentosCollapsed = !_pagamentosCollapsed;
   document.getElementById('pagamentos-body').style.display = _pagamentosCollapsed ? 'none' : '';
-  document.getElementById('pagamentos-toggle-btn').textContent = _pagamentosCollapsed ? '▸' : '▾';
+  setToggle(document.getElementById('pagamentos-toggle-btn'), !_pagamentosCollapsed, 'extrato de pagamentos');
 }
 
 // ── Esconder/mostrar todos os valores (olhinho geral do cabeçalho) ──
@@ -2113,7 +2162,6 @@ function setMasked(m) {
   cfMasked = !!m;
   // o estado geral manda: zera as escolhas individuais dos olhinhos por perfil
   _saldoVisiblePerProfile = cfVisMap();
-  _gastosVisiblePerProfile = cfVisMap();
   _pagamentosVisiblePerProfile = cfVisMap();
   applyMask();
   const act = document.querySelector('.tab.active');
@@ -2619,6 +2667,11 @@ function getTableTotal(t) {
   // única, compartilhada com a prévia da Início) — aqui só repassamos.
   // Cópia antiga do arquivo em cache (sem "version")? Então refaz a conta de Faturas aqui:
   // só as faturas, sem Pix (o Pix já saiu da conta e não há nada a pagar depois).
+  // Cópia antiga (versão < 3) refaz o Planejamento aqui: estouro de categoria reserva 0.
+  if (t.type === 'planejamento' && !(FinanceFormulas.version >= 3)) {
+    return (t.rows || []).filter(r => r.categoria && r.profileIdx != null)
+      .reduce((s, r) => s + Math.max(0, (parseFloat(r.valor) || 0) - computeGastoCategoria(r.profileIdx, r.categoria)), 0);
+  }
   if (t.type === 'faturas_auto' && !(FinanceFormulas.version >= 2)) {
     return (state.faturas || []).reduce((s, f) =>
       s + (f.rows || []).reduce((s2, r) => s2 + (parseFloat(r.value) || 0), 0), 0);
@@ -3259,7 +3312,9 @@ function renderPlanejamentoCard(card, t) {
   if (validRows.length) {
     const totalEstimado = validRows.reduce((s, r) => s + (parseFloat(r.valor) || 0), 0);
     const totalGasto = validRows.reduce((s, r) => s + computeGastoCategoria(r.profileIdx, r.categoria), 0);
-    const totalRestante = totalEstimado - totalGasto;
+    // Mesma conta da linha do Saldo: só conta o que ainda falta gastar; estouro não abate a sobra de outra categoria.
+    const totalRestante = validRows.reduce((s, r) => s + Math.max(0, (parseFloat(r.valor) || 0) - computeGastoCategoria(r.profileIdx, r.categoria)), 0);
+    const totalEstourado = validRows.reduce((s, r) => s + Math.max(0, computeGastoCategoria(r.profileIdx, r.categoria) - (parseFloat(r.valor) || 0)), 0);
     const overCount = validRows.filter(r => computeGastoCategoria(r.profileIdx, r.categoria) > (parseFloat(r.valor) || 0)).length;
     const okCount = validRows.length - overCount;
     const closing = document.createElement('div');
@@ -3267,7 +3322,7 @@ function renderPlanejamentoCard(card, t) {
     let msg = `${okCount} ${okCount === 1 ? 'categoria fechada' : 'categorias fechadas'} no previsto.`;
     msg += overCount === 0 ? ' Nenhuma estourou.' : ` ${overCount} ${overCount === 1 ? 'estourou' : 'estouraram'}.`;
     closing.innerHTML = `<div>${msg}</div>
-      <div class="plan-sub" style="margin-top:4px">Previsto ${fmt(totalEstimado)} · ainda falta gastar <strong class="${totalRestante >= 0 ? 'positive' : 'negative'}">${totalRestante >= 0 ? '' : '− '}${fmt(Math.abs(totalRestante))}</strong></div>`;
+      <div class="plan-sub" style="margin-top:4px">Previsto ${fmt(totalEstimado)} · ainda falta gastar <strong class="positive">${fmt(totalRestante)}</strong>${totalEstourado > 0 ? ` · passou do previsto <strong class="negative">${fmt(totalEstourado)}</strong> (já está nas faturas)` : ''}</div>`;
     card.appendChild(closing);
   }
 
@@ -3475,7 +3530,7 @@ function renderSaldoBuilder() {
 
     const lab = document.createElement('span');
     lab.style.cssText = 'display:flex;align-items:center;gap:12px;flex:1;min-width:0';
-    lab.innerHTML = `<span class="row-ic">${ic(tableIconName(t), 20)}</span><span class="row-name">${t.name}</span><span class="row-chev">${isOpen ? '▾' : '▸'}</span>`;
+    lab.innerHTML = `<span class="row-ic">${ic(tableIconName(t), 20)}</span><span class="row-name">${t.name}</span><span class="row-chev">${chevSvg(isOpen)}</span>`;
 
     const moves = document.createElement('span');
     moves.className = 'row-moves';
@@ -3956,8 +4011,7 @@ function renderFaturas() {
 
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'btn btn-ghost btn-sm';
-    toggleBtn.textContent = _collapsedFaturas[f.id] !== false ? '▸' : '▾';
-    toggleBtn.title = 'Recolher/expandir';
+    setToggle(toggleBtn, _collapsedFaturas[f.id] === false, 'fatura ' + (f.name || ''));
     toggleBtn.onclick = () => {
       _collapsedFaturas[f.id] = _collapsedFaturas[f.id] === false ? true : false;
       renderFaturas();
@@ -4105,139 +4159,92 @@ function getAllTransactionsByProfile(pIdx) {
   return [...expenses, ...payments].sort((a,b) => (a.txDate||'').localeCompare(b.txDate||''));
 }
 
-function renderPerfis() {
-  const container = document.getElementById('perfis-summary');
-  container.innerHTML = '';
+// Lançamentos de um perfil (gastos + pagamentos), editáveis. Aparecem dentro do card "Saldo final
+// por perfil" quando a pessoa abre o card. Valores ficam ocultos enquanto o olho do perfil estiver fechado.
+let _perfilAberto = {};
+function buildExtratoPerfil(pIdx, visible) {
+  const txs = getAllTransactionsByProfile(pIdx);
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+  const table = document.createElement('table');
+  table.innerHTML = `<thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th></th></tr></thead>`;
+  const tbody = document.createElement('tbody');
 
-  getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
-    const txs = getAllTransactionsByProfile(pIdx);
-    const totalGastos = txs.filter(t => t.txKind !== 'payment').reduce((s,r) => s + (parseFloat(r.value)||0), 0);
-    const totalPago = txs.filter(t => t.txKind === 'payment').reduce((s,r) => s + (parseFloat(r.value)||0), 0);
-    const saldo = totalPago - totalGastos;
-    const visible = !!_gastosVisiblePerProfile[pIdx];
+  if (txs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhum lançamento no extrato deste perfil ainda.</div></td></tr>`;
+  } else {
+    txs.forEach(tx => {
+      const tr = document.createElement('tr');
 
-    const card = document.createElement('div');
-    card.className = 'card';
+      const tdDate = document.createElement('td');
+      const inDate = document.createElement('input');
+      inDate.type = 'date'; inDate.value = tx.txDate || '';
+      inDate.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;color:var(--text)';
+      inDate.onchange = e => {
+        if (tx.txKind === 'payment') { const p = state.payments.find(p=>p.id===tx.id); if(p){p.date=e.target.value; saveState();} }
+        else if (tx.txKind === 'pix') updatePixRow(tx.id, 'date', e.target.value);
+        else updateRow(tx.faturaId, tx.id, 'date', e.target.value);
+      };
+      tdDate.appendChild(inDate);
 
-    const header = document.createElement('div');
-    header.className = 'card-header';
+      const tdTipo = document.createElement('td');
+      const isPay = tx.txKind === 'payment';
+      tdTipo.innerHTML = isPay
+        ? '<span class="val-cell positive" style="font-size:12px;font-weight:700">Pagamento</span>'
+        : `<span class="val-cell negative" style="font-size:12px;font-weight:700">${tx.faturaName||'Gasto'}</span>`;
 
-    const nameEl = document.createElement('div');
-    nameEl.className = 'card-title';
-    const dot = document.createElement('span');
-    dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:'+getProfileColor(pIdx)+';display:inline-block';
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text'; nameInput.className = 'profile-name-input';
-    nameInput.style.cssText = 'font-size:14px;font-weight:600';
-    nameInput.value = pName;
-    nameInput.oninput = e => { state.profiles[pIdx].name = e.target.value; saveState(); };
-    nameEl.append(dot, nameInput);
+      const tdDesc = document.createElement('td');
+      const inDesc = document.createElement('input');
+      inDesc.type = 'text'; inDesc.value = tx.name || tx.desc || '';
+      inDesc.placeholder = 'Descrição';
+      inDesc.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;color:var(--text);width:100%;box-sizing:border-box';
+      inDesc.onchange = e => {
+        if (tx.txKind === 'payment') { const p = state.payments.find(p=>p.id===tx.id); if(p){p.desc=e.target.value; saveState();} }
+        else if (tx.txKind === 'pix') updatePixRow(tx.id, 'name', e.target.value);
+        else updateRow(tx.faturaId, tx.id, 'name', e.target.value);
+      };
+      tdDesc.appendChild(inDesc);
 
-    const totalEl = document.createElement('div');
-    totalEl.className = 'card-total';
-    totalEl.textContent = visible ? (saldo>=0?'+':'') + fmtRaw(saldo) : '••••';
-    totalEl.style.color = saldo >= 0 ? 'var(--accent2)' : 'var(--warning)';
+      const tdVal = document.createElement('td');
+      const inVal = document.createElement('input');
+      inVal.type = 'number'; inVal.step = '0.01';
+      inVal.value = visible ? tx.value : '';
+      inVal.placeholder = visible ? '0,00' : '••••';
+      inVal.disabled = !visible;
+      inVal.className = isPay ? 'val-cell positive' : 'val-cell negative';
+      attachElasticWidth(inVal, 80, 180);
+      inVal.onchange = e => {
+        if (tx.txKind === 'payment') { const p = state.payments.find(p=>p.id===tx.id); if(p){p.value=parseFloat(e.target.value)||0; saveState();} }
+        else if (tx.txKind === 'pix') updatePixRow(tx.id, 'value', e.target.value);
+        else updateRow(tx.faturaId, tx.id, 'value', e.target.value);
+        renderSaldo();
+      };
+      tdVal.appendChild(inVal);
 
-    const eyeBtn = document.createElement('button');
-    eyeBtn.className = 'btn btn-ghost btn-sm';
-    eyeBtn.innerHTML = visible ? ic('eye') : ic('eyeOff'); eyeBtn.setAttribute('aria-label', visible ? 'Ocultar valores' : 'Mostrar valores');
-    eyeBtn.title = 'Mostrar/ocultar valores deste perfil';
-    eyeBtn.onclick = () => { _gastosVisiblePerProfile[pIdx] = !visible; renderPerfis(); };
+      const tdDel = document.createElement('td');
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-danger btn-sm'; delBtn.innerHTML = ic('trash'); delBtn.setAttribute('aria-label','Remover'); 
+      delBtn.onclick = () => {
+        if (!confirm('Excluir este lançamento?')) return;
+        if (tx.txKind === 'payment') { state.payments = state.payments.filter(p=>p.id!==tx.id); saveState(); }
+        else if (tx.txKind === 'pix') { removePixRow(tx.id); return; }
+        else removeRow(tx.faturaId, tx.id);
+        renderSaldo();
+      };
+      tdDel.appendChild(delBtn);
 
-    const toggleBtn = document.createElement('button');
-    toggleBtn.className = 'btn btn-ghost btn-sm';
-    toggleBtn.textContent = _collapsedProfiles[pIdx] !== false ? '▸' : '▾';
-    toggleBtn.title = 'Recolher/expandir';
-    toggleBtn.onclick = () => { _collapsedProfiles[pIdx] = _collapsedProfiles[pIdx] === false ? true : false; renderPerfis(); };
+      tr.append(tdDate, tdTipo, tdDesc, tdVal, tdDel);
+      tbody.appendChild(tr);
+    });
+  }
 
-    header.append(toggleBtn, nameEl, eyeBtn, totalEl);
-    card.appendChild(header);
-
-    const body = document.createElement('div');
-    body.id = 'profile-body-' + pIdx;
-    if (_collapsedProfiles[pIdx] !== false) body.style.display = 'none';
-
-    const wrap = document.createElement('div');
-    wrap.className = 'table-wrap';
-    const table = document.createElement('table');
-    table.innerHTML = `<thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th></th></tr></thead>`;
-    const tbody = document.createElement('tbody');
-
-    if (txs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhum lançamento no extrato deste perfil ainda.</div></td></tr>`;
-    } else {
-      txs.forEach(tx => {
-        const tr = document.createElement('tr');
-
-        const tdDate = document.createElement('td');
-        const inDate = document.createElement('input');
-        inDate.type = 'date'; inDate.value = tx.txDate || '';
-        inDate.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;color:var(--text)';
-        inDate.onchange = e => {
-          if (tx.txKind === 'payment') { const p = state.payments.find(p=>p.id===tx.id); if(p){p.date=e.target.value; saveState();} }
-          else if (tx.txKind === 'pix') updatePixRow(tx.id, 'date', e.target.value);
-          else updateRow(tx.faturaId, tx.id, 'date', e.target.value);
-        };
-        tdDate.appendChild(inDate);
-
-        const tdTipo = document.createElement('td');
-        const isPay = tx.txKind === 'payment';
-        tdTipo.innerHTML = isPay
-          ? '<span class="val-cell positive" style="font-size:12px;font-weight:700">Pagamento</span>'
-          : `<span class="val-cell negative" style="font-size:12px;font-weight:700">${tx.faturaName||'Gasto'}</span>`;
-
-        const tdDesc = document.createElement('td');
-        const inDesc = document.createElement('input');
-        inDesc.type = 'text'; inDesc.value = tx.name || tx.desc || '';
-        inDesc.placeholder = 'Descrição';
-        inDesc.style.cssText = 'background:transparent;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;color:var(--text);width:100%;box-sizing:border-box';
-        inDesc.onchange = e => {
-          if (tx.txKind === 'payment') { const p = state.payments.find(p=>p.id===tx.id); if(p){p.desc=e.target.value; saveState();} }
-          else if (tx.txKind === 'pix') updatePixRow(tx.id, 'name', e.target.value);
-          else updateRow(tx.faturaId, tx.id, 'name', e.target.value);
-        };
-        tdDesc.appendChild(inDesc);
-
-        const tdVal = document.createElement('td');
-        const inVal = document.createElement('input');
-        inVal.type = 'number'; inVal.step = '0.01';
-        inVal.value = visible ? tx.value : '';
-        inVal.placeholder = visible ? '0,00' : '••••';
-        inVal.disabled = !visible;
-        inVal.className = isPay ? 'val-cell positive' : 'val-cell negative';
-        attachElasticWidth(inVal, 80, 180);
-        inVal.onchange = e => {
-          if (tx.txKind === 'payment') { const p = state.payments.find(p=>p.id===tx.id); if(p){p.value=parseFloat(e.target.value)||0; saveState();} }
-          else if (tx.txKind === 'pix') updatePixRow(tx.id, 'value', e.target.value);
-          else updateRow(tx.faturaId, tx.id, 'value', e.target.value);
-          renderPerfis(); renderSaldo();
-        };
-        tdVal.appendChild(inVal);
-
-        const tdDel = document.createElement('td');
-        const delBtn = document.createElement('button');
-        delBtn.className = 'btn btn-danger btn-sm'; delBtn.innerHTML = ic('trash'); delBtn.setAttribute('aria-label','Remover'); 
-        delBtn.onclick = () => {
-          if (!confirm('Excluir este lançamento?')) return;
-          if (tx.txKind === 'payment') { state.payments = state.payments.filter(p=>p.id!==tx.id); saveState(); }
-          else if (tx.txKind === 'pix') { removePixRow(tx.id); return; }
-          else removeRow(tx.faturaId, tx.id);
-          renderPerfis(); renderSaldo();
-        };
-        tdDel.appendChild(delBtn);
-
-        tr.append(tdDate, tdTipo, tdDesc, tdVal, tdDel);
-        tbody.appendChild(tr);
-      });
-    }
-
-    table.appendChild(tbody);
-    wrap.appendChild(table);
-    body.appendChild(wrap);
-    card.appendChild(body);
-    container.appendChild(card);
-  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  return wrap;
 }
+
+// Compatibilidade: vários pontos da tela ainda pedem para "atualizar os perfis"; agora é o próprio saldo.
+function renderPerfis() { renderSaldo(); }
 
 // ══════════════════════════════════════════════════════
 //  PAGAMENTOS
@@ -4288,8 +4295,7 @@ function renderPagamentos() {
 
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'btn btn-ghost btn-sm';
-    toggleBtn.textContent = collapsed ? '▸' : '▾';
-    toggleBtn.title = 'Recolher/expandir';
+    setToggle(toggleBtn, !collapsed, 'pagamentos de ' + pName);
     toggleBtn.onclick = () => { _collapsedPagamentosPerProfile[pIdx] = !collapsed; renderPagamentos(); };
 
     const titleEl = document.createElement('div');
@@ -4388,22 +4394,43 @@ function renderSaldo() {
     const totalPago = pays.reduce((s,p) => s + p.value, 0);
     const saldo = totalPago - totalGastos;
     const visible = !!_saldoVisiblePerProfile[pIdx];
+    const aberto = !!_perfilAberto[pIdx];
+    const nLanc = rows.length + pays.length;
+    const alternar = () => { _perfilAberto[pIdx] = !aberto; renderSaldo(); };
 
     const pCard = document.createElement('div');
-    pCard.className = 'profile-card';
+    pCard.className = 'profile-card' + (aberto ? ' open' : '');
     pCard.dataset.p = pIdx;
+    if (aberto) pCard.style.gridColumn = '1 / -1'; // aberto: ocupa a linha inteira para caber a tabela
 
     const nameRow = document.createElement('div');
     nameRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px';
-    const nameDiv = document.createElement('div');
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'profile-card-toggle';
+    toggle.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+    toggle.setAttribute('aria-controls', 'perfil-extrato-' + pIdx);
+    toggle.setAttribute('aria-label', `${pName}: ${aberto ? 'recolher' : 'ver'} lançamentos`);
+    const nameDiv = document.createElement('span');
     nameDiv.className = 'profile-card-name';
+    nameDiv.style.margin = '0';
     nameDiv.textContent = pName;
+    const chev = document.createElement('span');
+    chev.className = 'row-chev'; chev.setAttribute('aria-hidden', 'true');
+    chev.innerHTML = chevSvg(aberto);
+    toggle.append(nameDiv, chev);
+    toggle.onclick = alternar;
     const eyeBtn = document.createElement('button');
     eyeBtn.className = 'btn btn-ghost btn-sm';
     eyeBtn.innerHTML = visible ? ic('eye') : ic('eyeOff'); eyeBtn.setAttribute('aria-label', visible ? 'Ocultar valores' : 'Mostrar valores');
     eyeBtn.title = 'Mostrar/ocultar o saldo deste perfil';
     eyeBtn.onclick = () => { _saldoVisiblePerProfile[pIdx] = !visible; renderSaldo(); };
-    nameRow.append(nameDiv, eyeBtn);
+    nameRow.append(toggle, eyeBtn);
+
+    // Resumo do perfil: tocar em qualquer linha abre/fecha os lançamentos
+    const resumo = document.createElement('div');
+    resumo.className = 'profile-card-summary';
+    resumo.onclick = alternar;
 
     const r1 = document.createElement('div'); r1.className = 'profile-card-row';
     r1.innerHTML = `<span class="label">Total de gastos</span><span class="val-cell negative">${visible?'−':''}${fmtSaldo(totalGastos,pIdx)}</span>`;
@@ -4417,70 +4444,24 @@ function renderSaldo() {
     r3.innerHTML = `<span class="label" style="font-weight:600">Saldo</span>
       <span class="profile-card-final ${saldoClass}">${saldoSign}${fmtSaldo(saldo,pIdx)}</span>`;
 
-    pCard.append(nameRow, r1, r2, r3);
+    const dica = document.createElement('div');
+    dica.className = 'profile-card-hint';
+    dica.textContent = aberto ? 'Recolher lançamentos' : (nLanc ? `Ver lançamentos (${nLanc})` : 'Ver lançamentos');
+
+    resumo.append(r1, r2, r3, dica);
+    pCard.append(nameRow, resumo);
+
+    if (aberto) {
+      const det = document.createElement('div');
+      det.id = 'perfil-extrato-' + pIdx;
+      det.className = 'profile-card-extrato';
+      det.appendChild(buildExtratoPerfil(pIdx, visible));
+      pCard.appendChild(det);
+    }
     grid.appendChild(pCard);
   });
 
   container.appendChild(grid);
-
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.innerHTML = `<div class="card-header"><div class="card-title">Resumo geral</div></div>`;
-
-  const wrap = document.createElement('div');
-  wrap.className = 'table-wrap';
-
-  const table = document.createElement('table');
-  table.innerHTML = `<thead><tr>
-    <th>Perfil</th><th>Total Gastos</th><th>Total Pago</th><th>Saldo</th>
-  </tr></thead>`;
-
-  const tbody = document.createElement('tbody');
-  let gtGastos = 0, gtPago = 0;
-  let allVisible = true;
-
-  getActiveProfiles().forEach(({ name: pName, idx: pIdx }) => {
-    const rows = getAllRowsByProfile(pIdx);
-    const tg = rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
-    const pays = state.payments.filter(p => p.profileIdx === pIdx);
-    const tp = pays.reduce((s,p) => s + p.value, 0);
-    const sl = tp - tg;
-    gtGastos += tg; gtPago += tp;
-    const visible = !!_saldoVisiblePerProfile[pIdx];
-    if (!visible) allVisible = false;
-
-    const tr = document.createElement('tr');
-    const dot = `<span style="width:8px;height:8px;border-radius:50%;background:${getProfileColor(pIdx)};display:inline-block;margin-right:8px;"></span>`;
-    const sc = sl >= 0 ? 'positive' : 'negative';
-    const ss = (visible && sl >= 0) ? '+' : '';
-    tr.innerHTML = `
-      <td>${dot}${pName}</td>
-      <td class="val-cell negative">${visible?'−':''}${fmtSaldo(tg,pIdx)}</td>
-      <td class="val-cell positive">${visible?'+':''}${fmtSaldo(tp,pIdx)}</td>
-      <td class="val-cell ${sc}">${ss}${fmtSaldo(sl,pIdx)}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  // Total Geral só mostra em claro se TODOS os perfis estiverem visíveis —
-  // senão daria pra "descobrir" um perfil escondido fazendo a subtração.
-  const tfoot = document.createElement('tfoot');
-  const gtSaldo = gtPago - gtGastos;
-  const gtClass = gtSaldo >= 0 ? 'positive' : 'negative';
-  const gtSign = (allVisible && gtSaldo >= 0) ? '+' : '';
-  const gtFmt = v => allVisible ? fmtRaw(v) : '••••';
-  tfoot.innerHTML = `<tr>
-    <td>Total Geral</td>
-    <td class="val-cell negative">${allVisible?'−':''}${gtFmt(gtGastos)}</td>
-    <td class="val-cell positive">${allVisible?'+':''}${gtFmt(gtPago)}</td>
-    <td class="val-cell ${gtClass}">${gtSign}${gtFmt(gtSaldo)}</td>
-  </tr>`;
-
-  table.appendChild(tbody);
-  table.appendChild(tfoot);
-  wrap.appendChild(table);
-  card.appendChild(wrap);
-  container.appendChild(card);
 }
 
 // ══════════════════════════════════════════════════════

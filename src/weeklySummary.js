@@ -120,17 +120,17 @@ export function resumoSemanal(entrada) {
   } else if (falta > 0 && falta >= diasRestantes) {
     if (falta > diasRestantes) {
       recomendacao = diasRestantes === 0
-        ? `Faltam ${falta} ${plural(falta, 'treino', 'treinos')} e não restam dias livres nesta semana. Vale ajustar a meta da próxima semana.`
-        : `Faltam ${falta} treinos e só ${plural(diasRestantes, 'resta', 'restam')} ${diasRestantes} ${plural(diasRestantes, 'dia', 'dias')}. Vale ajustar a meta ou encaixar dois treinos no mesmo dia.`;
+        ? 'Semana corrida? Tudo bem. Que tal ajustar a meta de treinos para a próxima semana?'
+        : `Semana corrida? Um treino ${diasRestantes === 1 ? 'no dia que resta' : 'em cada dia que resta'} já conta. Se a meta estiver alta, ajuste para a próxima semana.`;
     } else {
-      recomendacao = `Faltam ${falta} ${plural(falta, 'treino', 'treinos')} e ${plural(diasRestantes, 'resta', 'restam')} ${diasRestantes} ${plural(diasRestantes, 'dia', 'dias')}. Treine ${diasRestantes === 1 ? 'no dia que resta' : 'todos os dias que restam'} para fechar a meta.`;
+      recomendacao = `Ainda dá para fechar a meta: ${falta === 1 ? 'um treino' : 'um treino por dia'} até domingo resolve.`;
     }
   } else if (vencPerto) {
     recomendacao = `A fatura ${vencPerto.name} vence ${quando(vencPerto.dias)}. Deixe o pagamento separado hoje.`;
   } else if (dieta && dieta.pct < LIMITE_BOM) {
-    recomendacao = 'A dieta ficou abaixo do esperado. Escolha uma refeição para seguir à risca amanhã.';
+    recomendacao = 'A dieta escapou um pouco. Que tal escolher uma refeição para seguir com calma amanhã?';
   } else if (hab && hab.pct < LIMITE_BOM) {
-    recomendacao = 'Os hábitos ficaram abaixo do esperado. Escolha um só para focar amanhã.';
+    recomendacao = 'Os hábitos ficaram mais soltos. Escolha só um para focar amanhã.';
   } else if (!cumpriu.length) {
     recomendacao = 'Ainda não há registros nesta semana. Marque o treino de hoje para começar o prontuário da semana.';
   } else if (falta > 0) {

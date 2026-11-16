@@ -96,3 +96,60 @@ export function BottomNav({screen,onNavigate}){
     </nav>
   );
 }
+
+// Cabeçalho único das abas (Nutrição, Treino, Compras, Estudos, Hábitos, Grade…).
+// Mesmo visual do topo de Finanças: fundo creme, título em Fraunces, ações à
+// direita e o botão de perfil sempre no mesmo lugar. "Sair" mora em Perfil.
+export function TopBar({title,subtitle,onBack,onOpenProfile,actions,status}){
+  return(
+    <header style={{position:'sticky',top:0,zIndex:90,background:'var(--bg)',borderBottom:'1px solid var(--border)',marginInline:'min(0px, calc((960px - 100vw) / 2))'}}>
+      <div style={{maxWidth:960,margin:'0 auto',padding:'12px 16px',display:'flex',alignItems:'center',gap:8,minHeight:68,boxSizing:'border-box'}}>
+        {onBack&&(
+          <button onClick={onBack} aria-label="Voltar" style={iconBtn}>
+            <Icon name="chevron" size={22} style={{transform:'rotate(180deg)'}}/>
+          </button>
+        )}
+        <div style={{flex:1,minWidth:0}}>
+          <h1 style={{margin:0,fontFamily:'var(--font-display)',fontWeight:500,fontSize:26,lineHeight:'32px',letterSpacing:'-0.01em',color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{title}</h1>
+          {subtitle&&<p style={{margin:'2px 0 0',fontSize:14,lineHeight:'18px',color:'var(--muted)'}}>{subtitle}</p>}
+        </div>
+        {status&&<span role="status" style={{fontSize:13,color:'var(--muted)',whiteSpace:'nowrap'}}>{status}</span>}
+        {actions}
+        {onOpenProfile&&(
+          <button onClick={onOpenProfile} aria-label="Perfil e configurações" style={{...iconBtn,background:'var(--accent-soft)'}}>
+            <Icon name="user"/>
+          </button>
+        )}
+      </div>
+    </header>
+  );
+}
+const iconBtn={width:44,height:44,borderRadius:22,border:'none',background:'transparent',color:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:0,flexShrink:0};
+
+// Estado vazio com ação: diz o que falta e o que fazer em seguida.
+export function EmptyState({icon='user',title,text,actionLabel,onAction}){
+  return(
+    <div style={{maxWidth:420,margin:'0 auto',padding:'40px 24px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+      <span style={{width:72,height:72,borderRadius:36,background:'var(--accent-soft)',color:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:8}}>
+        <Icon name={icon} size={32} stroke={1.5}/>
+      </span>
+      <h2 style={{margin:0,fontFamily:'var(--font-display)',fontWeight:500,fontSize:22,lineHeight:'28px',color:'var(--text)'}}>{title}</h2>
+      {text&&<p style={{margin:0,fontSize:15,lineHeight:'22px',color:'var(--muted)'}}>{text}</p>}
+      {actionLabel&&(
+        <button onClick={onAction} style={{marginTop:16,minHeight:48,padding:'0 28px',borderRadius:12,border:'none',background:'var(--accent)',color:'var(--on-accent)',fontFamily:'inherit',fontSize:15,fontWeight:700,cursor:'pointer'}}>{actionLabel}</button>
+      )}
+    </div>
+  );
+}
+
+// Placeholder de carregamento: mantém cabeçalho e barra no lugar e mostra só
+// blocos cinza onde o conteúdo vai entrar (em vez da tela inteira "Carregando…").
+export function Skeleton({rows=3}){
+  const block={background:'var(--surface2)',borderRadius:20,animation:'lp-pulse 1.4s ease-in-out infinite'};
+  return(
+    <div aria-busy="true" aria-label="Carregando" style={{maxWidth:960,margin:'0 auto',padding:16,display:'flex',flexDirection:'column',gap:12}}>
+      <div style={{...block,height:44,width:'60%',borderRadius:12}}/>
+      {Array.from({length:rows}).map((_,i)=><div key={i} style={{...block,height:i===0?140:96}}/>)}
+    </div>
+  );
+}

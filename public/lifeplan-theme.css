@@ -108,3 +108,14 @@ html:root[data-theme="dark"] {
     transition-duration: .01ms !important;
   }
 }
+
+/* ── Base tipográfica ─────────────────────────────────────────────────────
+ * Sem isso, tudo que não define fonte (barra inferior, botões, "Carregando…")
+ * caía em Times New Roman/Arial, o padrão do navegador. */
+html, body { font-family: var(--font-body); color: var(--text); -webkit-font-smoothing: antialiased; }
+:where(button, input, select, textarea) { font-family: inherit; }
+
+/* escala de raios: 8 (chips), 12 (campos e botões), 20 (cards) */
+html:root { --r-sm: 8px; --r-md: 12px; --r-lg: 20px; }
+
+@keyframes lp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }

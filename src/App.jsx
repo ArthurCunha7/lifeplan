@@ -1,7 +1,7 @@
 // src/App.jsx — LifePlan completo
 // Novidades: 🛒 Lista de compras | 🔄 Troca de tipo de treino por dia
 import { useState, useMemo, useRef, useEffect, Component } from "react";
-import { Icon, Glyph, BottomNav, NAV_SCREENS } from "./ui";
+import { Icon, Glyph, BottomNav, NAV_SCREENS, TopBar, EmptyState, Skeleton } from "./ui";
 import { LockScreen, PrivacyCover, LockSettings } from "./LockScreen";
 import { getPrivacy, clearLock } from "./privacySettings";
 import { NotificationBell, NotificationSettings } from "./Notifications";
@@ -9,6 +9,7 @@ import { disablePush } from "./notificationsApi";
 import { resumoSemanal } from "./weeklySummary";
 import { cruzarSaudeDinheiro } from "./crossInsights";
 import { MODELOS, treinosDeForca, montarModelo } from "./workoutTemplates";
+import { dividirTitulo, lerExercicios, rotuloSemana, diaDaSemana } from "./workoutFormat";
 import { supabase, signUp, signIn, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 
 // Tema compartilhado (cores + fontes), o mesmo arquivo usado pelas páginas em
@@ -136,14 +137,15 @@ export function searchTACO(query,limit=9){
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const S={
-  wrap:   {minHeight:'100vh',background:'var(--bg)',color:'var(--text)',fontFamily:'var(--font-body)',paddingBottom:110},
+  // em telas largas o conteúdo fica centralizado em 960px (o fundo continua ocupando tudo)
+  wrap:   {minHeight:'100vh',background:'var(--bg)',color:'var(--text)',fontFamily:'var(--font-body)',paddingBottom:110,paddingInline:'max(0px, calc((100vw - 960px) / 2))'},
   header: {background:'var(--surface)',borderBottom:'1px solid var(--border)',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:100,boxShadow:'0 1px 6px rgba(0,0,0,0.04)'},
-  card:   {background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,margin:'0 16px 12px',padding:'16px'},
-  input:  {width:'100%',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,color:'var(--text)',fontSize:14,padding:'10px 12px',minHeight:44,outline:'none',boxSizing:'border-box'},
-  select: {width:'100%',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,color:'var(--text)',fontSize:14,padding:'10px 12px',minHeight:44,outline:'none',boxSizing:'border-box'},
+  card:   {background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,margin:'0 16px 12px',padding:'16px'},
+  input:  {width:'100%',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,color:'var(--text)',fontSize:14,padding:'10px 12px',minHeight:44,outline:'none',boxSizing:'border-box'},
+  select: {width:'100%',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,color:'var(--text)',fontSize:14,padding:'10px 12px',minHeight:44,outline:'none',boxSizing:'border-box'},
   label:  {fontSize:12,fontWeight:700,color:'var(--muted2)',marginBottom:6,display:'block',letterSpacing:.8},
   badge:  c=>({background:`color-mix(in srgb, ${c} 16%, transparent)`,color:c,padding:'3px 8px',borderRadius:8,fontWeight:700,fontSize:12}),
-  btn:    (c='var(--accent)')=>({background:c,border:'none',borderRadius:10,color:'var(--on-accent)',padding:'12px 18px',minHeight:44,fontSize:14,fontWeight:700,cursor:'pointer'}),
+  btn:    (c='var(--accent)')=>({background:c,border:'none',borderRadius:12,fontFamily:'inherit',color:'var(--on-accent)',padding:'12px 18px',minHeight:44,fontSize:14,fontWeight:700,cursor:'pointer'}),
   // bottom nav
   nav:    {position:'fixed',bottom:0,left:0,right:0,background:'var(--surface)',borderTop:'1px solid var(--border)',display:'flex',zIndex:100},
   navBtn: active=>({flex:1,background:'none',border:'none',padding:'12px 0 10px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:3,color:active?'var(--accent)':'var(--muted)'}),
@@ -153,7 +155,7 @@ const S={
 function AuthWrap({children}){
   return(
     <div className="narrow-tab" style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-      <div style={{width:'100%',maxWidth:400,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:24,padding:32}}>{children}</div>
+      <div style={{width:'100%',maxWidth:400,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:32}}>{children}</div>
     </div>
   );
 }
@@ -183,16 +185,16 @@ function LoginPage({onSwitch,onLogin}){
       <div style={{textAlign:'center',marginBottom:28}}><div style={{fontSize:20,fontWeight:800,color:'var(--text)'}}>Recuperar senha</div></div>
       {forgotSent?(
         <div style={{textAlign:'center'}}>
-          <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:22}}>Se <b>{forgotEmail}</b> tiver uma conta, enviamos um link para você criar uma senha nova. Confira sua caixa de entrada (e o spam).</div>
-          <button style={{...S.btn('var(--success)'),width:'100%',padding:13}} onClick={()=>{setForgotMode(false);setForgotSent(false);}}>Voltar para o login</button>
+          <div style={{fontSize:14,color:'var(--muted2)',lineHeight:1.6,marginBottom:22}}>Se <b>{forgotEmail}</b> tiver uma conta, enviamos um link para você criar uma senha nova. Confira sua caixa de entrada (e o spam).</div>
+          <button style={{...S.btn(),width:'100%',padding:13}} onClick={()=>{setForgotMode(false);setForgotSent(false);}}>Voltar para o login</button>
         </div>
       ):(
         <>
           <label style={S.label}>SEU E-MAIL</label>
           <input style={{...S.input,marginBottom:16}} type="email" placeholder="seu@email.com" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleForgot()}/>
-          {err&&<div style={{color:'var(--danger)',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
-          <button style={{...S.btn('var(--success)'),width:'100%',padding:13,marginBottom:12,opacity:loading?.6:1}} onClick={handleForgot} disabled={loading}>{loading?'Enviando…':'Enviar link de recuperação'}</button>
-          <div style={{textAlign:'center'}}><button style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:12}} onClick={()=>{setForgotMode(false);setErr('');}}>← Voltar para o login</button></div>
+          {err&&<div style={{color:'var(--danger)',fontSize:14,marginBottom:12,textAlign:'center'}}>{err}</div>}
+          <button style={{...S.btn(),width:'100%',padding:13,marginBottom:12,opacity:loading?.6:1}} onClick={handleForgot} disabled={loading}>{loading?'Enviando…':'Enviar link de recuperação'}</button>
+          <div style={{textAlign:'center'}}><button style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:14}} onClick={()=>{setForgotMode(false);setErr('');}}>← Voltar para o login</button></div>
         </>
       )}
     </AuthWrap>
@@ -201,7 +203,7 @@ function LoginPage({onSwitch,onLogin}){
     <AuthWrap>
       <div style={{textAlign:'center',marginBottom:28}}><div style={{fontFamily:'var(--font-display)',fontSize:34,fontWeight:600,color:'var(--accent)'}}>LifePlan</div><div style={{fontSize:12,color:'var(--muted)',marginTop:4}}>Tabela TACO · NEPA/UNICAMP</div></div>
       <div style={{fontSize:20,fontWeight:800,color:'var(--text)',textAlign:'center',marginBottom:24}}>Bem-vindo de volta</div>
-      <button style={{width:'100%',padding:13,marginBottom:16,borderRadius:10,border:'1px solid var(--border2)',background:'var(--surface)',color:'var(--text)',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}} onClick={handleGoogle} disabled={loading}>
+      <button style={{width:'100%',padding:13,marginBottom:16,borderRadius:12,border:'1px solid var(--border2)',background:'var(--surface)',color:'var(--text)',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}} onClick={handleGoogle} disabled={loading}>
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style={{width:20,height:20}}/>
         Entrar com Google
       </button>
@@ -214,10 +216,10 @@ function LoginPage({onSwitch,onLogin}){
       <input style={{...S.input,marginBottom:12}} type="email" placeholder="seu@email.com" value={email} onChange={e=>setEmail(e.target.value)}/>
       <label style={S.label}>SENHA</label>
       <input style={{...S.input,marginBottom:8}} type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>
-      <div style={{textAlign:'right',marginBottom:16}}><button style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:12}} onClick={()=>{setForgotMode(true);setErr('');}}>Esqueci minha senha</button></div>
-      {err&&<div style={{color:'var(--danger)',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
-      <button style={{...S.btn('var(--success)'),width:'100%',padding:13,marginBottom:16,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'Entrando…':'Entrar'}</button>
-      <div style={{textAlign:'center',fontSize:13,color:'var(--muted)'}}>Não tem conta?{' '}<button style={{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontWeight:700,textDecoration:'underline',padding:'12px 4px'}} onClick={onSwitch}>Cadastrar →</button></div>
+      <div style={{textAlign:'right',marginBottom:16}}><button style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:14}} onClick={()=>{setForgotMode(true);setErr('');}}>Esqueci minha senha</button></div>
+      {err&&<div style={{color:'var(--danger)',fontSize:14,marginBottom:12,textAlign:'center'}}>{err}</div>}
+      <button style={{...S.btn(),width:'100%',padding:13,marginBottom:16,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'Entrando…':'Entrar'}</button>
+      <div style={{textAlign:'center',fontSize:14,color:'var(--muted)'}}>Não tem conta?{' '}<button style={{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontWeight:700,textDecoration:'underline',padding:'12px 4px'}} onClick={onSwitch}>Cadastrar →</button></div>
     </AuthWrap>
   );
 }
@@ -242,8 +244,8 @@ function ResetPasswordPage({onDone}){
           <input style={{...S.input,marginBottom:12}} type="password" placeholder="mínimo 6 caracteres" value={pass} onChange={e=>setPass(e.target.value)}/>
           <label style={S.label}>CONFIRME A NOVA SENHA</label>
           <input style={{...S.input,marginBottom:16}} type="password" placeholder="repita a senha" value={confirm} onChange={e=>setConfirm(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handle()}/>
-          {err&&<div style={{color:'var(--danger)',fontSize:12,marginBottom:12,textAlign:'center'}}>{err}</div>}
-          <button style={{...S.btn('var(--success)'),width:'100%',padding:13,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'Salvando…':'Salvar nova senha'}</button>
+          {err&&<div style={{color:'var(--danger)',fontSize:14,marginBottom:12,textAlign:'center'}}>{err}</div>}
+          <button style={{...S.btn(),width:'100%',padding:13,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'Salvando…':'Salvar nova senha'}</button>
         </>
       )}
     </AuthWrap>
@@ -272,8 +274,8 @@ function RegisterPage({onSwitch,onLogin}){
       <div style={{textAlign:'center'}}>
         
         <div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:10}}>Confirme seu e-mail</div>
-        <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:20}}>Enviamos um link de confirmação para <b>{form.email}</b>. Toque nele para ativar sua conta e depois volte para entrar.</div>
-        <button style={{...S.btn('var(--success)'),width:'100%',padding:13}} onClick={onSwitch}>Ir para o login</button>
+        <div style={{fontSize:14,color:'var(--muted2)',lineHeight:1.6,marginBottom:20}}>Enviamos um link de confirmação para <b>{form.email}</b>. Toque nele para ativar sua conta e depois volte para entrar.</div>
+        <button style={{...S.btn(),width:'100%',padding:13}} onClick={onSwitch}>Ir para o login</button>
       </div>
     </AuthWrap>
   );
@@ -281,7 +283,7 @@ function RegisterPage({onSwitch,onLogin}){
     <AuthWrap>
       <div style={{textAlign:'center',marginBottom:24}}><div style={{fontFamily:'var(--font-display)',fontSize:34,fontWeight:600,color:'var(--accent)'}}>LifePlan</div></div>
       <div style={{fontSize:20,fontWeight:800,color:'var(--text)',textAlign:'center',marginBottom:24}}>Criar conta</div>
-      <button style={{width:'100%',padding:13,marginBottom:16,borderRadius:10,border:'1px solid var(--border2)',background:'var(--surface)',color:'var(--text)',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}} onClick={handleGoogle} disabled={loading}>
+      <button style={{width:'100%',padding:13,marginBottom:16,borderRadius:12,border:'1px solid var(--border2)',background:'var(--surface)',color:'var(--text)',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}} onClick={handleGoogle} disabled={loading}>
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style={{width:20,height:20}}/>
         Cadastrar com Google
       </button>
@@ -293,9 +295,9 @@ function RegisterPage({onSwitch,onLogin}){
       {[['name','','NOME','Seu nome'],['email','','E-MAIL','seu@email.com'],['password','','SENHA','Mín. 6 caracteres'],['confirm','','CONFIRMAR','Repita a senha']].map(([k,ic,lb,ph])=>(
         <div key={k} style={{marginBottom:12}}><label style={S.label}>{ic} {lb}</label><input style={S.input} type={k==='password'||k==='confirm'?'password':'text'} placeholder={ph} value={form[k]} onChange={set(k)}/></div>
       ))}
-      {err&&<div style={{color:'var(--danger)',fontSize:12,margin:'8px 0',textAlign:'center'}}>{err}</div>}
-      <button style={{...S.btn('var(--success)'),width:'100%',padding:13,marginTop:8,marginBottom:16,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'Criando…':'Criar conta'}</button>
-      <div style={{textAlign:'center',fontSize:13,color:'var(--muted)'}}>Já tem conta?{' '}<button style={{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontWeight:700,textDecoration:'underline',padding:'12px 4px'}} onClick={onSwitch}>Entrar →</button></div>
+      {err&&<div style={{color:'var(--danger)',fontSize:14,margin:'8px 0',textAlign:'center'}}>{err}</div>}
+      <button style={{...S.btn(),width:'100%',padding:13,marginTop:8,marginBottom:16,opacity:loading?.6:1}} onClick={handle} disabled={loading}>{loading?'Criando…':'Criar conta'}</button>
+      <div style={{textAlign:'center',fontSize:14,color:'var(--muted)'}}>Já tem conta?{' '}<button style={{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',fontWeight:700,textDecoration:'underline',padding:'12px 4px'}} onClick={onSwitch}>Entrar →</button></div>
     </AuthWrap>
   );
 }
@@ -407,8 +409,8 @@ function PrivacyCard({userId,onAccountDeleted}){
       <div style={{fontSize:12,fontWeight:700,color:'var(--muted)',letterSpacing:.8}}>PRIVACIDADE E DADOS</div>
       <div style={{fontSize:14,color:'var(--text-2)',lineHeight:1.5}}>Seus dados são seus. Você pode baixar uma cópia de tudo o que está guardado na sua conta ou excluí-la a qualquer momento.</div>
       <button onClick={doExport} disabled={!!busy} style={{...btnGhost,opacity:busy?.6:1}}><Icon name="download" size={18}/>{busy==='export'?'Gerando arquivo…':'Baixar meus dados'}</button>
-      {exportMsg&&<div role="status" style={{fontSize:13,color:'var(--success)'}}>{exportMsg}</div>}
-      {!open&&err&&<div role="alert" style={{fontSize:13,color:'var(--warning)'}}>{err}</div>}
+      {exportMsg&&<div role="status" style={{fontSize:14,color:'var(--success)'}}>{exportMsg}</div>}
+      {!open&&err&&<div role="alert" style={{fontSize:14,color:'var(--warning)'}}>{err}</div>}
       <button onClick={openDelete} disabled={!!busy} style={{...btnGhost,color:'var(--danger)'}}><Icon name="trash" size={18}/>Excluir minha conta</button>
       {open&&(
         <div style={{position:'fixed',inset:0,background:'rgba(16,22,18,0.55)',zIndex:400,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={()=>!busy&&setOpen(false)}>
@@ -420,12 +422,12 @@ function PrivacyCard({userId,onAccountDeleted}){
             <div style={{fontSize:14,color:'var(--text-2)',lineHeight:1.55,marginBottom:12}}>
               Isto apaga <strong>para sempre</strong> seu login e tudo o que você registrou: perfil, plano e treinos, medidas e fotos de progresso, estudos, finanças e fotos de recibos. Não dá para desfazer.
             </div>
-            {leader&&<div style={{background:'var(--warning-soft)',color:'var(--warning)',border:'1px solid var(--warning)',borderRadius:12,padding:'10px 12px',fontSize:13,marginBottom:12,lineHeight:1.5}}>Você é o líder de um modo família. Ao excluir a conta, o modo família é desfeito. Os outros membros continuam com os próprios dados e podem criar ou entrar em outro modo família.</div>}
+            {leader&&<div style={{background:'var(--warning-soft)',color:'var(--warning)',border:'1px solid var(--warning)',borderRadius:12,padding:'10px 12px',fontSize:14,marginBottom:12,lineHeight:1.5}}>Você é o líder de um modo família. Ao excluir a conta, o modo família é desfeito. Os outros membros continuam com os próprios dados e podem criar ou entrar em outro modo família.</div>}
             <button onClick={doExport} disabled={!!busy} style={{...btnGhost,marginBottom:6,opacity:busy?.6:1}}><Icon name="download" size={18}/>{busy==='export'?'Gerando arquivo…':'Baixar meus dados antes'}</button>
-            {exportMsg&&<div role="status" style={{fontSize:13,color:'var(--success)',marginBottom:6}}>{exportMsg}</div>}
+            {exportMsg&&<div role="status" style={{fontSize:14,color:'var(--success)',marginBottom:6}}>{exportMsg}</div>}
             <label htmlFor="del-confirm" style={{...S.label,marginTop:12}}>PARA CONFIRMAR, DIGITE EXCLUIR</label>
             <input id="del-confirm" style={S.input} value={typed} onChange={e=>setTyped(e.target.value)} autoComplete="off" autoCapitalize="characters" placeholder="EXCLUIR" disabled={!!busy}/>
-            {err&&<div role="alert" style={{fontSize:13,color:'var(--warning)',marginTop:10,lineHeight:1.5}}>{err}</div>}
+            {err&&<div role="alert" style={{fontSize:14,color:'var(--warning)',marginTop:10,lineHeight:1.5}}>{err}</div>}
             <div style={{display:'flex',gap:10,marginTop:16}}>
               <button onClick={()=>setOpen(false)} disabled={busy==='delete'} style={{...btnGhost,flex:1}}>Cancelar</button>
               <button onClick={doDelete} disabled={!confirmed||!!busy} style={{...S.btn('var(--danger)'),flex:1,minHeight:48,opacity:(!confirmed||busy)?.45:1,cursor:(!confirmed||busy)?'not-allowed':'pointer'}}>{busy==='delete'?'Excluindo…':'Excluir tudo'}</button>
@@ -482,11 +484,8 @@ function ProfilePage({userId,initialProfile,onSave,onBack,onLogout,onAccountDele
   }
   return(
     <div style={S.wrap}>
-      <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>Meu perfil</div>
-        {onBack&&<button style={{background:'none',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'6px 12px',fontSize:12,cursor:'pointer'}} onClick={onBack}>← Voltar</button>}
-      </div>
-      <div style={{padding:'16px 16px 0'}}><div style={{background:'var(--accent-soft)',border:'1px solid var(--border)',borderRadius:14,padding:14,marginBottom:4,fontSize:14,color:'var(--text-2)'}}>Preencha seus dados para gerar um plano alimentar personalizado com alimentos da Tabela TACO.</div></div>
+      <TopBar title="Meu perfil" onBack={onBack}/>
+      <div style={{padding:'16px 16px 0'}}><div style={{background:'var(--accent-soft)',border:'1px solid var(--border)',borderRadius:12,padding:14,marginBottom:4,fontSize:14,color:'var(--text-2)'}}>Preencha seus dados para gerar um plano alimentar personalizado com alimentos da Tabela TACO.</div></div>
       <div style={S.card}>
         <div style={{fontSize:12,fontWeight:700,color:'var(--muted2)',marginBottom:14,letterSpacing:.8}}>DADOS FÍSICOS</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
@@ -503,7 +502,7 @@ function ProfilePage({userId,initialProfile,onSave,onBack,onLogout,onAccountDele
           <div style={{fontSize:12,fontWeight:700,color:'var(--success)',marginBottom:12,letterSpacing:.8}}>SEU PLANO CALCULADO</div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:10}}>
             {[['flame','TDEE',tdee+' kcal'],['utensils','Meta',targets.kcal+' kcal'],['dumbbell','Proteína',targets.prot+'g'],['leaf','Gordura',targets.fat+'g'],['activity','Carbs',targets.carbs+'g'],['scale','IMC',(+form.weight/(((+form.height)/100)**2)).toFixed(1)]].map(([ic,lb,vl])=>(
-              <div key={lb} style={{background:'var(--surface)',borderRadius:10,padding:'10px 8px',textAlign:'center'}}>
+              <div key={lb} style={{background:'var(--surface)',borderRadius:12,padding:'10px 8px',textAlign:'center'}}>
                 <div style={{marginBottom:4,color:'var(--accent)',display:'flex',justifyContent:'center'}}><Glyph name={ic} size={20}/></div>
                 <div style={{fontSize:14,fontWeight:800,color:'var(--text)'}}>{vl}</div>
                 <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{lb}</div>
@@ -558,10 +557,10 @@ function WorkoutModal({day,onSelect,onClose,profiles=[]}){
                     style={{padding:'12px 14px',borderRadius:12,cursor:'pointer',border:'1px solid',
                       ...(isActive?{background:`color-mix(in srgb, ${color} 14%, transparent)`,borderColor:color}:{background:'var(--surface)',borderColor:'var(--surface)'})}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                      <div style={{fontSize:13,fontWeight:700,color:isActive?color:'var(--text)'}}>{p.typeLabel}</div>
+                      <div style={{fontSize:14,fontWeight:700,color:isActive?color:'var(--text)'}}>{p.typeLabel}</div>
                       {isActive&&<span style={S.badge(color)}>✓ Ativo</span>}
                     </div>
-                    {p.exercises&&<div style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,whiteSpace:'pre-line',marginTop:4}}>{p.exercises}</div>}
+                    {p.exercises&&<div style={{fontSize:14,color:'var(--muted)',lineHeight:1.6,whiteSpace:'pre-line',marginTop:4}}>{p.exercises}</div>}
                   </div>
                 );
               })}
@@ -569,7 +568,7 @@ function WorkoutModal({day,onSelect,onClose,profiles=[]}){
               <div onClick={()=>onSelect({type:'rest',color:'var(--muted)',typeLabel:'Descanso',exercises:'Nenhum treino – foco em sono e recuperação'})}
                 style={{padding:'12px 14px',borderRadius:12,cursor:'pointer',border:'1px solid',
                   ...(day.type==='rest'?{background:'var(--muted)18',borderColor:'var(--muted)'}:{background:'var(--surface)',borderColor:'var(--surface)'})}}>
-                <div style={{fontSize:13,fontWeight:700,color:day.type==='rest'?'var(--muted2)':'var(--text)'}}>Descanso</div>
+                <div style={{fontSize:14,fontWeight:700,color:day.type==='rest'?'var(--muted2)':'var(--text)'}}>Descanso</div>
               </div>
             </div>
           </>
@@ -578,8 +577,8 @@ function WorkoutModal({day,onSelect,onClose,profiles=[]}){
           <div style={{textAlign:'center',padding:'32px 0',flex:1}}>
             <div style={{marginBottom:10,color:'var(--muted)',display:'flex',justifyContent:'center'}}><Icon name="dumbbell" size={40} stroke={1.5}/></div>
             <div style={{color:'var(--text)',fontWeight:700,marginBottom:6}}>Nenhum treino criado</div>
-            <div style={{color:'var(--muted)',fontSize:12,marginBottom:16}}>Crie seus treinos na aba Treinos para poder selecioná-los aqui.</div>
-            <button style={{...S.btn('var(--success)'),padding:'10px 20px'}} onClick={onClose}>Ir para Treinos</button>
+            <div style={{color:'var(--muted)',fontSize:14,marginBottom:16}}>Crie seus treinos na aba Treinos para poder selecioná-los aqui.</div>
+            <button style={{...S.btn(),padding:'10px 20px'}} onClick={onClose}>Ir para Treinos</button>
           </div>
         )}
       </div>
@@ -599,10 +598,10 @@ function FoodModal({onSelect,onClose}){
           <button style={S.btn('var(--danger)')} onClick={onClose}><Icon name="x" size={18}/></button>
         </div>
         <div style={{overflowY:'auto',flex:1}}>
-          {q.length<2&&<div style={{color:'var(--muted)',textAlign:'center',padding:20,fontSize:13}}>Digite 2+ letras para buscar</div>}
+          {q.length<2&&<div style={{color:'var(--muted)',textAlign:'center',padding:20,fontSize:14}}>Digite 2+ letras para buscar</div>}
           {results.map(t=>(
-            <div key={t.id} style={{padding:'10px 12px',borderRadius:10,cursor:'pointer',marginBottom:6,background:'var(--surface)',border:'1px solid var(--surface)'}} onClick={()=>onSelect(t)}>
-              <div style={{fontSize:13,color:'var(--text)',fontWeight:600,marginBottom:4}}>{t.n}</div>
+            <div key={t.id} style={{padding:'10px 12px',borderRadius:12,cursor:'pointer',marginBottom:6,background:'var(--surface)',border:'1px solid var(--surface)'}} onClick={()=>onSelect(t)}>
+              <div style={{fontSize:14,color:'var(--text)',fontWeight:600,marginBottom:4}}>{t.n}</div>
               <div style={{display:'flex',gap:6,fontSize:12}}>
                 <span style={S.badge('var(--warning)')}>{t.e} kcal</span>
                 <span style={S.badge('var(--info)')}>P {t.p}g</span>
@@ -619,21 +618,17 @@ function FoodModal({onSelect,onClose}){
 }
 
 // ── LISTA DE COMPRAS ──────────────────────────────────────────────────────────
-function ShoppingList({items,onToggle,onRemove,onClear}){
+function ShoppingList({items,onToggle,onRemove,onClear,onOpenProfile,onGoToPlan}){
   const pending=items.filter(i=>!i.checked), done=items.filter(i=>i.checked);
   return(
     <div style={S.wrap}>
-      <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>Lista de Compras</div>
-        {done.length>0&&<button style={{...S.btn('var(--muted)'),padding:'6px 12px',fontSize:12}} onClick={onClear}>Limpar comprados</button>}
-      </div>
+      <TopBar title="Lista de compras" onOpenProfile={onOpenProfile}
+        actions={done.length>0&&<button style={{...S.btn('var(--surface2)'),color:'var(--text)',border:'1px solid var(--border)',padding:'0 14px'}} onClick={onClear}>Limpar comprados</button>}/>
 
       {items.length===0?(
-        <div style={{padding:48,textAlign:'center'}}>
-          <div style={{marginBottom:16,color:'var(--muted)',display:'flex',justifyContent:'center'}}><Icon name="cart" size={52} stroke={1.5}/></div>
-          <div style={{fontSize:18,fontWeight:700,color:'var(--text)',marginBottom:8}}>Lista vazia</div>
-          <div style={{color:'var(--muted)',fontSize:14}}>Toque em ao lado de qualquer alimento no plano para adicioná-lo aqui.</div>
-        </div>
+        <EmptyState icon="cart" title="Sua lista está vazia"
+          text="No plano alimentar, toque no carrinho ao lado de um alimento para trazê-lo para cá."
+          actionLabel={onGoToPlan?'Abrir plano alimentar':undefined} onAction={onGoToPlan}/>
       ):(
         <>
           {pending.length>0&&(
@@ -641,10 +636,10 @@ function ShoppingList({items,onToggle,onRemove,onClear}){
               <div style={{fontSize:12,fontWeight:700,color:'var(--muted2)',marginBottom:12,letterSpacing:.8}}>A COMPRAR ({pending.length})</div>
               {pending.map(item=>(
                 <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:'1px solid var(--surface)'}}>
-                  <button onClick={()=>onToggle(item.id)} style={{width:22,height:22,borderRadius:6,border:'2px solid var(--success)',background:'transparent',cursor:'pointer',flexShrink:0}}/>
+                  <button onClick={()=>onToggle(item.id)} style={{width:22,height:22,borderRadius:8,border:'2px solid var(--success)',background:'transparent',cursor:'pointer',flexShrink:0}}/>
                   <div style={{flex:1}}>
                     <div style={{fontSize:14,color:'var(--text)',fontWeight:600}}>{item.name}</div>
-                    <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{item.qty}g · {item.kcal} kcal</div>
+                    <div style={{fontSize:14,color:'var(--muted)',marginTop:2}}>{item.qty}g · {item.kcal} kcal</div>
                   </div>
                   <button onClick={()=>onRemove(item.id)} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:16,padding:'0 4px'}}><Icon name="x" size={18}/></button>
                 </div>
@@ -656,8 +651,8 @@ function ShoppingList({items,onToggle,onRemove,onClear}){
               <div style={{fontSize:12,fontWeight:700,color:'var(--muted2)',marginBottom:12,letterSpacing:.8}}>COMPRADO ({done.length})</div>
               {done.map(item=>(
                 <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid var(--surface)'}}>
-                  <button onClick={()=>onToggle(item.id)} style={{width:22,height:22,borderRadius:6,border:'2px solid var(--success)',background:'var(--success-soft)',cursor:'pointer',flexShrink:0,fontSize:13}}>✓</button>
-                  <div style={{flex:1,textDecoration:'line-through',color:'var(--muted)',fontSize:13}}>{item.name}</div>
+                  <button onClick={()=>onToggle(item.id)} style={{width:22,height:22,borderRadius:8,border:'2px solid var(--success)',background:'var(--success-soft)',cursor:'pointer',flexShrink:0,fontSize:14}}>✓</button>
+                  <div style={{flex:1,textDecoration:'line-through',color:'var(--muted)',fontSize:14}}>{item.name}</div>
                   <button onClick={()=>onRemove(item.id)} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:16,padding:'0 4px'}}><Icon name="x" size={18}/></button>
                 </div>
               ))}
@@ -677,35 +672,35 @@ function WorkoutTemplates({onApply,onClose}){
   const [sel,setSel]=useState(null);
   const DIAS=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
   const modelo=MODELOS.find(m=>m.id===sel);
-  const cardBase={background:'var(--surface)',border:'1px solid var(--border)',borderRadius:14,padding:'14px 16px',marginBottom:10,textAlign:'left',width:'100%',cursor:'pointer',color:'var(--text)',fontFamily:'inherit',display:'block'};
+  const cardBase={background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:'14px 16px',marginBottom:10,textAlign:'left',width:'100%',cursor:'pointer',color:'var(--text)',fontFamily:'inherit',display:'block'};
   if(modelo){
     const n=treinosDeForca(modelo);
     return(
-      <div data-testid="template-preview" style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:12,textAlign:'left'}}>
-        <div style={{fontSize:16,fontWeight:800,color:'var(--text)'}}>{modelo.nome}</div>
-        <div style={{fontSize:13,color:'var(--muted)',margin:'4px 0 12px',lineHeight:1.5}}>{modelo.resumo}</div>
+      <div data-testid="template-preview" style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:16,marginBottom:12,textAlign:'left'}}>
+        <div style={{fontFamily:'var(--font-display)',fontSize:20,fontWeight:500,lineHeight:1.2,color:'var(--text)'}}>{modelo.nome}</div>
+        <div style={{fontSize:14,color:'var(--muted)',margin:'4px 0 12px',lineHeight:1.5}}>{modelo.resumo}</div>
         {modelo.semana.map((d,i)=>(
           <details key={i} style={{borderTop:'1px solid var(--border)',padding:'8px 0'}}>
             <summary style={{cursor:'pointer',fontSize:14,fontWeight:700,color:d.tipo==='rest'?'var(--muted)':'var(--text)',listStyle:'revert'}}>
               <span style={{display:'inline-block',width:36,verticalAlign:'top',color:'var(--muted2)',fontWeight:800}}>{DIAS[i]}</span><span style={{display:'inline-block',verticalAlign:'top',maxWidth:'calc(100% - 48px)'}}>{d.rotulo}</span>
             </summary>
-            <div style={{whiteSpace:'pre-line',fontSize:13,lineHeight:1.7,color:'var(--muted2)',padding:'6px 0 2px 36px'}}>{d.exercicios}</div>
+            <div style={{whiteSpace:'pre-line',fontSize:14,lineHeight:1.7,color:'var(--muted2)',padding:'6px 0 2px 36px'}}>{d.exercicios}</div>
           </details>
         ))}
         {modelo.notas&&(
           <details style={{borderTop:'1px solid var(--border)',padding:'8px 0'}}>
             <summary style={{cursor:'pointer',fontSize:14,fontWeight:700,color:'var(--text)'}}>Progressão e dicas</summary>
-            <ul style={{margin:'6px 0 0',paddingLeft:20,fontSize:13,lineHeight:1.6,color:'var(--muted2)'}}>
+            <ul style={{margin:'6px 0 0',paddingLeft:20,fontSize:14,lineHeight:1.6,color:'var(--muted2)'}}>
               {modelo.notas.map((t,i)=><li key={i} style={{margin:'4px 0'}}>{t}</li>)}
             </ul>
-            {modelo.fonte&&<div style={{fontSize:12,color:'var(--muted)',marginTop:8,lineHeight:1.5}}>{modelo.fonte}</div>}
+            {modelo.fonte&&<div style={{fontSize:14,color:'var(--muted)',marginTop:8,lineHeight:1.5}}>{modelo.fonte}</div>}
           </details>
         )}
-        <div style={{background:'var(--accent-soft)',borderRadius:12,padding:'10px 12px',margin:'12px 0',fontSize:13,lineHeight:1.5,color:'var(--text)'}}>
+        <div style={{background:'var(--accent-soft)',borderRadius:12,padding:'10px 12px',margin:'12px 0',fontSize:14,lineHeight:1.5,color:'var(--text)'}}>
           Ao usar este modelo, os 7 dias do seu plano de treino são substituídos e a meta semanal vira {n} {n===1?'treino':'treinos'}. Os treinos que você já salvou continuam na lista.
         </div>
         <div style={{display:'flex',gap:8}}>
-          <button style={{...S.btn('var(--success)'),flex:1,padding:11}} onClick={()=>onApply(modelo)}>Usar este modelo</button>
+          <button style={{...S.btn(),flex:1,padding:11}} onClick={()=>onApply(modelo)}>Usar este modelo</button>
           <button style={{...S.btn('var(--muted)'),padding:11}} onClick={()=>setSel(null)}>Voltar</button>
         </div>
       </div>
@@ -715,138 +710,219 @@ function WorkoutTemplates({onApply,onClose}){
     <div data-testid="template-list" style={{marginBottom:12}}>
       {MODELOS.map(m=>(
         <button key={m.id} style={cardBase} onClick={()=>setSel(m.id)}>
-          <div style={{fontSize:15,fontWeight:800}}>{m.nome}</div>
-          <div style={{fontSize:13,color:'var(--muted)',marginTop:4,lineHeight:1.5}}>{m.resumo}</div>
+          <div style={{fontFamily:'var(--font-display)',fontSize:18,fontWeight:500,lineHeight:1.2}}>{m.nome}</div>
+          <div style={{fontSize:14,color:'var(--muted)',marginTop:4,lineHeight:1.5}}>{m.resumo}</div>
         </button>
       ))}
-      {onClose&&<button style={{...S.btn('var(--muted)'),padding:'9px 16px',fontSize:13}} onClick={onClose}>Fechar modelos</button>}
+      {onClose&&<button style={{...S.btn('var(--muted)'),padding:'9px 16px',fontSize:14}} onClick={onClose}>Fechar modelos</button>}
     </div>
   );
 }
 
 // ── WORKOUT PROFILES PAGE ─────────────────────────────────────────────────────
+// ── FICHA DE TREINO ───────────────────────────────────────────────────────────
+// Quadro da semana (7 linhas: dia e treino do dia) no topo; abaixo, uma prescrição por treino.
+// O treino continua salvo como texto; workoutFormat.js só lê esse texto para mostrar em colunas.
+const rxTitulo={fontFamily:'var(--font-display)',fontWeight:500,color:'var(--text)',margin:0,lineHeight:1.15};
+const rxGhost={background:'transparent',border:'1px solid var(--border)',borderRadius:12,color:'var(--text-2)',minHeight:44,minWidth:44,padding:'0 12px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'inherit',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6};
+
+function QuadroSemana({plan,profiles,hoje,onGo}){
+  const DIAS=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  return(
+    <ul aria-label="Quadro da semana" style={{listStyle:'none',margin:'0 0 12px',padding:0,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+      {DIAS.map((d,i)=>{
+        const dia=plan?.[i]||{}; const descanso=!dia.type||dia.type==='rest';
+        const {nome,foco}=dividirTitulo(dia.typeLabel);
+        const alvo=!descanso&&profiles.find(p=>p.typeLabel===dia.typeLabel);
+        const cor=WORKOUT_TYPES.find(w=>w.type===dia.type)?.color||'var(--success)';
+        const eHoje=i===hoje;
+        const conteudo=(<>
+          <span className="lp-num" style={{width:38,flexShrink:0,fontSize:14,fontWeight:800,color:eHoje?'var(--accent-dark)':'var(--text-2)'}}>{d}</span>
+          <span style={{flex:1,minWidth:0,display:'flex',flexDirection:'column'}}>
+            <span style={{fontSize:15,fontWeight:descanso?400:600,color:descanso?'var(--muted)':'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{descanso?'Descanso':nome}</span>
+            {!descanso&&foco&&<span style={{fontSize:14,color:'var(--muted)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{foco}</span>}
+          </span>
+          {eHoje&&<span style={{fontSize:12,fontWeight:800,color:'var(--accent-dark)',background:'var(--accent-soft)',borderRadius:8,padding:'2px 8px',marginRight:descanso?0:8}}>hoje</span>}
+          {!descanso&&<span aria-hidden="true" style={{width:8,height:8,borderRadius:2,background:cor,flexShrink:0}}/>}
+        </>);
+        const base={display:'flex',alignItems:'center',gap:6,width:'100%',minHeight:eHoje||!descanso?48:40,padding:'6px 14px',borderTop:i?'1px solid var(--border2)':'none',background:eHoje?'color-mix(in srgb, var(--accent-soft) 55%, var(--surface))':'transparent',boxSizing:'border-box',textAlign:'left',font:'inherit',color:'inherit',border:'none',borderTopWidth:i?1:0,borderTopStyle:'solid',borderTopColor:'var(--border2)',borderLeft:eHoje?'3px solid var(--accent)':'3px solid transparent'};
+        return(
+          <li key={i} aria-current={eHoje?'date':undefined}>
+            {alvo
+              ?<button type="button" onClick={()=>onGo(alvo.id)} style={{...base,cursor:'pointer'}} aria-label={`${d}: ${dia.typeLabel}. Ver o treino`}>{conteudo}</button>
+              :<div style={base}>{conteudo}</div>}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function WorkoutProfilesPage({profiles,plan,onSave,onDelete,onApplyToDay,onApplyTemplate,onBack,tab,setTab,cartCount,onOpenProfile,onLogout,onHome,workoutGoal,setWorkoutGoal}){
   const [editing,setEditing]=useState(null); // null | profile object
   const [showNew,setShowNew]=useState(false);
   const [showTemplates,setShowTemplates]=useState(false);
   const [applied,setApplied]=useState(null); // texto de confirmação depois de usar um modelo
+  const [confirmDel,setConfirmDel]=useState(null); // id do treino cuja remoção espera confirmação
+  const hoje=diaDaSemana();
   function usarModelo(m){
     onApplyTemplate(m); setShowTemplates(false);
     const n=treinosDeForca(m);
     setApplied(`Modelo "${m.nome}" aplicado. Seus 7 dias foram atualizados e a meta virou ${n} ${n===1?'treino':'treinos'} por semana.`);
     try{window.scrollTo({top:0,behavior:'smooth'});}catch{/* sem scroll */}
   }
+  function irPara(id){
+    const el=document.getElementById('rx-'+id); if(!el) return;
+    const calmo=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({behavior:calmo?'auto':'smooth',block:'start'});
+    try{el.focus({preventScroll:true});}catch{/* sem foco */}
+  }
 
   function EditForm({initial,onDone}){
     const [form,setForm]=useState(initial||{id:'wp'+Date.now(),type:'strength',typeLabel:'',exercises:''});
     const set=k=>e=>setForm(f=>({...f,[k]:e.target.value}));
+    const rotulo={fontSize:14,fontWeight:700,color:'var(--text-2)',marginBottom:6,display:'block'};
     return(
-      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:12}}>
-        <div style={{marginBottom:10}}>
-          <label style={S.label}>TIPO</label>
-          <div style={{display:'flex',gap:8}}>
+      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:'4px solid var(--accent)',borderRadius:'6px 14px 14px 6px',padding:16,marginBottom:14}}>
+        <h2 style={{...rxTitulo,fontSize:20,marginBottom:14}}>{initial?'Editar treino':'Novo treino'}</h2>
+        <div style={{marginBottom:12}}>
+          <span style={rotulo} id="rx-tipo">Tipo</span>
+          <div role="group" aria-labelledby="rx-tipo" style={{display:'flex',gap:8}}>
             {WORKOUT_TYPES.map(wt=>(
-              <button key={wt.type} onClick={()=>setForm(f=>({...f,type:wt.type}))} style={{flex:1,padding:'8px 0',borderRadius:10,border:'1px solid',cursor:'pointer',fontSize:18,
+              <button key={wt.type} type="button" aria-pressed={form.type===wt.type} aria-label={wt.label} onClick={()=>setForm(f=>({...f,type:wt.type}))} style={{flex:1,minHeight:44,padding:'8px 0',borderRadius:12,border:'1px solid',cursor:'pointer',fontSize:18,
                 ...(form.type===wt.type?{background:`color-mix(in srgb, ${wt.color} 14%, transparent)`,borderColor:wt.color}:{background:'var(--surface)',borderColor:'var(--border)'})}}>
                 <Glyph name={wt.icon} size={20}/>
               </button>
             ))}
           </div>
         </div>
-        <div style={{marginBottom:10}}>
-          <label style={S.label}>NOME DO TREINO</label>
-          <input style={S.input} value={form.typeLabel} onChange={set('typeLabel')} placeholder="Ex: Treino A – Peito e Tríceps"/>
-        </div>
         <div style={{marginBottom:12}}>
-          <label style={S.label}>EXERCÍCIOS E SÉRIES</label>
-          <textarea style={{...S.input,minHeight:130,resize:'vertical',lineHeight:1.8}} value={form.exercises} onChange={set('exercises')}
-            placeholder={"Supino reto 4×8\nSupino inclinado 3×10\nCrucifixo 3×12\nTríceps polia 4×10\nTríceps francês 3×10"}/>
-          <div style={{fontSize:12,color:'var(--muted)',marginTop:4}}>Um exercício por linha</div>
+          <label style={rotulo} htmlFor="rx-nome">Nome do treino</label>
+          <input id="rx-nome" style={S.input} value={form.typeLabel} onChange={set('typeLabel')} placeholder="Ex.: Treino A – Peito e tríceps"/>
+        </div>
+        <div style={{marginBottom:14}}>
+          <label style={rotulo} htmlFor="rx-ex">Exercícios</label>
+          <textarea id="rx-ex" style={{...S.input,minHeight:140,resize:'vertical',lineHeight:1.7,fontFamily:'inherit',fontSize:15}} value={form.exercises} onChange={set('exercises')}
+            placeholder={"Supino reto 4×8 · RIR 1-2 · 2 min\nSupino inclinado 3×10\nCrucifixo 3×12\nTríceps polia 4×10"}/>
+          <div style={{fontSize:14,color:'var(--muted)',marginTop:6,lineHeight:1.5}}>Um exercício por linha, com séries×repetições. RIR e intervalo são opcionais.</div>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <button style={{...S.btn('var(--success)'),flex:1,padding:11}} onClick={()=>{if(!form.typeLabel.trim())return;onSave({...form,color:WORKOUT_TYPES.find(w=>w.type===form.type)?.color||'var(--success)'});onDone();}}>Salvar</button>
-          <button style={{...S.btn('var(--muted)'),padding:11}} onClick={onDone}>Cancelar</button>
+          <button style={{...S.btn('var(--accent)'),flex:1,padding:11}} onClick={()=>{if(!form.typeLabel.trim())return;onSave({...form,color:WORKOUT_TYPES.find(w=>w.type===form.type)?.color||'var(--success)'});onDone();}}>Salvar treino</button>
+          <button style={rxGhost} onClick={onDone}>Cancelar</button>
         </div>
       </div>
     );
   }
 
   const DAYS_SHORT=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const diasDeTreino=(plan||[]).filter(d=>d&&d.type==='strength').length;
 
   return(
     <div style={S.wrap}>
-      <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>Meus Treinos</div>
-        <div style={{display:'flex',gap:8}}>
-          {profiles.length>0&&<button style={{...S.btn('var(--accent)'),padding:'7px 14px',fontSize:13}} onClick={()=>{setShowTemplates(v=>!v);setApplied(null);}} aria-expanded={showTemplates}>Modelos</button>}
-          <button style={{...S.btn('var(--success)'),padding:'7px 14px',fontSize:13}} onClick={()=>setShowNew(true)}>+ Novo</button>
-        </div>
-      </div>
+      <TopBar title="Ficha de treino" subtitle={rotuloSemana()} onOpenProfile={onOpenProfile}
+        actions={<div style={{display:'flex',gap:8,flexShrink:0}}>
+          {profiles.length>0&&<button style={{...rxGhost,color:'var(--accent-dark)',borderColor:'var(--accent)'}} onClick={()=>{setShowTemplates(v=>!v);setApplied(null);}} aria-expanded={showTemplates}>Modelos</button>}
+          <button style={{...S.btn('var(--accent)'),padding:'0 14px',fontSize:14,display:'flex',alignItems:'center',gap:4}} onClick={()=>setShowNew(true)} aria-label="Novo treino"><Icon name="plus" size={18} stroke={2}/>Novo</button>
+        </div>}/>
 
       <div style={{padding:'16px 16px 100px'}}>
-        <div style={{background:'var(--accent-soft)',border:'1px solid var(--border)',borderRadius:14,padding:'12px 14px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
-          <div>
-            <div style={{fontSize:13,fontWeight:800,color:'var(--text)'}}>Meta de treinos por semana</div>
-            <div style={{fontSize:12,color:'var(--muted2)',marginTop:2}}>Usada no marcador de Insights em Hábitos e Performance</div>
+        <QuadroSemana plan={plan} profiles={profiles} hoje={hoje} onGo={irPara}/>
+
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,padding:'12px 4px 18px'}}>
+          <div style={{minWidth:0}}>
+            <div style={{fontSize:15,fontWeight:700,color:'var(--text)'}}>Meta semanal</div>
+            <div style={{fontSize:14,color:'var(--muted)',marginTop:2,lineHeight:1.4}}>Usada nos Insights de Hábitos e Performance.</div>
+            {diasDeTreino!==workoutGoal&&<div style={{fontSize:14,color:'var(--warning)',marginTop:2}}>Seu plano tem {diasDeTreino} {diasDeTreino===1?'dia':'dias'} de musculação.</div>}
           </div>
-          <input type="number" min="1" max="14" value={workoutGoal} onChange={e=>setWorkoutGoal(Math.max(1,parseInt(e.target.value,10)||1))}
-            style={{width:56,textAlign:'center',border:'1px solid var(--border)',borderRadius:8,padding:'6px 4px',fontSize:14,fontWeight:800}}/>
+          <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+            <button type="button" aria-label="Diminuir meta" style={{...rxGhost,fontSize:20,padding:0}} onClick={()=>setWorkoutGoal(Math.max(1,(workoutGoal||1)-1))}>−</button>
+            <input type="number" min="1" max="14" aria-label="Meta de treinos por semana" value={workoutGoal} onChange={e=>setWorkoutGoal(Math.max(1,parseInt(e.target.value,10)||1))}
+              style={{width:48,minHeight:44,textAlign:'center',border:'1px solid var(--border)',borderRadius:12,background:'var(--surface)',color:'var(--text)',fontSize:17,fontWeight:800,fontFamily:'inherit'}}/>
+            <button type="button" aria-label="Aumentar meta" style={{...rxGhost,fontSize:20,padding:0}} onClick={()=>setWorkoutGoal(Math.min(14,(workoutGoal||1)+1))}>+</button>
+          </div>
         </div>
 
-        {applied&&<div role="status" data-testid="template-applied" style={{background:'var(--success-soft)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 14px',marginBottom:12,fontSize:13,lineHeight:1.5,color:'var(--text)'}}>{applied}</div>}
+        {applied&&<div role="status" data-testid="template-applied" style={{background:'var(--success-soft)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 14px',marginBottom:14,fontSize:14,lineHeight:1.5,color:'var(--text)'}}>{applied}</div>}
 
         {showNew&&<EditForm initial={null} onDone={()=>setShowNew(false)}/>}
 
         {showTemplates&&profiles.length>0&&!showNew&&<WorkoutTemplates onApply={usarModelo} onClose={()=>setShowTemplates(false)}/>}
 
         {profiles.length===0&&!showNew&&(
-          <div data-testid="treino-vazio" style={{textAlign:'center',padding:'32px 0 8px'}}>
-            <div style={{marginBottom:12,color:'var(--muted)',display:'flex',justifyContent:'center'}}><Icon name="dumbbell" size={52} stroke={1.5}/></div>
-            <div style={{fontSize:16,fontWeight:700,color:'var(--text)',marginBottom:8}}>Nenhum treino criado ainda</div>
-            <div style={{color:'var(--muted)',fontSize:13,marginBottom:20,lineHeight:1.5}}>Comece por um modelo pronto: ele monta a semana inteira e você ajusta o que quiser depois.</div>
+          <div data-testid="treino-vazio" style={{textAlign:'center',padding:'12px 0 8px'}}>
+            <h2 style={{...rxTitulo,fontSize:22,marginBottom:8}}>Nenhum treino criado ainda</h2>
+            <div style={{color:'var(--muted)',fontSize:14,marginBottom:20,lineHeight:1.5}}>Comece por um modelo pronto: ele monta a semana inteira e você ajusta o que quiser depois.</div>
             <WorkoutTemplates onApply={usarModelo}/>
-            <div style={{color:'var(--muted)',fontSize:13,margin:'4px 0 12px'}}>ou</div>
-            <button style={{...S.btn('var(--success)'),padding:'12px 28px'}} onClick={()=>setShowNew(true)}>+ Criar do zero</button>
+            <div style={{color:'var(--muted)',fontSize:14,margin:'4px 0 12px'}}>ou</div>
+            <button style={{...S.btn('var(--accent)'),padding:'12px 28px'}} onClick={()=>setShowNew(true)}>+ Criar do zero</button>
           </div>
         )}
+
+        {profiles.length>0&&<h2 style={{...rxTitulo,fontSize:19,margin:'4px 0 12px'}}>Seus treinos</h2>}
 
         {profiles.map(p=>{
           const color=WORKOUT_TYPES.find(w=>w.type===p.type)?.color||'var(--success)';
           if(editing?.id===p.id) return <EditForm key={p.id} initial={p} onDone={()=>setEditing(null)}/>;
+          const {nome,foco}=dividirTitulo(p.typeLabel);
+          const linhas=lerExercicios(p.exercises);
+          const confirmando=confirmDel===p.id;
           return(
-            <div key={p.id} style={{background:'var(--surface)',border:`1px solid ${color}33`,borderRadius:16,padding:16,marginBottom:12}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-                <div>
-                  <div style={{fontSize:15,fontWeight:800,color:color}}>{p.typeLabel}</div>
-                  <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{WORKOUT_TYPES.find(w=>w.type===p.type)?.label}</div>
+            <article key={p.id} id={'rx-'+p.id} tabIndex={-1} style={{background:'var(--surface)',border:'1px solid var(--border)',borderLeft:`4px solid ${color}`,borderRadius:'6px 14px 14px 6px',marginBottom:14,scrollMarginTop:88,outline:'none'}}>
+              <header style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,padding:'14px 12px 10px 16px'}}>
+                <div style={{minWidth:0}}>
+                  <h3 style={{...rxTitulo,fontSize:22}}>{nome}</h3>
+                  <div style={{fontSize:14,color:'var(--muted)',marginTop:4,lineHeight:1.4}}>{foco||WORKOUT_TYPES.find(w=>w.type===p.type)?.label}</div>
                 </div>
-                <div style={{display:'flex',gap:6}}>
-                  <button style={{...S.btn('var(--accent)'),padding:'5px 10px',fontSize:12}} onClick={()=>setEditing(p)} aria-label="Editar"><Icon name="pencil" size={16}/></button>
-                  <button style={{...S.btn('var(--danger)'),padding:'5px 10px',fontSize:12}} onClick={()=>onDelete(p.id)} aria-label="Remover"><Icon name="trash" size={16}/></button>
-                </div>
-              </div>
-              {p.exercises&&(
-                <div style={{fontSize:12,color:'var(--muted2)',lineHeight:1.8,whiteSpace:'pre-line',marginBottom:10,padding:'8px 10px',background:'var(--surface2)',borderRadius:8}}>
-                  {p.exercises}
-                </div>
+                <button style={rxGhost} onClick={()=>setEditing(p)} aria-label={`Editar ${nome}`}><Icon name="pencil" size={18}/></button>
+              </header>
+
+              {linhas.length>0&&(
+                <ul style={{listStyle:'none',margin:0,padding:0}}>
+                  {linhas.map((l,i)=>(
+                    <li key={i} style={{borderTop:'1px solid var(--border2)',padding:'10px 16px'}}>
+                      {l.tipo==='serie'?(<>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:12}}>
+                          <span style={{fontSize:15,fontWeight:500,color:'var(--text)',lineHeight:1.35}}>{l.nome}</span>
+                          <span className="lp-num" style={{fontSize:16,fontWeight:800,color:'var(--text)',whiteSpace:'nowrap'}}>{l.dose}</span>
+                        </div>
+                        {(l.rir||l.intervalo)&&(
+                          <div className="lp-num" style={{display:'flex',gap:16,fontSize:14,color:'var(--muted)',marginTop:3}}>
+                            {l.rir&&<span>RIR {l.rir}</span>}
+                            {l.intervalo&&<span>Intervalo {l.intervalo}</span>}
+                          </div>
+                        )}
+                      </>):<div style={{fontSize:14,color:'var(--muted)',lineHeight:1.5}}>{l.texto}</div>}
+                    </li>
+                  ))}
+                </ul>
               )}
 
-              <div style={{fontSize:12,fontWeight:800,color:'var(--muted)',marginBottom:6,textTransform:'uppercase'}}>Aplicar em quais dias?</div>
-              <div style={{display:'flex',gap:4}}>
-                {DAYS_SHORT.map((d,di)=>{
-                  const isUsing=plan[di]?.typeLabel===p.typeLabel;
-                  return(
-                    <button key={di} onClick={()=>onApplyToDay(p.id,di,isUsing)}
-                      style={{flex:1,padding:'6px 0',borderRadius:8,border:`1px solid ${isUsing?color:'var(--border)'}`,
-                        background:isUsing?color:'var(--surface)',color:isUsing?'var(--surface)':'var(--muted2)',
-                        fontSize:12,fontWeight:800,cursor:'pointer'}}>
-                      {d}
-                    </button>
-                  );
-                })}
-              </div>
-
-            </div>
+              <footer style={{borderTop:'1px solid var(--border2)',padding:'12px 16px 14px'}}>
+                <div style={{fontSize:14,fontWeight:700,color:'var(--text-2)',marginBottom:8}}>Dias no plano</div>
+                <div style={{display:'flex',gap:4}}>
+                  {DAYS_SHORT.map((d,di)=>{
+                    const isUsing=plan[di]?.typeLabel===p.typeLabel;
+                    return(
+                      <button key={di} type="button" aria-pressed={isUsing} aria-label={`${d}: ${isUsing?'remover do plano':'usar neste dia'}`} onClick={()=>onApplyToDay(p.id,di,isUsing)}
+                        style={{flex:1,minHeight:44,padding:0,borderRadius:8,border:`1px solid ${isUsing?color:'var(--border)'}`,
+                          background:isUsing?color:'var(--surface)',color:isUsing?'var(--on-accent)':'var(--text-2)',
+                          fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit'}}>
+                        {d}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:8,marginTop:10,minHeight:44}}>
+                  {confirmando?(<>
+                    <span style={{fontSize:14,color:'var(--text-2)',marginRight:'auto'}}>Remover este treino da lista?</span>
+                    <button style={rxGhost} onClick={()=>setConfirmDel(null)}>Manter</button>
+                    <button style={{...S.btn('var(--danger)'),padding:'0 14px'}} aria-label={`Confirmar remoção de ${nome}`} onClick={()=>{setConfirmDel(null);onDelete(p.id);}}>Remover</button>
+                  </>):(
+                    <button style={{...rxGhost,border:'none',color:'var(--danger)',fontWeight:600}} aria-label={`Remover ${nome}`} onClick={()=>setConfirmDel(p.id)}><Icon name="trash" size={16}/>Remover treino</button>
+                  )}
+                </div>
+              </footer>
+            </article>
           );
         })}
       </div>
@@ -1110,17 +1186,26 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
   const cartCount=shopping.filter(i=>!i.checked).length;
 
   // ── early returns (after all hooks)
+  const tabTitle={plan:'Nutrição',shop:'Lista de compras',workout:'Ficha de treino'}[tab]||'Nutrição';
   if(!plan) return(
-    <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{textAlign:'center'}}><div style={{fontFamily:'var(--font-display)',fontSize:32,fontWeight:600,color:'var(--accent)',marginBottom:12}}>LifePlan</div><div style={{color:'var(--muted)'}}>Carregando...</div></div>
-    </div>
-  );
-  if(!plan.length) return(
     <div style={S.wrap}>
-      <div style={S.header}><div style={{fontFamily:'var(--font-display)',fontSize:22,fontWeight:600,color:'var(--accent)'}}>LifePlan</div><button style={{background:'none',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'6px 12px',fontSize:12,cursor:'pointer'}} onClick={onLogout}>Sair</button></div>
-      <div style={{padding:32,textAlign:'center'}}><div style={{marginBottom:16,color:'var(--muted)',display:'flex',justifyContent:'center'}}><Icon name="user" size={56} stroke={1.5}/></div><div style={{fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:8}}>Configure seu perfil</div><div style={{color:'var(--muted)',fontSize:14,marginBottom:28}}>Informe seus dados para gerar um plano alimentar personalizado</div><button style={{...S.btn('var(--success)'),padding:'14px 32px',fontSize:15}} onClick={onOpenProfile}>Configurar Perfil</button></div>
+      <TopBar title={tabTitle} onOpenProfile={onOpenProfile}/>
+      <Skeleton rows={3}/>
     </div>
   );
+  if(!plan.length){
+    const vazio={
+      workout:{icon:'dumbbell',title:'Monte seu plano de treino',text:'Conte um pouco sobre você (peso, rotina e objetivo) e o LifePlan sugere os treinos da semana.'},
+      shop:{icon:'cart',title:'Sua lista começa pelo plano',text:'Configure seu perfil para gerar o plano alimentar. Depois é só tocar no carrinho ao lado dos alimentos.'},
+    }[tab]||{icon:'leaf',title:'Monte seu plano alimentar',text:'Informe peso, altura, rotina e objetivo para gerar um cardápio personalizado com a Tabela TACO.'};
+    return(
+      <div style={S.wrap}>
+        <TopBar title={tabTitle} onOpenProfile={onOpenProfile}/>
+        <EmptyState icon={vazio.icon} title={vazio.title} text={vazio.text} actionLabel="Configurar meu perfil" onAction={onOpenProfile}/>
+        {tab==='plan'&&<div style={{maxWidth:960,margin:'0 auto',padding:'0 16px'}}><FoodComparator/></div>}
+      </div>
+    );
+  }
 
   const day=plan[dayIdx];
   const tc={strength:'var(--success)',cardio:'var(--info)',rest:'var(--muted)'}[day?.type]||'var(--muted)';
@@ -1152,25 +1237,19 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
 
   // ── render lista de compras
   if(tab==='shop') return(
-    <ShoppingList items={shopping} onToggle={toggleCart} onRemove={removeCart} onClear={clearDone}/>
+    <ShoppingList items={shopping} onToggle={toggleCart} onRemove={removeCart} onClear={clearDone} onOpenProfile={onOpenProfile} onGoToPlan={()=>setTab('plan')}/>
   );
 
   // ── render plano
   return(
     <div style={S.wrap}>
-      {/* Header */}
-      <div style={S.header}>
-        <div style={{fontFamily:'var(--font-display)',fontSize:22,fontWeight:600,color:'var(--accent)'}}>LifePlan</div>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          {saveMsg&&<span style={{fontSize:12,color:saveMsg.startsWith('Salvo')?'var(--success)':'var(--danger)'}}>{saveMsg}</span>}
-          {saving&&<span style={{fontSize:12,color:'var(--muted2)'}}>Salvando…</span>}
-        </div>
-      </div>
+      <TopBar title="Nutrição" onOpenProfile={onOpenProfile}
+        status={saving?'Salvando…':(saveMsg||null)}/>
 
       {/* Day tabs */}
       <div style={{display:'flex',overflowX:'auto',gap:8,padding:'16px 20px',scrollbarWidth:'none'}}>
         {plan.map((d,i)=>(
-          <button key={d.id} onClick={()=>setDayIdx(i)} style={{flexShrink:0,minHeight:44,padding:'8px 16px',borderRadius:14,border:'1px solid',cursor:'pointer',fontSize:14,fontWeight:700,
+          <button key={d.id} onClick={()=>setDayIdx(i)} style={{flexShrink:0,minHeight:44,padding:'8px 16px',borderRadius:12,border:'1px solid',cursor:'pointer',fontSize:14,fontWeight:700,
             ...(i===dayIdx?{background:d.type==='rest'?'var(--surface3)':d.type==='cardio'?'var(--info-soft)':'var(--accent-soft)',borderColor:d.type==='rest'?'var(--muted)':d.type==='cardio'?'var(--info)':'var(--accent)',color:d.type==='rest'?'var(--text-2)':d.type==='cardio'?'var(--info)':'var(--accent-dark)'}:{background:'var(--surface)',borderColor:'var(--border)',color:'var(--muted)'})
           }}>
             <div>{d.short}</div>
@@ -1185,12 +1264,12 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
           <div>
             <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>{day.fullName}</div>
             <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
-              {(day.type==='rest'||workoutProfiles.some(p=>p.typeLabel===day.typeLabel))&&<div style={{fontSize:13,color:tc,fontWeight:700}}>{day.typeLabel}</div>}
+              {(day.type==='rest'||workoutProfiles.some(p=>p.typeLabel===day.typeLabel))&&<div style={{fontSize:14,color:tc,fontWeight:700}}>{day.typeLabel}</div>}
               {/* Botão troca treino */}
               <button onClick={()=>setShowWorkout(true)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'8px 12px',minHeight:40,fontSize:12,cursor:'pointer',fontWeight:600}}>Treino</button>
               <button onClick={()=>setShowMealCount(true)} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,color:'var(--muted2)',padding:'8px 12px',minHeight:40,fontSize:12,cursor:'pointer',fontWeight:600}}>Refeições</button>
             </div>
-            {day.exercises&&(day.type==='rest'||workoutProfiles.some(p=>p.typeLabel===day.typeLabel))&&<div style={{fontSize:12,color:'var(--muted2)',marginTop:6,lineHeight:1.7,whiteSpace:'pre-line'}}>{day.exercises.replace(/·/g,'\n')}</div>}
+            {day.exercises&&(day.type==='rest'||workoutProfiles.some(p=>p.typeLabel===day.typeLabel))&&<div style={{fontSize:14,color:'var(--muted2)',marginTop:6,lineHeight:1.7,whiteSpace:'pre-line'}}>{day.exercises.replace(/·/g,'\n')}</div>}
           </div>
           <div style={{textAlign:'right'}}>
             <div style={{fontSize:20,fontWeight:900,color:tc}}>{dayTotals.kcal}</div>
@@ -1199,9 +1278,9 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
         </div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
           {[['dumbbell',dayTotals.p+'g','proteína','var(--info)'],['leaf',dayTotals.l+'g','gordura','var(--warning)'],['activity',dayTotals.cb+'g','carbs','var(--accent)'],['flame',day.burned+'kcal','queimado','var(--text-2)']].map(([ic,v,l,c])=>(
-            <div key={l} style={{background:`color-mix(in srgb, ${c} 10%, transparent)`,border:`1px solid color-mix(in srgb, ${c} 25%, transparent)`,borderRadius:10,padding:'8px 12px',flex:1,minWidth:60,textAlign:'center'}}>
+            <div key={l} style={{background:`color-mix(in srgb, ${c} 10%, transparent)`,border:`1px solid color-mix(in srgb, ${c} 25%, transparent)`,borderRadius:12,padding:'8px 12px',flex:1,minWidth:60,textAlign:'center'}}>
               <div style={{display:'flex',justifyContent:'center',color:c}}><Glyph name={ic} size={16}/></div>
-              <div style={{fontSize:13,fontWeight:800,color:c}}>{v}</div>
+              <div style={{fontSize:14,fontWeight:800,color:c}}>{v}</div>
               <div style={{fontSize:12,color:'var(--muted)',fontWeight:600}}>{l}</div>
             </div>
           ))}
@@ -1247,7 +1326,7 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
                     </div>
                     {/* Botão carrinho */}
                     <button onClick={()=>addToCart(food)} title="Adicionar à lista de compras"
-                      style={{background:inCart?'var(--success-soft)':'var(--surface)',border:`1px solid ${inCart?'var(--success)':'var(--border)'}`,borderRadius:7,color:inCart?'var(--success)':'var(--muted)',cursor:'pointer',fontSize:14,padding:'3px 6px',lineHeight:1}}>
+                      style={{background:inCart?'var(--success-soft)':'var(--surface)',border:`1px solid ${inCart?'var(--success)':'var(--border)'}`,borderRadius:8,color:inCart?'var(--success)':'var(--muted)',cursor:'pointer',fontSize:14,padding:'3px 6px',lineHeight:1}}>
                       <Icon name="cart" size={16}/>
                     </button>
                     <button style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:14,padding:'0 2px'}} onClick={()=>removeFood(mi,food.id)}><Icon name="x" size={18}/></button>
@@ -1262,8 +1341,8 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
         );
       })}
 
+      <div style={{padding:'8px 16px 0'}}><FoodComparator/></div>
       <div style={{height:80}}/>
-
 
       {showSearch!==null&&<FoodModal onSelect={t=>addFood(showSearch,t)} onClose={()=>setShowSearch(null)}/>}
       {showMealCount&&(
@@ -1271,9 +1350,9 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
           <div style={{background:'var(--surface)',borderRadius:'20px 20px 0 0',width:'100%',padding:24}} onClick={e=>e.stopPropagation()}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <div style={{fontSize:16,fontWeight:800,color:'var(--text)'}}>Dividir Refeições — {day.fullName}</div>
-              <button style={S.btn('var(--danger)')} onClick={()=>setShowMealCount(false)}><Icon name="x" size={18}/></button>
+              <button aria-label="Fechar" style={{...S.btn('transparent'),color:'var(--muted)',padding:0,width:44}} onClick={()=>setShowMealCount(false)}><Icon name="x" size={20}/></button>
             </div>
-            <div style={{fontSize:12,color:'var(--muted)',marginBottom:16}}>Escolha em quantas refeições distribuir os macros do dia. Os alimentos serão redistribuídos automaticamente.</div>
+            <div style={{fontSize:14,color:'var(--muted)',marginBottom:16}}>Escolha em quantas refeições distribuir os macros do dia. Os alimentos serão redistribuídos automaticamente.</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10}}>
               {[2,3,4,5,6].map(n=>{
                 const active=day.meals.length===n;
@@ -1287,7 +1366,7 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
                 );
               })}
             </div>
-            <div style={{marginTop:16,fontSize:12,color:'var(--muted)',textAlign:'center'}}>* Apenas o dia atual será alterado</div>
+            <div style={{marginTop:16,fontSize:14,color:'var(--muted)',textAlign:'center'}}>* Apenas o dia atual será alterado</div>
           </div>
         </div>
       )}
@@ -1598,17 +1677,26 @@ const GOOGLE_WEATHER_API_KEY = import.meta.env.VITE_GOOGLE_WEATHER_API_KEY || ''
 
 function useWeatherLocation(){
   const [state,setState]=useState({loading:true,temp:null,city:null,error:null,code:null,iconUri:null,isDay:1,uvMax:null,rain:null,sunrise:null,sunset:null,tempTrend:null});
+  const [attempt,setAttempt]=useState(0);
+  // "Ocultar" no aviso de localização vale para este aparelho
+  const [hidden,setHidden]=useState(()=>{try{return localStorage.getItem('lifeplan_hide_weather')==='1';}catch{return false;}});
   useEffect(()=>{
-    if(!navigator.geolocation){setState(s=>({...s,loading:false,error:'Geolocalização indisponível'}));return;}
+    if(hidden) return;
+    setState(s=>({...s,loading:true,error:null}));
+    if(!navigator.geolocation){setState(s=>({...s,loading:false,error:'Seu navegador não informa a localização, então o clima fica de fora.'}));return;}
     navigator.geolocation.getCurrentPosition(async(pos)=>{
       const {latitude,longitude}=pos.coords;
       try{
         if(GOOGLE_WEATHER_API_KEY) await fetchFromGoogleWeather(latitude,longitude,setState);
         else await fetchFromOpenMeteo(latitude,longitude,setState);
       }catch{setState(s=>({...s,loading:false,error:'Falha ao buscar o clima'}));}
-    },()=>{setState(s=>({...s,loading:false,error:'Permissão de localização negada'}));},{timeout:8000});
-  },[]);
-  return state;
+    },(err)=>{setState(s=>({...s,loading:false,error:err?.code===1
+      ?'Permita a localização para ver o clima e o aviso de chuva de hoje.'
+      :'Não consegui achar sua localização agora.'}));},{timeout:8000});
+  },[attempt,hidden]);
+  const retry=()=>setAttempt(a=>a+1);
+  const hide=()=>{try{localStorage.setItem('lifeplan_hide_weather','1');}catch{}setHidden(true);};
+  return {...state,hidden,retry,hide};
 }
 
 async function fetchFromGoogleWeather(latitude,longitude,setState){
@@ -1888,7 +1976,10 @@ function getSaldoPreview(){
       // cópia antiga de finance-formulas.js em cache (sem "version"): refaz Faturas sem somar Pix
       const total=(t.type==='faturas_auto'&&!(window.FinanceFormulas.version>=2))
         ?(state.faturas||[]).reduce((s,f)=>s+(f.rows||[]).reduce((s2,r)=>s2+(parseFloat(r.value)||0),0),0)
-        :window.FinanceFormulas.cfGetTableTotal(state,t);
+        // cópia antiga (versão < 3): Planejamento reserva só o que falta gastar (estouro = 0)
+        :(t.type==='planejamento'&&!(window.FinanceFormulas.version>=3))
+          ?(t.rows||[]).filter(r=>r.categoria&&r.profileIdx!=null).reduce((s,r)=>s+Math.max(0,(parseFloat(r.valor)||0)-window.FinanceFormulas.cfComputeGastoCategoria(state,r.profileIdx,r.categoria)),0)
+          :window.FinanceFormulas.cfGetTableTotal(state,t);
       saldoFinal += total*t.sign;
     });
     return saldoFinal;
@@ -1965,18 +2056,18 @@ function FocusTimer(){
   function reset(){setRunning(false);clearInterval(intervalRef.current);setMethod(null);}
   function fmt(s){const m=Math.floor(s/60).toString().padStart(2,'0');const ss=(s%60).toString().padStart(2,'0');return `${m}:${ss}`;}
 
-  const cardStyle={margin:'18px 16px 0',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:18,boxShadow:'var(--shadow-sm)'};
+  const cardStyle={background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:18};
 
   if(!method) return(
     <div style={cardStyle}>
-      <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:4}}>⏱️ Timer de Foco</div>
-      <div style={{fontSize:12,color:'var(--muted2)',marginBottom:14}}>Escolha um dos 3 métodos de estudo com mais respaldo científico:</div>
+      <h2 style={{margin:'0 0 4px',display:'flex',alignItems:'center',gap:8,fontFamily:'var(--font-display)',fontWeight:500,fontSize:22,lineHeight:'28px',color:'var(--text)'}}><Icon name="timer" size={22} style={{color:'var(--accent)'}}/>Timer de foco</h2>
+      <p style={{margin:'0 0 14px',fontSize:14,lineHeight:'20px',color:'var(--muted)'}}>Escolha um dos 3 métodos de estudo com mais respaldo científico:</p>
       {STUDY_METHODS.map(m=>(
-        <button key={m.id} onClick={()=>chooseMethod(m)} style={{display:'flex',alignItems:'center',gap:12,width:'100%',textAlign:'left',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:14,padding:'12px 14px',marginBottom:10,cursor:'pointer'}}>
+        <button key={m.id} onClick={()=>chooseMethod(m)} style={{display:'flex',alignItems:'center',gap:12,width:'100%',textAlign:'left',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:'12px 14px',marginBottom:10,cursor:'pointer',fontFamily:'inherit',color:'inherit'}}>
           <span style={{display:'inline-flex',flexShrink:0,color:'var(--accent)'}}><Glyph name={STUDY_METHOD_ICONS[m.id]} size={26}/></span>
           <span>
             <div style={{fontSize:14,fontWeight:800,color:'var(--accent-dark)'}}>{m.name}</div>
-            <div style={{fontSize:12,color:'var(--muted2)',marginTop:3,lineHeight:1.5}}>{m.desc}</div>
+            <div style={{fontSize:14,color:'var(--muted)',marginTop:3,lineHeight:1.45}}>{m.desc}</div>
           </span>
         </button>
       ))}
@@ -1985,7 +2076,7 @@ function FocusTimer(){
 
   return(
     <div style={{...cardStyle,textAlign:'center'}}>
-      <div style={{fontSize:13,fontWeight:700,color:'var(--muted2)',marginBottom:10}}><span style={{display:'inline-flex',verticalAlign:'-0.2em',marginRight:6}}><Glyph name={STUDY_METHOD_ICONS[method.id]} size={16}/></span>{method.name} — {phase==='focus'?'Foco':'Pausa'}{cycles>0?` · ciclo ${cycles+1}`:''}</div>
+      <div style={{fontSize:14,fontWeight:700,color:'var(--muted2)',marginBottom:10}}><span style={{display:'inline-flex',verticalAlign:'-0.2em',marginRight:6}}><Glyph name={STUDY_METHOD_ICONS[method.id]} size={16}/></span>{method.name} — {phase==='focus'?'Foco':'Pausa'}{cycles>0?` · ciclo ${cycles+1}`:''}</div>
       <div style={{
         width:170,height:170,margin:'0 auto 16px',borderRadius:'50%',
         background:phase==='focus'?'var(--accent-soft)':'var(--info-soft)',
@@ -1995,59 +2086,126 @@ function FocusTimer(){
         <div style={{fontSize:38,fontWeight:900,color:phase==='focus'?'var(--accent-dark)':'var(--info)',fontVariantNumeric:'tabular-nums'}}>{fmt(seconds)}</div>
       </div>
       <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
-        <button onClick={()=>setRunning(r=>!r)} style={{...S.btn(running?'var(--muted)':'var(--success)'),padding:'10px 22px'}}>{running?'⏸ Pausar':'▶️ Retomar'}</button>
+        <button onClick={()=>setRunning(r=>!r)} style={{...S.btn(running?'var(--surface2)':'var(--accent)'),color:running?'var(--text)':'var(--on-accent)',border:running?'1px solid var(--border)':'none',padding:'10px 22px'}}>{running?'Pausar':'Retomar'}</button>
         {method.id==='flowtime'&&phase==='focus'&&<button onClick={endFlowFocus} style={{...S.btn('var(--info)'),padding:'10px 22px'}}>Ir para pausa</button>}
-        <button onClick={reset} style={{...S.btn('var(--danger)'),padding:'10px 22px'}}>✕ Encerrar</button>
+        <button onClick={reset} style={{...S.btn('transparent'),color:'var(--danger)',border:'1px solid var(--border)',padding:'10px 22px'}}>Encerrar</button>
       </div>
     </div>
   );
 }
 
 // ── ABA ESTUDOS ────────────────────────────────────────────────────────────────
-function StudyTab({onHome,onOpenProfile,onLogout}){
+// As páginas em iframe (Estudos, Finanças, Hábitos) recebem `embed=1`: assim
+// elas mostram o botão de perfil no próprio cabeçalho e escondem o que é
+// duplicado. O botão de perfil delas avisa o app via postMessage.
+const iframeSrc=(file,extra='')=>`/${file}?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}&embed=1${extra}`;
+// Altura da tela menos a barra inferior (76px + área segura do iPhone)
+const NAV_SPACE='calc(76px + env(safe-area-inset-bottom, 0px))';
+
+// Faz o iframe crescer junto com o conteúdo dele: a página inteira rola de uma
+// vez só, sem uma barra de rolagem "dentro" da outra.
+function useAutoHeight(ref){
+  useEffect(()=>{
+    const frame=ref.current; if(!frame) return;
+    let ro=null;
+    const fit=()=>{
+      try{
+        const body=frame.contentDocument?.body; if(!body) return;
+        const h=Math.ceil(body.getBoundingClientRect().height);
+        if(h>0) frame.style.height=h+'px';
+      }catch{}
+    };
+    const onLoad=()=>{
+      fit();
+      try{ ro?.disconnect(); ro=new ResizeObserver(fit); ro.observe(frame.contentDocument.body); }catch{}
+    };
+    frame.addEventListener('load',onLoad);
+    if(frame.contentDocument?.readyState==='complete') onLoad();
+    return()=>{frame.removeEventListener('load',onLoad);ro?.disconnect();};
+  },[ref]);
+}
+
+function StudyTab({userId,onOpenTimetable}){
+  const frameRef=useRef(null);
+  useAutoHeight(frameRef);
   return(
     <div style={S.wrap}>
-      <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>Estudos</div>
-      </div>
-      <div style={{paddingBottom:100}}>
-        <div style={{padding:'16px 16px 0'}}>
-          <div style={{borderRadius:16,overflow:'hidden',border:'1px solid var(--border)',height:'65vh',minHeight:460,background:'var(--surface)'}}>
-            <iframe title="Estudos" src={`/estudos.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}`} style={{width:'100%',height:'100%',border:'none'}}/>
-          </div>
-        </div>
+      <iframe ref={frameRef} title="Estudos" src={iframeSrc('estudos.html')} scrolling="no"
+        style={{display:'block',width:'100%',height:'70vh',border:'none',background:'var(--bg)'}}/>
+      <div style={{maxWidth:960,margin:'0 auto',padding:'8px 16px 0',display:'flex',flexDirection:'column',gap:16}}>
         <FocusTimer/>
+        <TimetableCard userId={userId} onEdit={onOpenTimetable}/>
       </div>
     </div>
   );
 }
 
 // ── ABA FINANÇAS ────────────────────────────────────────────────────────────────
-function FinanceTab({onHome,onOpenProfile,onLogout}){
+// Finanças já é uma página inteira (cabeçalho, abas e conteúdo): ocupa a tela
+// toda acima da barra inferior.
+function FinanceTab(){
   return(
-    <div style={S.wrap}>
-      <div style={{maxWidth:900,margin:'0 auto'}}>
-        <div style={{height:'calc(100dvh - 84px)',minHeight:560,background:'var(--bg)'}}>
-          <iframe title="Finanças" src={`/controle-financeiro.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}`} style={{width:'100%',height:'100%',border:'none'}}/>
-        </div>
-      </div>
+    <div style={{...S.wrap,paddingBottom:0}}>
+      <iframe title="Finanças" src={iframeSrc('controle-financeiro.html')}
+        style={{display:'block',width:'100%',height:`calc(100dvh - ${NAV_SPACE})`,border:'none',background:'var(--bg)'}}/>
     </div>
   );
 }
 
 // ── ABA HÁBITOS E PERFORMANCE ─────────────────────────────────────────────────
-function HabitsTab({onHome,onOpenProfile,onLogout}){
+function HabitsTab({onHome,onOpenProfile}){
   return(
-    <div style={S.wrap}>
-      <div style={S.header}>
-        <div style={{fontSize:18,fontWeight:800,color:'var(--text)'}}>Hábitos e performance</div>
-      </div>
-      <div style={{padding:16,paddingBottom:100}}>
-        <div style={{borderRadius:16,overflow:'hidden',border:'1px solid var(--border)',height:'82vh',minHeight:600,background:'var(--surface)'}}>
-          <iframe title="Hábitos e Performance" src={`/my-fit-era.html?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}&hideHeader=1`} style={{width:'100%',height:'100%',border:'none'}}/>
-        </div>
-      </div>
+    <div style={{...S.wrap,paddingBottom:0}}>
+      <TopBar title="Hábitos e performance" onBack={onHome} onOpenProfile={onOpenProfile}/>
+      <iframe title="Hábitos e Performance" src={iframeSrc('my-fit-era.html','&hideHeader=1')}
+        style={{display:'block',width:'100%',height:`calc(100dvh - 69px - ${NAV_SPACE})`,border:'none',background:'var(--bg)'}}/>
     </div>
+  );
+}
+
+// Grade de horários (somente leitura) — fica na aba Estudos; "Editar" abre a tela completa.
+function TimetableCard({userId,onEdit}){
+  const {data}=useTimetable(userId);
+  const line='1px solid var(--border)';
+  return(
+    <section style={{display:'flex',flexDirection:'column',gap:10}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'0 4px'}}>
+        <h2 style={{margin:0,fontFamily:'var(--font-display)',fontWeight:500,fontSize:22,lineHeight:'28px',color:'var(--text)'}}>Grade de horários</h2>
+        {data.rows.length>0&&<button onClick={onEdit} style={{height:44,padding:'0 14px',borderRadius:12,border:'none',background:'var(--accent-soft)',color:'var(--accent)',fontFamily:'inherit',fontSize:14,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:6}}><Icon name="pencil" size={16}/>Editar</button>}
+      </div>
+      <div style={{background:'var(--surface)',border:line,borderRadius:20,overflow:'hidden'}}>
+        {data.rows.length===0?(
+          <EmptyState icon="calendar" title="Monte sua grade da semana"
+            text="Cadastre seus horários de aula. A tela inicial passa a mostrar qual é a próxima."
+            actionLabel="Montar grade" onAction={onEdit}/>
+        ):(
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%',minWidth:560,borderCollapse:'collapse',fontSize:14,tableLayout:'fixed'}}>
+              <thead>
+                <tr>
+                  <th style={{width:'16%',padding:'10px 8px',borderBottom:line,textAlign:'left',background:'var(--surface2)'}}></th>
+                  {WEEK_DAYS.map(d=>(
+                    <th key={d} style={{padding:'10px 4px',borderBottom:line,borderLeft:line,color:'var(--text)',fontWeight:700,background:'var(--surface2)'}}>{d}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.rows.map(r=>(
+                  <tr key={r.id}>
+                    <td className="lp-num" style={{padding:'10px 8px',fontWeight:700,color:'var(--text)',borderTop:line,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.label}</td>
+                    {WEEK_DAYS.map(d=>(
+                      <td key={d} style={{padding:'10px 4px',borderTop:line,borderLeft:line,color:'var(--text)',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {data.cells[`${r.id}-${d}`]||''}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -2057,15 +2215,12 @@ function TimetableScreen({onHome,userId}){
   const T=HOME_THEME;
 
   return(
-    <div style={{minHeight:'100vh',background:T.page,padding:'16px 10px 100px'}}>
-      <div style={{maxWidth:900,margin:'0 auto',background:T.outerCard,borderRadius:24,padding:18,boxShadow:'var(--shadow-sm)'}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
-          <button style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:T.ink}} onClick={onHome}>←</button>
-          <div style={{fontFamily:"'Caveat',cursive",fontSize:30,fontWeight:700,color:T.ink}}>Grade de Horários</div>
-        </div>
+    <div style={S.wrap}>
+      <TopBar title="Grade de horários" subtitle="Toque em uma célula para editar" onBack={onHome}/>
+      <div style={{maxWidth:960,margin:'0 auto',padding:16}}>
 
-        <div style={{overflowX:'auto',borderRadius:12,border:`1px solid ${T.line}`}}>
-          <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:760,tableLayout:'fixed'}}>
+        <div style={{overflowX:'auto',borderRadius:20,border:`1px solid ${T.line}`,background:'var(--surface)'}}>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:14,minWidth:760,tableLayout:'fixed'}}>
             <thead>
               <tr>
                 <th style={{padding:'10px 8px',background:T.sage,color:T.ink,textAlign:'left',minWidth:140}}>Horário</th>
@@ -2080,36 +2235,36 @@ function TimetableScreen({onHome,userId}){
                 <tr key={r.id} style={{background:ri%2===0?'var(--accent-soft)':'var(--surface)'}}>
                   <td style={{padding:2,borderTop:`1px solid ${T.line}`}}>
                     <input value={r.label} onChange={e=>renameRow(r.id,e.target.value)}
-                      style={{width:'100%',border:'none',background:'transparent',fontWeight:800,color:T.ink,fontSize:12,padding:'8px 6px',outline:'none',boxSizing:'border-box'}}
+                      style={{width:'100%',border:'none',background:'transparent',fontWeight:800,color:T.ink,fontSize:14,padding:'8px 6px',outline:'none',boxSizing:'border-box'}}
                       placeholder="ex: 08:00 - 09:40"/>
                   </td>
                   {WEEK_DAYS.map(d=>(
                     <td key={d} style={{padding:2,borderTop:`1px solid ${T.line}`,borderLeft:`1px solid ${T.line}`}}>
                       <input value={data.cells[`${r.id}-${d}`]||''} onChange={e=>setCell(r.id,d,e.target.value)}
-                        style={{width:'100%',border:'none',background:'transparent',color:T.ink,fontSize:12,padding:'8px 6px',textAlign:'center',outline:'none',boxSizing:'border-box'}}
+                        style={{width:'100%',border:'none',background:'transparent',color:T.ink,fontSize:14,padding:'8px 6px',textAlign:'center',outline:'none',boxSizing:'border-box'}}
                         placeholder="—"/>
                     </td>
                   ))}
                   <td style={{padding:2,borderTop:`1px solid ${T.line}`,whiteSpace:'nowrap',textAlign:'center'}}>
-                    <button onClick={()=>moveRow(r.id,-1)} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,padding:'0 3px'}} title="Mover para cima">↑</button>
-                    <button onClick={()=>moveRow(r.id,1)} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,padding:'0 3px'}} title="Mover para baixo">↓</button>
-                    <button onClick={()=>removeRow(r.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:14,color:'var(--danger)',padding:'0 3px'}} title="Remover linha"><Icon name="x" size={18}/></button>
+                    <button onClick={()=>moveRow(r.id,-1)} style={rowIconBtn} title="Mover para cima" aria-label="Mover para cima">↑</button>
+                    <button onClick={()=>moveRow(r.id,1)} style={rowIconBtn} title="Mover para baixo" aria-label="Mover para baixo">↓</button>
+                    <button onClick={()=>removeRow(r.id)} style={{...rowIconBtn,color:'var(--danger)'}} title="Remover linha" aria-label="Remover linha"><Icon name="x" size={18}/></button>
                   </td>
                 </tr>
               ))}
               {!data.rows.length&&(
-                <tr><td colSpan={9} style={{padding:'24px 10px',textAlign:'center',color:T.muted,background:'var(--surface)'}}>Nenhum horário ainda. Toque em "+ Adicionar linha" para começar a montar sua grade.</td></tr>
+                <tr><td colSpan={9} style={{padding:'24px 10px',textAlign:'center',color:T.muted,background:'var(--surface)'}}>Nenhum horário ainda. Toque em "Adicionar linha de horário" para começar.</td></tr>
               )}
             </tbody>
           </table>
         </div>
 
-        <button style={{marginTop:14,background:T.sageDark,border:'none',borderRadius:10,color:'var(--on-accent)',fontWeight:800,fontSize:14,padding:'12px 18px',cursor:'pointer'}}
+        <button style={{...S.btn(),marginTop:14,display:'flex',alignItems:'center',gap:6}}
           onClick={()=>addRow('')}>
-          + Adicionar linha de horário
+          <Icon name="plus" size={18} stroke={2}/>Adicionar linha de horário
         </button>
 
-        <div style={{fontSize:12,color:T.muted,marginTop:10,lineHeight:1.6}}>
+        <div style={{fontSize:14,color:T.muted,marginTop:12,lineHeight:1.6}}>
           Cada linha e cada célula são livres — escreva o rótulo do horário do jeito que quiser (ex: "08:00 - 09:40", "Manhã", "Bloco 1")
           e o nome da disciplina em cada dia. Use os botões ↑ ↓ para reordenar e ✕ para remover uma linha.<br/>
           Dica: se o rótulo começar com um horário no formato <b>HH:MM</b>, o balão de Estudos na tela inicial usa isso para calcular a próxima aula automaticamente.
@@ -2118,6 +2273,8 @@ function TimetableScreen({onHome,userId}){
     </div>
   );
 }
+
+const rowIconBtn={background:'none',border:'none',cursor:'pointer',fontSize:16,minWidth:32,minHeight:32,padding:0,color:'var(--text)',display:'inline-flex',alignItems:'center',justifyContent:'center',verticalAlign:'middle',fontFamily:'inherit'};
 
 // ── TEMA VISUAL DA TELA INICIAL (paleta creme/verde-sálvia, conforme mockup) ──
 const HOME_THEME={
@@ -2145,7 +2302,7 @@ function FoodSlot({label,slot,setSlot,accent}){
   }
 
   return(
-    <div style={{flex:'1 1 220px',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,padding:14}}>
+    <div style={{flex:'1 1 220px',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:14}}>
       <div style={{fontSize:12,fontWeight:700,color:accent,marginBottom:8,letterSpacing:'.06em',textTransform:'uppercase'}}>{label}</div>
       <div style={{position:'relative'}}>
         <input
@@ -2167,15 +2324,15 @@ function FoodSlot({label,slot,setSlot,accent}){
       </div>
       <div style={{display:'flex',gap:8,marginTop:10}}>
         <div style={{flex:1}}>
-          <div style={{fontSize:12,color:'var(--muted)',fontWeight:600,marginBottom:4}}>Quantidade (g) (g)</div>
+          <div style={{fontSize:12,color:'var(--muted)',fontWeight:600,marginBottom:4}}>Quantidade (g)</div>
           <div style={{display:'flex',gap:4}}>
             <input type="number" value={slot.qty} onChange={e=>setSlot(s=>({...s,qty:parseFloat(e.target.value)||0}))}
               style={{width:'100%',border:'1px solid var(--border)',borderRadius:12,padding:'0 10px',height:44,fontSize:14,outline:'none',boxSizing:'border-box',background:'var(--surface2)',color:'var(--text)'}}/>
-            <button onClick={()=>setSlot(s=>({...s,qty:1000}))} style={{fontSize:13,fontWeight:700,color:accent,background:'none',border:'1px solid var(--border)',borderRadius:12,padding:'0 10px',minWidth:44,cursor:'pointer',whiteSpace:'nowrap'}}>1kg</button>
+            <button onClick={()=>setSlot(s=>({...s,qty:1000}))} style={{fontSize:14,fontWeight:700,color:accent,background:'none',border:'1px solid var(--border)',borderRadius:12,padding:'0 10px',minWidth:44,cursor:'pointer',whiteSpace:'nowrap'}}>1kg</button>
           </div>
         </div>
         <div style={{flex:1}}>
-          <div style={{fontSize:12,color:'var(--muted)',fontWeight:600,marginBottom:4}}>Preço (R$) (R$)</div>
+          <div style={{fontSize:12,color:'var(--muted)',fontWeight:600,marginBottom:4}}>Preço (R$)</div>
           <input type="number" step="0.01" value={slot.price} onChange={e=>setSlot(s=>({...s,price:e.target.value}))}
             placeholder="0,00" style={{width:'100%',border:'1px solid var(--border)',borderRadius:12,padding:'0 10px',height:44,fontSize:14,outline:'none',boxSizing:'border-box',background:'var(--surface2)',color:'var(--text)'}}/>
         </div>
@@ -2261,13 +2418,13 @@ function FoodComparator(){
 
   return(
     <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:16,marginBottom:16,boxShadow:'none'}}>
-      <div style={{fontFamily:'var(--font-display)',fontWeight:500,fontSize:20,lineHeight:'26px',color:'var(--text)',marginBottom:2}}>Comparador de alimentos</div>
-      <div style={{fontSize:13,color:'var(--muted)',marginBottom:12}}>Qual alimento vale mais a pena levar pra casa?</div>
+      <div style={{fontFamily:'var(--font-display)',fontWeight:500,fontSize:22,lineHeight:'26px',color:'var(--text)',marginBottom:2}}>Comparador de alimentos</div>
+      <div style={{fontSize:14,color:'var(--muted)',marginBottom:12}}>Qual alimento vale mais a pena levar pra casa?</div>
 
       <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}}>
         {COMPARATOR_PRIORITIES.map(pr=>(
           <button key={pr.id} onClick={()=>setPriority(pr.id)}
-            style={{fontSize:13,fontWeight:700,padding:'10px 14px',minHeight:44,borderRadius:22,cursor:'pointer',
+            style={{fontSize:14,fontWeight:700,padding:'10px 14px',minHeight:44,borderRadius:22,cursor:'pointer',fontFamily:'inherit',
               background:priority===pr.id?'var(--accent)':'var(--surface)',color:priority===pr.id?'var(--on-accent)':'var(--muted)',
               border:`1px solid ${priority===pr.id?'var(--accent)':'var(--border)'}`}}>
             {pr.label}
@@ -2281,18 +2438,18 @@ function FoodComparator(){
       </div>
 
       {mA&&mB&&(
-        <div style={{marginTop:14,background:winner?'var(--accent-soft)':'var(--surface)',border:`1px solid ${winner?'var(--accent)':'var(--border)'}`,borderRadius:14,padding:'12px 14px'}}>
+        <div style={{marginTop:14,background:winner?'var(--accent-soft)':'var(--surface)',border:`1px solid ${winner?'var(--accent)':'var(--border)'}`,borderRadius:12,padding:'12px 14px'}}>
           {winner?(
-            <div style={{fontSize:13,fontWeight:800,color:'var(--accent-dark)',marginBottom:8}}>
+            <div style={{fontSize:14,fontWeight:800,color:'var(--accent-dark)',marginBottom:8}}>
               {winner==='A'?slotA.food.n:slotB.food.n} vale mais a pena ({p.label})
             </div>
           ):(
-            <div style={{fontSize:13,fontWeight:800,color:'var(--muted2)',marginBottom:8}}>Empate nesse critério</div>
+            <div style={{fontSize:14,fontWeight:800,color:'var(--muted2)',marginBottom:8}}>Empate nesse critério</div>
           )}
           <div style={{display:'flex',gap:10}}>
             {[['A',slotA,mA,'var(--info)'],['B',slotB,mB,'var(--warning)']].map(([key,slot,m,accent])=>(
-              <div key={key} style={{flex:1,fontSize:13,color:'var(--text)',lineHeight:1.7,
-                border:winner===key?`2px solid ${accent}`:'1px solid transparent',borderRadius:10,padding:'6px 8px'}}>
+              <div key={key} style={{flex:1,fontSize:14,color:'var(--text)',lineHeight:1.7,
+                border:winner===key?`2px solid ${accent}`:'1px solid transparent',borderRadius:12,padding:'6px 8px'}}>
                 <div style={{fontWeight:800,color:accent,marginBottom:2}}>{slot.food.n}</div>
                 <div>Proteína: {m.proteinPerReal.toFixed(1)}g / R$</div>
                 <div>Calorias: {m.kcalPerReal.toFixed(0)}kcal / R$</div>
@@ -2421,7 +2578,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   const wxIcon=weather.rain?.active?'cloudRain':(weather.isDay===false?'moon':'sun');
 
   const card={background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20};
-  const bubble={width:44,height:44,borderRadius:14,background:'var(--accent-soft)',color:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0};
+  const bubble={width:44,height:44,borderRadius:12,background:'var(--accent-soft)',color:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0};
   const rowBtn={display:'flex',alignItems:'center',gap:14,flex:1,minWidth:0,minHeight:68,background:'none',border:'none',padding:0,cursor:'pointer',textAlign:'left',font:'inherit',color:'inherit'};
   const rowTitle={fontSize:16,lineHeight:'20px',fontWeight:600,color:'var(--text)'};
   const rowMeta={fontSize:14,lineHeight:'18px',color:'var(--muted)'};
@@ -2463,9 +2620,17 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
           <p style={{margin:'2px 0 0',fontSize:16,lineHeight:'22px',color:'var(--text-2)'}}>{pendingText}</p>
         </section>
 
-        {(weather.loading||weather.error||wxOk)&&(
-          <div style={{display:'flex',flexDirection:'column',gap:4,alignSelf:'flex-start',maxWidth:'100%',padding:'10px 14px',border:'1px solid var(--border)',borderRadius:18,color:'var(--text-2)',fontSize:13.5,lineHeight:'18px'}}>
-            {weather.loading?<span>Buscando o clima…</span>:weather.error?<span>{weather.error}</span>:(
+        {!weather.hidden&&(weather.loading||weather.error||wxOk)&&(
+          <div style={{display:'flex',flexDirection:'column',gap:4,alignSelf:'flex-start',maxWidth:'100%',padding:'10px 14px',border:'1px solid var(--border)',borderRadius:20,color:'var(--text-2)',fontSize:14,lineHeight:'20px'}}>
+            {weather.loading?<span>Buscando o clima…</span>:weather.error?(
+              <>
+                <span style={{display:'flex',alignItems:'center',gap:8}}><Icon name="cloud" size={18} style={{color:'var(--accent)'}}/>{weather.error}</span>
+                <span style={{display:'flex',gap:8,marginTop:4}}>
+                  <button onClick={weather.retry} style={{height:36,padding:'0 12px',borderRadius:12,border:'none',background:'var(--accent-soft)',color:'var(--accent)',fontFamily:'inherit',fontSize:14,fontWeight:600,cursor:'pointer'}}>Tentar de novo</button>
+                  <button onClick={weather.hide} style={{height:36,padding:'0 12px',borderRadius:12,border:'none',background:'transparent',color:'var(--muted)',fontFamily:'inherit',fontSize:14,fontWeight:600,cursor:'pointer'}}>Ocultar</button>
+                </span>
+              </>
+            ):(
               <>
                 <span style={{display:'flex',alignItems:'center',gap:8,fontWeight:600,color:'var(--text)'}}>
                   <Icon name={wxIcon} size={18}/>{weather.city}, <span className="lp-num">{weather.temp}°</span>
@@ -2507,9 +2672,9 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
           <section aria-label="Resumo da semana" data-testid="weekly-summary">
             <h2 style={eyebrow}>Resumo da semana · <span className="lp-num">{weekly.periodo}</span></h2>
             <div style={{...card,padding:16,display:'flex',flexDirection:'column',gap:14}}>
-              {[['Você cumpriu',weekly.cumpriu,'Nada registrado ainda.',true],['Ficou pendente',weekly.pendente,'Nada pendente.',false]].map(([title,items,empty,done])=>(
+              {[['Você cumpriu',weekly.cumpriu,'Nada registrado ainda. Use “Marcar feito” no treino de hoje para começar.',true],['Ficou pendente',weekly.pendente,'Nada pendente.',false]].map(([title,items,empty,done])=>(
                 <div key={title}>
-                  <h3 style={{margin:'0 0 6px',fontSize:13,lineHeight:'16px',fontWeight:700,color:'var(--muted)'}}>{title}</h3>
+                  <h3 style={{margin:'0 0 6px',fontSize:14,lineHeight:'18px',fontWeight:700,color:'var(--muted)'}}>{title}</h3>
                   {items.length?(
                     <ul style={{margin:0,padding:0,listStyle:'none',display:'flex',flexDirection:'column',gap:6}}>
                       {items.map((t,i)=>(
@@ -2524,8 +2689,8 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
                   ):<p style={{margin:0,fontSize:14,lineHeight:'20px',color:'var(--muted)'}}>{empty}</p>}
                 </div>
               ))}
-              <div style={{background:'var(--accent-soft)',borderRadius:14,padding:'12px 14px'}}>
-                <h3 style={{margin:'0 0 4px',fontSize:13,lineHeight:'16px',fontWeight:700,color:'var(--accent)'}}>Recomendação</h3>
+              <div style={{background:'var(--accent-soft)',borderRadius:12,padding:'12px 14px'}}>
+                <h3 style={{margin:'0 0 4px',fontSize:14,lineHeight:'18px',fontWeight:700,color:'var(--accent)'}}>Recomendação</h3>
                 <p style={{margin:0,fontSize:15,lineHeight:'21px',color:'var(--text)'}}>{weekly.recomendacao}</p>
               </div>
             </div>
@@ -2540,7 +2705,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
                 <p style={{margin:0,fontSize:16,lineHeight:'23px',fontWeight:600,color:'var(--text)'}}>{cross.frase}</p>
                 {[['Semanas de gasto alto',cross.dietaAlta,'var(--warning)'],['Semanas de gasto baixo',cross.dietaBaixa,'var(--accent)']].map(([label,pct,color])=>(
                   <div key={label}>
-                    <div style={{display:'flex',justifyContent:'space-between',fontSize:13,lineHeight:'18px',color:'var(--muted)',marginBottom:4}}>
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:14,lineHeight:'18px',color:'var(--muted)',marginBottom:4}}>
                       <span>{label} em {cross.categoria}</span><span className="lp-num" style={{color:'var(--text)',fontWeight:600}}>Dieta {pct}%</span>
                     </div>
                     <div role="img" aria-label={`${label}: dieta em ${pct}%`} style={{height:8,borderRadius:4,background:'var(--accent-soft)',overflow:'hidden'}}>
@@ -2548,7 +2713,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
                     </div>
                   </div>
                 ))}
-                <p style={{margin:0,fontSize:13,lineHeight:'18px',color:'var(--muted)'}}>Baseado em {cross.semanas} semanas. Isso mostra que os dois andam juntos, não que um causou o outro.</p>
+                <p style={{margin:0,fontSize:14,lineHeight:'18px',color:'var(--muted)'}}>Baseado em {cross.semanas} semanas. Isso mostra que os dois andam juntos, não que um causou o outro.</p>
               </>)}
               {cross.status==='sem-relacao'&&(
                 <p style={{margin:0,fontSize:15,lineHeight:'21px',color:'var(--text)'}}>Nas últimas {cross.semanas} semanas, nenhuma categoria de gasto apareceu junto com queda na dieta.</p>
@@ -2571,7 +2736,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
                 onChange={e=>setGoalInput(e.target.value)}
                 onBlur={()=>{const g=parseInt(goalInput,10);water.setGoal(g>0?g:water.data.goal);setEditingGoal(false);}}
                 onKeyDown={e=>{if(e.key==='Enter')e.target.blur();}}
-                style={{width:96,height:40,fontSize:14,border:'1px solid var(--border)',borderRadius:10,padding:'0 10px',outline:'none',background:'var(--surface2)',color:'var(--text)'}}/>
+                style={{width:96,height:40,fontSize:14,border:'1px solid var(--border)',borderRadius:12,padding:'0 10px',outline:'none',background:'var(--surface2)',color:'var(--text)'}}/>
             ):(
               <div style={{display:'flex',alignItems:'center',gap:2}}>
                 <span className="lp-num" style={{fontSize:14,lineHeight:'18px',color:'var(--muted)'}}>{water.data.current} de {water.data.goal} ml</span>
@@ -2602,9 +2767,9 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
                 <Icon name="wallet" size={18}/><span style={{fontSize:14,lineHeight:'18px',fontWeight:600,color:'var(--text)'}}>Finanças</span>
               </span>
               <span className="lp-num" style={{fontSize:22,lineHeight:'28px',fontWeight:600,marginTop:4,color:saldoVisible&&saldo!==null&&saldo<0?'var(--warning)':'var(--text)',letterSpacing:saldoVisible?0:'.04em'}}>
-                {saldo!==null?(saldoVisible?brl(saldo):'R$ ••••'):'—'}
+                {saldo!==null?(saldoVisible?brl(saldo):'R$ ••••'):'Começar'}
               </span>
-              <span style={{fontSize:13,lineHeight:'17px',color:'var(--muted)'}}>Saldo do mês</span>
+              <span style={{fontSize:14,lineHeight:'18px',color:'var(--muted)'}}>{saldo!==null?'Saldo do mês':'Cadastre sua primeira fatura'}</span>
             </button>
             {saldo!==null&&(
               <button onClick={()=>setSaldoVisible(v=>!v)} aria-label={saldoVisible?'Ocultar valores':'Mostrar valores'} aria-pressed={saldoVisible}
@@ -2617,8 +2782,8 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
             <span style={{display:'flex',alignItems:'center',gap:6,color:'var(--accent)'}}>
               <Icon name="cart" size={18}/><span style={{fontSize:14,lineHeight:'18px',fontWeight:600,color:'var(--text)'}}>Lista de compras</span>
             </span>
-            <span className="lp-num" style={{fontSize:22,lineHeight:'28px',fontWeight:600,marginTop:4}}>{shoppingCount!==null?shoppingCount:'—'}</span>
-            <span style={{fontSize:13,lineHeight:'17px',color:'var(--muted)'}}>{shoppingCount===1?'item pendente':'itens pendentes'}</span>
+            <span className="lp-num" style={{fontSize:22,lineHeight:'28px',fontWeight:600,marginTop:4}}>{shoppingCount?shoppingCount:'Vazia'}</span>
+            <span style={{fontSize:14,lineHeight:'18px',color:'var(--muted)'}}>{!shoppingCount?'Adicione itens pelo plano':shoppingCount===1?'item pendente':'itens pendentes'}</span>
           </button>
         </section>
 
@@ -2635,7 +2800,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
           {agendaItems.length===0?(
             <div style={{display:'flex',flexDirection:'column',gap:2}}>
               <span style={{fontSize:16,lineHeight:'22px',fontWeight:500}}>Dias livres</span>
-              <span style={{fontSize:13,lineHeight:'17px',color:'var(--muted)'}}>Nada marcado nos próximos 7 dias</span>
+              <span style={{fontSize:14,lineHeight:'18px',color:'var(--muted)'}}>Nada marcado nos próximos 7 dias. Anote um compromisso abaixo.</span>
             </div>
           ):(
             <div style={{display:'flex',flexDirection:'column'}}>
@@ -2661,44 +2826,6 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
         </section>
 
         <BudgetChartPreview/>
-
-        <FoodComparator/>
-
-        <section style={{display:'flex',flexDirection:'column',gap:10}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'0 4px'}}>
-            <h2 style={sectionTitle}>Grade de horários</h2>
-            <button onClick={onOpenTimetable} style={smallBtn}><Icon name="pencil" size={16}/>Editar</button>
-          </div>
-          <div style={{...card,overflow:'hidden'}}>
-            <div style={{overflowX:'auto'}}>
-              <table style={{width:'100%',minWidth:560,borderCollapse:'collapse',fontSize:12,tableLayout:'fixed'}}>
-                <thead>
-                  <tr>
-                    <th style={{width:'16%',padding:'10px 6px',borderBottom:`1px solid ${T.line}`,textAlign:'left',background:'var(--surface2)'}}></th>
-                    {WEEK_DAYS.map(d=>(
-                      <th key={d} style={{width:`${84/7}%`,padding:'10px 4px',borderBottom:`1px solid ${T.line}`,borderLeft:`1px solid ${T.line}`,color:'var(--text)',fontWeight:700,background:'var(--surface2)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{FullDayName(d)}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {timetableData.rows.length===0&&(
-                    <tr><td colSpan={8} style={{padding:'18px 10px',textAlign:'center',color:'var(--muted)',whiteSpace:'normal'}}>Nenhum horário cadastrado ainda. Toque em "Editar" para montar sua grade.</td></tr>
-                  )}
-                  {timetableData.rows.map((r,ri)=>(
-                    <tr key={r.id} style={{background:ri%2===0?'var(--accent-soft)':'var(--surface)'}}>
-                      <td className="lp-num" style={{padding:'8px 6px',fontWeight:700,color:'var(--text)',borderTop:`1px solid ${T.line}`,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.label}</td>
-                      {WEEK_DAYS.map(d=>(
-                        <td key={d} style={{padding:'8px 4px',borderTop:`1px solid ${T.line}`,borderLeft:`1px solid ${T.line}`,color:'var(--text)',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                          {timetableData.cells[`${r.id}-${d}`]||''}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
 
       </div>
     </div>
@@ -2840,6 +2967,19 @@ function AppInner(){
     return()=>subscription.unsubscribe();
   },[]);
 
+  // Ao sair do Perfil, volta para a aba de onde a pessoa veio (não sempre para a Início)
+  const profileBackRef=useRef('home');
+  // As páginas em iframe (Estudos, Finanças) têm o botão de perfil no próprio
+  // cabeçalho; ele pede para o app abrir o Perfil por aqui.
+  useEffect(()=>{
+    const onMsg=e=>{
+      if(e.origin!==window.location.origin) return;
+      if(e.data&&e.data.lifeplanNav==='profile'&&userIdRef.current){profileBackRef.current=screenRef.current;setScreen('profile');}
+    };
+    window.addEventListener('message',onMsg);
+    return()=>window.removeEventListener('message',onMsg);
+  },[]);
+
   let screenContent;
   if(screen==='loading') screenContent=(
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -2865,17 +3005,17 @@ function AppInner(){
       setLocked(false);
       setScreen('login');
     };
-    const onOpenProfile=()=>setScreen('profile');
+    const onOpenProfile=()=>{profileBackRef.current=RESUMABLE_SCREENS.includes(screen)?screen:'home';setScreen('profile');};
 
     if(screen==='profile') screenContent=(
       <ProfilePage userId={userId} initialProfile={profile}
-        onSave={(newPlan,newProfile)=>{setProfile(newProfile);setScreen('home');}}
-        onBack={()=>setScreen('home')} onLogout={onLogout} onAccountDeleted={onAccountDeleted} onLockNow={lockNow} onLockWipe={wipeLock}/>
+        onSave={(newPlan,newProfile)=>{setProfile(newProfile);setScreen(profileBackRef.current);}}
+        onBack={()=>setScreen(profileBackRef.current)} onLogout={onLogout} onAccountDeleted={onAccountDeleted} onLockNow={lockNow} onLockWipe={wipeLock}/>
     );
     else if(screen==='home') screenContent=(
       <HomeDashboard userId={userId} onNavigate={setScreen} onOpenProfile={onOpenProfile} onLogout={onLogout} onOpenTimetable={()=>setScreen('timetable')}/>
     );
-    else if(screen==='timetable') screenContent=<TimetableScreen onHome={()=>setScreen('home')} userId={userId}/>;
+    else if(screen==='timetable') screenContent=<TimetableScreen onHome={()=>setScreen('estudos')} userId={userId}/>;
     else if(screen==='nutrition') screenContent=(
       <MealPlanApp userId={userId} initialTab="plan" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
     );
@@ -2885,8 +3025,8 @@ function AppInner(){
     else if(screen==='treinos') screenContent=(
       <MealPlanApp userId={userId} initialTab="workout" onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>
     );
-    else if(screen==='estudos') screenContent=<StudyTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
-    else if(screen==='financas') screenContent=<FinanceTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
+    else if(screen==='estudos') screenContent=<StudyTab userId={userId} onOpenTimetable={()=>setScreen('timetable')}/>;
+    else if(screen==='financas') screenContent=<FinanceTab/>;
     else if(screen==='habitos') screenContent=<HabitsTab onHome={()=>setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile}/>;
     else if(screen==='reset-password') screenContent=<ResetPasswordPage onDone={()=>setScreen('home')}/>;
     else if(screen==='register') screenContent=<RegisterPage onSwitch={()=>setScreen('login')} onLogin={()=>setScreen('home')}/>;
@@ -2924,10 +3064,10 @@ class ErrorBoundary extends Component {
           <div style={{maxWidth:380,textAlign:'center',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:'32px 24px',boxShadow:'var(--shadow-md)'}}>
             
             <div style={{fontSize:18,fontWeight:800,color:'var(--text)',marginBottom:8}}>Algo deu errado</div>
-            <div style={{fontSize:13,color:'var(--muted2)',lineHeight:1.6,marginBottom:22}}>Essa tela travou de forma inesperada. Seus dados já salvos na nuvem não foram afetados — geralmente um recarregamento resolve.</div>
+            <div style={{fontSize:14,color:'var(--muted2)',lineHeight:1.6,marginBottom:22}}>Essa tela travou de forma inesperada. Seus dados já salvos na nuvem não foram afetados — geralmente um recarregamento resolve.</div>
             <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
               <button onClick={this.handleReload} style={{background:'var(--accent)',color:'var(--on-accent)',border:'none',borderRadius:12,padding:'12px 20px',fontWeight:800,fontSize:14,cursor:'pointer'}}>Recarregar</button>
-              <button onClick={this.handleGoHome} style={{background:'var(--surface2)',color:'var(--accent-dark)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 20px',fontWeight:800,fontSize:13,cursor:'pointer'}}>Voltar para o Início</button>
+              <button onClick={this.handleGoHome} style={{background:'var(--surface2)',color:'var(--accent-dark)',border:'1px solid var(--border)',borderRadius:12,padding:'10px 20px',fontWeight:800,fontSize:14,cursor:'pointer'}}>Voltar para o Início</button>
             </div>
           </div>
         </div>

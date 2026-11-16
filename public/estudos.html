@@ -18,7 +18,12 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:var(--bg); min-height:100vh; color:var(--text); font-family:var(--font-body); font-size:15px; line-height:1.45; transition:background-color .2s, color .2s; }
 
-  header { background:var(--surface); border-bottom:1px solid var(--border); padding:0.75rem 1rem 0; }
+  header { background:var(--bg); border-bottom:1px solid var(--border); padding:0.75rem 1rem 0; }
+  /* Dentro do LifePlan (iframe): a altura acompanha o conteúdo, e o botão de perfil aparece */
+  .embed-only { display:none; }
+  html.lp-embed .embed-only { display:inline-flex; }
+  html.lp-embed body { min-height:0; }
+  .empty .btn { margin-top:0.75rem; }
   .head-row { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; max-width:960px; margin:0 auto; }
   header h1 { font-family:var(--font-display); font-weight:500; font-size:1.6rem; letter-spacing:-0.01em; margin-right:auto; }
   #cloudStatus { font-size:0.8rem; color:var(--muted); white-space:nowrap; }
@@ -119,11 +124,14 @@
     <button class="icon-btn" onclick="exportStudyReportPDF()" title="Baixar um PDF com matérias, notas, estudos e eventos" aria-label="Exportar PDF">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>
     </button>
+    <button class="icon-btn embed-only" id="lp-profile-btn" title="Perfil e configurações" aria-label="Perfil e configurações" style="background:var(--accent-soft);border-radius:22px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+    </button>
   </div>
   <nav role="tablist" aria-label="Seções de estudos">
     <button class="tab-btn active" data-tab="dashboard" role="tab" aria-selected="true">Painel</button>
     <button class="tab-btn" data-tab="materias" role="tab" aria-selected="false">Matérias</button>
-    <button class="tab-btn" data-tab="estudos" role="tab" aria-selected="false">Estudos</button>
+    <button class="tab-btn" data-tab="estudos" role="tab" aria-selected="false">Sessões</button>
     <button class="tab-btn" data-tab="notas" role="tab" aria-selected="false">Notas</button>
     <button class="tab-btn" data-tab="calendario" role="tab" aria-selected="false">Calendário</button>
   </nav>
@@ -169,7 +177,7 @@
 
   <!-- ESTUDOS -->
   <section id="estudos" class="tab">
-    <h2>Registro de estudos</h2>
+    <h2>Sessões de estudo</h2>
     <div class="form-row">
       <select id="study-subject" aria-label="Matéria"></select>
       <input type="date" id="study-date" aria-label="Data">
@@ -255,6 +263,12 @@ let data = JSON.parse(localStorage.getItem('studyApp')) || {
 let currentDate = new Date();
 
 const uid = () => Date.now() + Math.random().toString(36).slice(2,7);
+
+// ── DENTRO DO LIFEPLAN (iframe) ───────────────────────────────────────────
+if (window.parent !== window) {
+  document.documentElement.classList.add('lp-embed');
+  document.getElementById('lp-profile-btn').onclick = () => window.parent.postMessage({ lifeplanNav: 'profile' }, window.location.origin);
+}
 
 // ── MODO ESCURO ────────────────────────────────────────────────────────────
 // Não tem botão aqui dentro — o único botão do app fica no LifePlan (fora do
@@ -393,7 +407,7 @@ function deleteStudy(id) {
 
 function renderStudies() {
   const el = document.getElementById('studies-list');
-  if (!data.studies.length) { el.innerHTML='<p class="empty">Nenhum estudo registrado.</p>'; return; }
+  if (!data.studies.length) { el.innerHTML='<p class="empty">Nenhuma sessão registrada. Preencha a matéria, a data e as horas acima.</p>'; return; }
   const sorted = [...data.studies].sort((a,b)=>b.date.localeCompare(a.date));
   el.innerHTML = `<div class="table-wrap"><table>
     <tr><th>Data</th><th>Matéria</th><th>Horas</th><th>Tópico</th><th></th></tr>
@@ -544,7 +558,7 @@ function renderCalendar() {
 
   // lista
   const el = document.getElementById('events-list');
-  if (!data.events.length) { el.innerHTML='<p class="empty">Nenhum evento.</p>'; return; }
+  if (!data.events.length) { el.innerHTML='<p class="empty">Nenhuma prova ou trabalho marcado. Adicione o primeiro acima.</p>'; return; }
   const sorted = [...data.events].sort((a,b)=>a.date.localeCompare(b.date));
   el.innerHTML = `<div class="table-wrap"><table>
     <tr><th>Data</th><th>Tipo</th><th>Título</th><th>Matéria</th><th>Descrição</th><th></th></tr>
@@ -583,7 +597,7 @@ function renderDashboard() {
 
   // Horas por matéria
   const hbs = document.getElementById('hours-by-subject');
-  if (!data.subjects.length) hbs.innerHTML='<p class="empty">Sem dados.</p>';
+  if (!data.subjects.length) hbs.innerHTML='<div class="empty">Cadastre suas matérias e registre as sessões de estudo para ver as horas aqui.<br><button class="btn" onclick="goToTab(\'materias\')">+ Cadastrar primeira matéria</button></div>';
   else {
     const max = Math.max(...data.subjects.map(s=>data.studies.filter(st=>st.subjectId===s.id).reduce((a,b)=>a+b.hours,0)),1);
     hbs.innerHTML = data.subjects.map(s=>{
@@ -595,7 +609,7 @@ function renderDashboard() {
 
   // Situação
   const sl = document.getElementById('situation-list');
-  if (!data.subjects.length) sl.innerHTML='<p class="empty">Sem matérias.</p>';
+  if (!data.subjects.length) sl.innerHTML='<p class="empty">Aqui aparece, para cada matéria, quanto falta para ser aprovado.</p>';
   else sl.innerHTML = data.subjects.map(s=>{
     const st = getSubjectStatus(s.id);
     return `<div class="card ${st.cssClass}"><strong>${esc(s.name)}</strong><br>${statusHtml(st).replace('class="status"','class="status" style="font-weight:500"')}</div>`;

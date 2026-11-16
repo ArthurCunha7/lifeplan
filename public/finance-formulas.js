@@ -67,8 +67,11 @@
       return faturasTotal;
     }
     if (t.type === 'planejamento') {
+      // O que a linha do Planejamento reserva no saldo: só o que AINDA FALTA gastar em cada categoria.
+      // Categoria estourada reserva 0: o que passou já está nas faturas/Pix e não pode ser contado
+      // de novo (nem virar crédito, nem abater a sobra de outra categoria).
       return (t.rows || []).filter(r => r.categoria && r.profileIdx != null)
-        .reduce((s, r) => s + ((parseFloat(r.valor) || 0) - cfComputeGastoCategoria(state, r.profileIdx, r.categoria)), 0);
+        .reduce((s, r) => s + Math.max(0, (parseFloat(r.valor) || 0) - cfComputeGastoCategoria(state, r.profileIdx, r.categoria)), 0);
     }
     const numCols = (t.columns || []).filter(c => c.type === 'number');
     if (!numCols.length) return 0;
@@ -77,9 +80,9 @@
   }
 
   global.FinanceFormulas = {
-    // versão 2: o total de "Faturas" não soma Pix. As telas conferem este número para não
+    // versão 3: o Planejamento só reserva o que falta gastar (estouro = 0). Versão 2: o total de "Faturas" não soma Pix. As telas conferem este número para não
     // errar a conta caso o navegador ainda tenha uma cópia antiga deste arquivo em cache.
-    version: 2,
+    version: 3,
     cfGetAllRowsByProfile,
     cfComputeEntradasTotal,
     cfComputeGastoCategoria,
