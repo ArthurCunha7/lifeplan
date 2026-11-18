@@ -1,27 +1,44 @@
 // Resumo da semana (tela Início), em tom de consulta: o que foi cumprido, o que ficou pendente
-// e uma recomendação. JavaScript puro: recebe os dados já lidos e devolve texto pronto.
+// e uma recomendação. Recebe os dados já lidos e devolve texto pronto.
 // Nunca devolve valores em reais (a tela Início pode estar com os valores ocultos).
 //
 // A semana vai de segunda a domingo e conta até hoje.
-import { vencimentosProximos } from './lembretes.js';
+import { vencimentosProximos } from './lembretes';
+import type { Fatura, HabitsDb, HabitStatusRecord, StudyData, WorkoutLog } from './types';
 
 export const META_TREINOS_PADRAO = 3;
 export const LIMITE_BOM = 70; // % de dieta/hábitos a partir do qual conta como cumprido
 
-const pad = n => String(n).padStart(2, '0');
-export const dataLocal = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const addDias = (d, n) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); return x; };
-const plural = (n, um, varios) => (n === 1 ? um : varios);
-const horas = h => (Math.round(h * 10) / 10).toLocaleString('pt-BR');
+export interface ResumoSemanalInput {
+  hoje?: Date;
+  workoutLog?: WorkoutLog | null;
+  workoutGoal?: number | null;
+  habitsDb?: HabitsDb | null;
+  studyData?: StudyData | null;
+  faturas?: Fatura[] | null;
+}
+
+export interface ResumoSemanalOutput {
+  periodo: string;
+  cumpriu: string[];
+  pendente: string[];
+  recomendacao: string;
+}
+
+const pad = (n: number): string => String(n).padStart(2, '0');
+export const dataLocal = (d: Date): string => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addDias = (d: Date, n: number): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const plural = (n: number, um: string, varios: string): string => (n === 1 ? um : varios);
+const horas = (h: number): string => (Math.round(h * 10) / 10).toLocaleString('pt-BR');
 
 // Datas (AAAA-MM-DD) de segunda a domingo da semana de `hoje`, e a posição de hoje (0 = segunda)
-export function semanaDe(hoje) {
+export function semanaDe(hoje: Date): { datas: string[]; idx: number } {
   const idx = (hoje.getDay() + 6) % 7;
   const seg = addDias(hoje, -idx);
   return { datas: Array.from({ length: 7 }, (_, i) => dataLocal(addDias(seg, i))), idx };
 }
 
-export function dietaDaSemana(habitsDb, datas) {
+export function dietaDaSemana(habitsDb: HabitsDb | null | undefined, datas: string[]): { pct: number; n: number } | null {
   let soma = 0, n = 0;
   const recs = habitsDb?.records || {};
   datas.forEach(d => {
@@ -36,48 +53,58 @@ export function dietaDaSemana(habitsDb, datas) {
   return n ? { pct: Math.round(soma / n), n } : null;
 }
 
-function habitosDaSemana(habitsDb, datas) {
+function habitosDaSemana(
+  habitsDb: HabitsDb | null | undefined,
+  datas: string[]
+): { pct: number; feitos: number; falhas: number; total: number } | null {
   let feitos = 0, falhas = 0;
   const recs = habitsDb?.records || {};
   datas.forEach(d => {
     const r = recs[d];
     if (!r) return;
     Object.entries(r).forEach(([k, x]) => {
-      if (k === 'tags' || k === 'diet' || !x) return;
-      if (x.status === 'done') feitos++; else if (x.status === 'fail') falhas++;
+      if (k === 'tags' || k === 'diet' || !x || typeof x !== 'object') return;
+      const h = x as HabitStatusRecord;
+      if (h.status === 'done') feitos++; else if (h.status === 'fail') falhas++;
     });
   });
   const total = feitos + falhas;
   return total ? { pct: Math.round((feitos / total) * 100), feitos, falhas, total } : null;
 }
 
-function estudosDaSemana(studyData, datas, hojeISO, ate7ISO) {
-  const sessoes = (studyData?.studies || []).filter(s => s && datas.includes(s.date));
-  const h = sessoes.reduce((a, s) => a + (parseFloat(s.hours) || 0), 0);
+function estudosDaSemana(
+  studyData: StudyData | null | undefined,
+  datas: string[],
+  hojeISO: string,
+  ate7ISO: string
+): { horas: number; sessoes: number; provas: Array<{ nome: string; dias: number }> } {
+  const sessoes = (studyData?.studies || []).filter(s => s && !!s.date && datas.includes(s.date));
+  const h = sessoes.reduce((a, s) => a + (parseFloat(String(s.hours ?? 0)) || 0), 0);
   const provas = (studyData?.events || [])
-    .filter(e => e && e.type === 'prova' && e.date && e.date >= hojeISO && e.date <= ate7ISO)
+    .filter((e): e is NonNullable<typeof e> & { date: string } => !!e && e.type === 'prova' && !!e.date && e.date >= hojeISO && e.date <= ate7ISO)
     .sort((a, b) => a.date.localeCompare(b.date))
     .map(e => {
-      const mat = (studyData.subjects || []).find(s => s.id === e.subjectId);
-      const dias = Math.round((new Date(e.date + 'T00:00:00') - new Date(hojeISO + 'T00:00:00')) / 86400000);
+      const mat = (studyData?.subjects || []).find(s => s.id === e.subjectId);
+      const dias = Math.round((new Date(e.date + 'T00:00:00').getTime() - new Date(hojeISO + 'T00:00:00').getTime()) / 86400000);
       return { nome: mat?.name || e.title || 'Prova', dias };
     });
   return { horas: h, sessoes: sessoes.length, provas };
 }
 
-const quando = n => (n === 0 ? 'hoje' : n === 1 ? 'amanhã' : `em ${n} dias`);
+const quando = (n: number): string => (n === 0 ? 'hoje' : n === 1 ? 'amanhã' : `em ${n} dias`);
 
 // entrada: { hoje: Date, workoutLog, workoutGoal, habitsDb, studyData, faturas }
-export function resumoSemanal(entrada) {
+export function resumoSemanal(entrada?: ResumoSemanalInput | null): ResumoSemanalOutput {
   const { hoje = new Date(), workoutLog = {}, habitsDb = null, studyData = null, faturas = [] } = entrada || {};
-  const meta = Number(entrada?.workoutGoal) > 0 ? Number(entrada.workoutGoal) : META_TREINOS_PADRAO;
+  const meta = Number(entrada?.workoutGoal) > 0 ? Number(entrada?.workoutGoal) : META_TREINOS_PADRAO;
   const { datas, idx } = semanaDe(hoje);
   const ateHoje = datas.slice(0, idx + 1);
   const diasRestantes = 7 - idx - (workoutLog && workoutLog[dataLocal(hoje)] ? 1 : 0); // dias ainda livres para treinar (hoje só conta se ainda não treinou)
   const hojeISO = dataLocal(hoje);
   const ate7ISO = dataLocal(addDias(hoje, 7));
 
-  const cumpriu = [], pendente = [];
+  const cumpriu: string[] = [];
+  const pendente: string[] = [];
 
   // Treinos
   const feitos = ateHoje.filter(d => workoutLog && workoutLog[d]).length;
@@ -112,7 +139,7 @@ export function resumoSemanal(entrada) {
   venc.forEach(v => pendente.push(`Fatura ${v.name} vence ${quando(v.dias)} (dia ${v.dia})`));
 
   // Recomendação: uma só, a de maior urgência
-  let recomendacao;
+  let recomendacao: string;
   const provaPerto = est.provas.find(p => p.dias <= 3);
   const vencPerto = venc.find(v => v.dias <= 2);
   if (provaPerto) {
@@ -139,6 +166,6 @@ export function resumoSemanal(entrada) {
     recomendacao = 'Semana no ritmo. Mantenha o plano.';
   }
 
-  const fmt = s => `${s.slice(8, 10)}/${s.slice(5, 7)}`;
+  const fmt = (s: string): string => `${s.slice(8, 10)}/${s.slice(5, 7)}`;
   return { periodo: `${fmt(datas[0])} a ${fmt(datas[6])}`, cumpriu, pendente, recomendacao };
 }

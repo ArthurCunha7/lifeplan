@@ -1,24 +1,34 @@
-// src/LockScreen.jsx — tela de bloqueio (PIN / biometria) e ajustes de privacidade do aparelho.
-import { useState, useEffect, useRef } from "react";
+// src/LockScreen.tsx — tela de bloqueio (PIN / biometria) e ajustes de privacidade do aparelho.
+import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { Icon } from "./ui";
 import { supabase } from "./supabaseClient";
 import {
   PIN_LEN, MAX_FAILS, LOCK_AFTER_OPTIONS, getPrivacy, setPrivacy, clearLock,
-  savePin, verifyPin, bioAvailable, bioEnroll, bioUnlock,
+  savePin, verifyPin, bioAvailable, bioEnroll, bioUnlock, type VerifyPinResult,
 } from "./privacySettings";
 
-const card = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, margin: '0 16px 12px', padding: 16 };
-const labelStyle = { fontSize: 12, fontWeight: 700, color: 'var(--muted)', letterSpacing: .8 };
-const btnBase = { border: '1px solid var(--border)', borderRadius: 10, minHeight: 48, padding: '12px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', background: 'var(--surface2)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 };
+const card: CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, margin: '0 16px 12px', padding: 16 };
+const labelStyle: CSSProperties = { fontSize: 12, fontWeight: 700, color: 'var(--muted)', letterSpacing: 0.8 };
+const btnBase: CSSProperties = { border: '1px solid var(--border)', borderRadius: 10, minHeight: 48, padding: '12px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', background: 'var(--surface2)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 };
+
+export interface PinPadProps {
+  title: string;
+  subtitle?: string;
+  error?: string;
+  warn?: string;
+  disabled?: boolean;
+  onComplete: (pin: string) => void;
+  bioButton?: (() => void) | null;
+}
 
 // ── Teclado numérico com bolinhas ────────────────────────────────────────────
-export function PinPad({ title, subtitle, error, warn, disabled, onComplete, bioButton }) {
+export function PinPad({ title, subtitle, error, warn, disabled, onComplete, bioButton }: PinPadProps) {
   const [value, setValue] = useState('');
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   const valueRef = useRef('');
   valueRef.current = value;
 
-  function press(d) {
+  function press(d: string) {
     if (disabled) return;
     const next = (valueRef.current + d).slice(0, PIN_LEN);
     if (next.length === PIN_LEN) { setValue(''); onComplete(next); }
@@ -27,7 +37,7 @@ export function PinPad({ title, subtitle, error, warn, disabled, onComplete, bio
   function back() { if (!disabled) setValue(v => v.slice(0, -1)); }
 
   useEffect(() => {
-    const onKey = e => {
+    const onKey = (e: KeyboardEvent) => {
       if (ref.current && ref.current.closest('[inert]')) return; // outra tela está por cima
       if (e.key >= '0' && e.key <= '9') { press(e.key); e.preventDefault(); }
       else if (e.key === 'Backspace') { back(); e.preventDefault(); }
@@ -36,7 +46,24 @@ export function PinPad({ title, subtitle, error, warn, disabled, onComplete, bio
     return () => window.removeEventListener('keydown', onKey);
   }); // sem dependências: sempre usa o press atual
 
-  const key = { width: 72, height: 72, borderRadius: 36, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 26, fontFamily: 'var(--font-display)', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? .5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, touchAction: 'manipulation' };
+  const key: CSSProperties = {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    border: '1px solid var(--border)',
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    fontSize: 26,
+    fontFamily: 'var(--font-display)',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.5 : 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    touchAction: 'manipulation',
+  };
+
   return (
     <div ref={ref} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
       <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 500, color: 'var(--text)', textAlign: 'center' }}>{title}</div>
@@ -69,7 +96,7 @@ export function PrivacyCover() {
 }
 
 // ── Tela de bloqueio ─────────────────────────────────────────────────────────
-export function LockScreen({ onUnlock, onForgot, onWipe }) {
+export function LockScreen({ onUnlock, onForgot, onWipe }: { onUnlock: () => void; onForgot: () => void; onWipe: () => void }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [until, setUntil] = useState(() => getPrivacy().lockedUntil);
@@ -88,11 +115,11 @@ export function LockScreen({ onUnlock, onForgot, onWipe }) {
   }
   useEffect(() => { if (hasBio) tryBio(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function submit(pin) {
+  async function submit(pin: string) {
     if (busy || waitLeft > 0) return;
     setBusy(true);
-    let r;
-    try { r = await verifyPin(pin); } catch (e) { setBusy(false); setError(e.message || 'Não foi possível conferir o PIN.'); return; }
+    let r: VerifyPinResult;
+    try { r = await verifyPin(pin); } catch (e) { setBusy(false); setError(e instanceof Error && e.message ? e.message : 'Não foi possível conferir o PIN.'); return; }
     setBusy(false);
     if (r.ok) { onUnlock(); return; }
     if (r.reason === 'wipe') { onWipe(); return; }
@@ -123,10 +150,10 @@ export function LockScreen({ onUnlock, onForgot, onWipe }) {
 }
 
 // ── Interruptor acessível ────────────────────────────────────────────────────
-function Switch({ checked, onChange, label, disabled }) {
+function Switch({ checked, onChange, label, disabled }: { checked: boolean; onChange: (next: boolean) => void; label: string; disabled?: boolean }) {
   return (
     <button role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={() => onChange(!checked)}
-      style={{ width: 56, height: 44, background: 'none', border: 'none', padding: 0, cursor: disabled ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: disabled ? .5 : 1 }}>
+      style={{ width: 56, height: 44, background: 'none', border: 'none', padding: 0, cursor: disabled ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: disabled ? 0.5 : 1 }}>
       <span style={{ width: 52, height: 32, borderRadius: 16, border: '1px solid var(--border)', background: checked ? 'var(--accent)' : 'var(--surface2)', position: 'relative', display: 'block', transition: 'background .15s' }}>
         <span style={{ position: 'absolute', top: 3, left: checked ? 23 : 3, width: 24, height: 24, borderRadius: 12, background: checked ? 'var(--on-accent)' : 'var(--muted)', transition: 'left .15s' }} />
       </span>
@@ -134,24 +161,28 @@ function Switch({ checked, onChange, label, disabled }) {
   );
 }
 
+type PinFlowMode = 'create' | 'change' | 'disable';
+type PinFlowStep = 'old' | 'new' | 'confirm';
+
 // ── Fluxos de PIN dentro de uma janela (criar, alterar, desligar) ────────────
-function PinFlow({ mode, onClose, onDone, onWipe }) {
+function PinFlow({ mode, onClose, onDone, onWipe }: { mode: PinFlowMode; onClose: () => void; onDone: () => void; onWipe: () => void }) {
   // create: new → confirm | change: old → new → confirm | disable: old
-  const [step, setStep] = useState(mode === 'create' ? 'new' : 'old');
+  const [step, setStep] = useState<PinFlowStep>(mode === 'create' ? 'new' : 'old');
   const [first, setFirst] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const titles = { old: 'Digite seu PIN atual', new: mode === 'create' ? 'Crie um PIN' : 'Crie o novo PIN', confirm: 'Repita o PIN' };
-  const subs = { old: mode === 'disable' ? 'Para desligar o bloqueio.' : 'Para continuar.', new: `${PIN_LEN} dígitos. Evite datas e sequências.`, confirm: 'Digite de novo para confirmar.' };
+  const titles: Record<PinFlowStep, string> = { old: 'Digite seu PIN atual', new: mode === 'create' ? 'Crie um PIN' : 'Crie o novo PIN', confirm: 'Repita o PIN' };
+  const subs: Record<PinFlowStep, string> = { old: mode === 'disable' ? 'Para desligar o bloqueio.' : 'Para continuar.', new: `${PIN_LEN} dígitos. Evite datas e sequências.`, confirm: 'Digite de novo para confirmar.' };
 
-  async function onComplete(pin) {
+  async function onComplete(pin: string) {
     setError('');
     if (step === 'old') {
       setBusy(true);
-      let r; try { r = await verifyPin(pin); } catch (e) { setBusy(false); setError(e.message); return; }
+      let r: VerifyPinResult;
+      try { r = await verifyPin(pin); } catch (e) { setBusy(false); setError(e instanceof Error ? e.message : 'Erro ao validar PIN'); return; }
       setBusy(false);
-      if (r.reason === 'wipe') { onWipe(); return; }
+      if (!r.ok && r.reason === 'wipe') { onWipe(); return; }
       if (!r.ok) { setError(r.reason === 'wait' ? `Aguarde ${Math.ceil(r.waitMs / 1000)} s para tentar de novo.` : 'PIN incorreto.'); return; }
       if (mode === 'disable') { clearLock(); onDone(); return; }
       setStep('new');
@@ -161,7 +192,7 @@ function PinFlow({ mode, onClose, onDone, onWipe }) {
     } else {
       if (pin !== first) { setError('Os PINs não são iguais. Comece de novo.'); setFirst(''); setStep('new'); return; }
       setBusy(true);
-      try { await savePin(pin); onDone(); } catch (e) { setError(e.message || 'Não foi possível salvar o PIN.'); }
+      try { await savePin(pin); onDone(); } catch (e) { setError(e instanceof Error && e.message ? e.message : 'Não foi possível salvar o PIN.'); }
       setBusy(false);
     }
   }
@@ -177,9 +208,9 @@ function PinFlow({ mode, onClose, onDone, onWipe }) {
 }
 
 // ── Cartão de ajustes (Perfil) ───────────────────────────────────────────────
-export function LockSettings({ userId, onLockNow, onWipe }) {
+export function LockSettings({ userId, onLockNow, onWipe }: { userId: string; onLockNow: () => void; onWipe: () => void }) {
   const [priv, setPriv] = useState(getPrivacy());
-  const [flow, setFlow] = useState(null);      // 'create' | 'change' | 'disable' | null
+  const [flow, setFlow] = useState<PinFlowMode | null>(null);
   const [bioOk, setBioOk] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -187,23 +218,23 @@ export function LockSettings({ userId, onLockNow, onWipe }) {
 
   useEffect(() => { bioAvailable().then(setBioOk); }, []);
 
-  async function toggleBio(on) {
+  async function toggleBio(on: boolean) {
     setErr(''); setMsg('');
     if (!on) { setPrivacy({ bioCredId: null }); refresh(); return; }
     try {
-      let email = null;
+      let email: string | null | undefined = null;
       try { const { data: { user } } = await supabase.auth.getUser(); email = user && user.email; } catch { /* sem e-mail: segue */ }
       await bioEnroll(userId, email);
       setMsg('Biometria ativada. O PIN continua valendo como alternativa.');
     } catch (e) {
-      setErr(e && e.name === 'NotAllowedError' ? 'Cadastro cancelado ou negado pelo aparelho.' : 'Não foi possível ativar a biometria neste aparelho.');
+      setErr(e instanceof DOMException && e.name === 'NotAllowedError' ? 'Cadastro cancelado ou negado pelo aparelho.' : 'Não foi possível ativar a biometria neste aparelho.');
     }
     refresh();
   }
 
-  const row = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 48 };
-  const rowText = { fontSize: 15, color: 'var(--text)' };
-  const hint = { fontSize: 13, color: 'var(--muted)', lineHeight: 1.45, marginTop: 2 };
+  const row: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 48 };
+  const rowText: CSSProperties = { fontSize: 15, color: 'var(--text)' };
+  const hint: CSSProperties = { fontSize: 13, color: 'var(--muted)', lineHeight: 1.45, marginTop: 2 };
 
   return (
     <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 10 }}>

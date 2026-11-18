@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { FinanceState } from '../types';
 
 // Importa o MESMO arquivo usado de verdade pelo app (public/finance-formulas.js)
 // — não uma cópia. Ele se anexa a window.FinanceFormulas quando carregado.
@@ -8,14 +9,9 @@ const {
   cfComputeEntradasTotal,
   cfComputeGastoCategoria,
   cfGetTableTotal,
-} = window.FinanceFormulas;
+} = window.FinanceFormulas!;
 
-// Estas funções são a fonte única de verdade tanto da prévia na Início
-// quanto do app de Finanças de verdade. Já tivemos um bug real onde duas
-// cópias divergentes existiam — estes testes existem pra isso nunca mais
-// passar despercebido.
-
-function makeState(overrides = {}) {
+function makeState(overrides: Partial<FinanceState> = {}): FinanceState {
   return {
     profiles: ['Arthur', 'Maria'],
     faturas: [],
@@ -65,8 +61,6 @@ describe('cfComputeEntradasTotal', () => {
       faturas: [{ id: 'f1', rows: [{ id: 'r1', profileIdx: 0, value: 100 }] }],
       payments: [{ profileIdx: 0, value: 60 }],
     });
-    // perfil 0: pago=60, gasto=100 -> (60-100)*-1 = 40
-    // perfil 1: sem gasto nem pagamento -> 0
     expect(cfComputeEntradasTotal(state)).toBe(40);
   });
 
@@ -113,8 +107,7 @@ describe('cfComputeGastoCategoria', () => {
 describe('cfGetTableTotal — cada tipo de tabela do Balanço Mensal', () => {
   it('tabela "lancamentos" nunca soma pro saldo (é só informativa)', () => {
     const state = makeState();
-    const t = { type: 'lancamentos' };
-    expect(cfGetTableTotal(state, t)).toBe(0);
+    expect(cfGetTableTotal(state, { type: 'lancamentos' })).toBe(0);
   });
 
   it('tabela "entradas" usa a fórmula de pago-menos-gasto por perfil', () => {
@@ -122,7 +115,6 @@ describe('cfGetTableTotal — cada tipo de tabela do Balanço Mensal', () => {
       faturas: [{ id: 'f1', rows: [{ profileIdx: 0, value: 100 }] }],
       payments: [{ profileIdx: 0, value: 100 }],
     });
-    // pago == gasto -> saldo zero
     expect(cfGetTableTotal(state, { type: 'entradas' })).toBe(0);
   });
 
@@ -133,10 +125,10 @@ describe('cfGetTableTotal — cada tipo de tabela do Balanço Mensal', () => {
     const t = {
       type: 'planejamento',
       rows: [
-        { categoria: 'Restaurantes', profileIdx: 0, valor: 200 }, // restante = 200-50 = 150
-        { categoria: 'Academia', profileIdx: 0, valor: 100 },      // sem gasto -> restante = 100
-        { categoria: '', profileIdx: 0, valor: 999 },              // sem categoria -> ignorada
-        { categoria: 'Uber', profileIdx: null, valor: 999 },       // sem perfil -> ignorada
+        { categoria: 'Restaurantes', profileIdx: 0, valor: 200 },
+        { categoria: 'Academia', profileIdx: 0, valor: 100 },
+        { categoria: '', profileIdx: 0, valor: 999 },
+        { categoria: 'Uber', profileIdx: null, valor: 999 },
       ],
     };
     expect(cfGetTableTotal(state, t)).toBe(250);
@@ -146,8 +138,8 @@ describe('cfGetTableTotal — cada tipo de tabela do Balanço Mensal', () => {
     const state = makeState({
       faturas: [{ id: 'f1', rows: [{ profileIdx: 0, value: 120, category: 'Restaurantes' }] }],
       pixRows: [
-        { id: 'p1', profileIdx: 0, value: 100, category: 'Restaurantes' }, // total = 220 > 200 (estourou -> reserva 0)
-        { id: 'p2', profileIdx: 0, value: 40, category: 'Uber' },          // restante = 100 - 40 = 60
+        { id: 'p1', profileIdx: 0, value: 100, category: 'Restaurantes' },
+        { id: 'p2', profileIdx: 0, value: 40, category: 'Uber' },
       ],
     });
     const t = {
@@ -174,7 +166,7 @@ describe('cfGetTableTotal — cada tipo de tabela do Balanço Mensal', () => {
     const state = makeState();
     const t = {
       type: 'custom',
-      columns: [{ id: 'nome', type: 'text' }, { id: 'val', type: 'number' }],
+      columns: [{ id: 'nome', type: 'text' as const }, { id: 'val', type: 'number' as const }],
       rows: [
         { values: { nome: 'Aluguel', val: 1200 } },
         { values: { nome: 'Luz', val: 180 } },
@@ -185,7 +177,7 @@ describe('cfGetTableTotal — cada tipo de tabela do Balanço Mensal', () => {
 
   it('tabela "custom" sem coluna numérica retorna 0 (não quebra)', () => {
     const state = makeState();
-    const t = { type: 'custom', columns: [{ id: 'nome', type: 'text' }], rows: [{ values: { nome: 'x' } }] };
+    const t = { type: 'custom', columns: [{ id: 'nome', type: 'text' as const }], rows: [{ values: { nome: 'x' } }] };
     expect(cfGetTableTotal(state, t)).toBe(0);
   });
 });

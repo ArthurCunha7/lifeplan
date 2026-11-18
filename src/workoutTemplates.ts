@@ -1,12 +1,48 @@
 // Modelos de treino prontos (tela "Meus Treinos"). Dados + uma função pura que monta o resultado.
 // Cada modelo descreve a SEMANA INTEIRA (segunda a domingo), inclusive os dias de descanso.
 // Os exercícios vão um por linha, no mesmo formato do formulário de treino do app.
+import type { MealPlanDay, WorkoutKind, WorkoutProfile } from './types';
 
-export const DESCANSO = { tipo: 'rest', rotulo: 'Descanso', exercicios: 'Nenhum treino – foco em sono e recuperação' };
-const COR = { strength: 'var(--success)', cardio: 'var(--info)', rest: 'var(--muted)' };
-const forca = (rotulo, linhas) => ({ tipo: 'strength', rotulo, exercicios: linhas.join('\n') });
+export interface DiaModelo {
+  tipo: WorkoutKind;
+  rotulo: string;
+  exercicios: string;
+}
 
-export const MODELOS = [
+export interface ModeloTreino {
+  id: string;
+  nome: string;
+  resumo: string;
+  fonte?: string;
+  notas?: string[];
+  semana: DiaModelo[];
+}
+
+export interface ResultadoMontarModelo {
+  plan: MealPlanDay[];
+  profiles: WorkoutProfile[];
+  meta: number;
+}
+
+export const DESCANSO: DiaModelo = {
+  tipo: 'rest',
+  rotulo: 'Descanso',
+  exercicios: 'Nenhum treino – foco em sono e recuperação',
+};
+
+const COR: Record<WorkoutKind, string> = {
+  strength: 'var(--success)',
+  cardio: 'var(--info)',
+  rest: 'var(--muted)',
+};
+
+const forca = (rotulo: string, linhas: string[]): DiaModelo => ({
+  tipo: 'strength',
+  rotulo,
+  exercicios: linhas.join('\n'),
+});
+
+export const MODELOS: ModeloTreino[] = [
   {
     id: 'abc',
     nome: 'ABC',
@@ -111,15 +147,23 @@ export const MODELOS = [
   },
 ];
 
-export const modeloPorId = id => MODELOS.find(m => m.id === id) || null;
-export const treinosDeForca = modelo => modelo.semana.filter(d => d.tipo === 'strength').length;
+export const modeloPorId = (id: string | null | undefined): ModeloTreino | null =>
+  MODELOS.find(m => m.id === id) || null;
+
+export const treinosDeForca = (modelo: ModeloTreino): number =>
+  modelo.semana.filter(d => d.tipo === 'strength').length;
 
 // Monta o resultado de aplicar um modelo:
 //   plan      → os 7 dias do plano atual, com tipo, nome e exercícios do modelo (mantém o resto de cada dia)
 //   profiles  → lista de treinos salvos, com um treino por nome do modelo (atualiza se já existir, senão cria)
 //   meta      → treinos de musculação por semana do modelo
 // `agora` só serve para gerar ids estáveis nos testes.
-export function montarModelo(modelo, planAtual, perfisAtuais, agora = Date.now()) {
+export function montarModelo(
+  modelo: ModeloTreino,
+  planAtual: MealPlanDay[] | null | undefined,
+  perfisAtuais: WorkoutProfile[] | null | undefined,
+  agora: number = Date.now()
+): ResultadoMontarModelo {
   const plan = (planAtual || []).map((d, i) => {
     const m = modelo.semana[i];
     return m ? { ...d, type: m.tipo, typeLabel: m.rotulo, exercises: m.exercicios } : d;

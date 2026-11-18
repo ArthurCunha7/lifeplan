@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { MealPlanDay, UserPlanDataBlob } from './types';
 
 // ── Configuração ─────────────────────────────────────────────────────────────
 // Crie um projeto gratuito em https://supabase.com, depois em
@@ -26,7 +27,7 @@ if (typeof window !== 'undefined') {
 }
 
 // ── Autenticação ─────────────────────────────────────────────────────────────
-export async function signUp({ email, password, name }) {
+export async function signUp({ email, password, name }: { email: string; password: string; name?: string }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -43,7 +44,7 @@ export async function signUp({ email, password, name }) {
   return data;
 }
 
-export async function signIn({ email, password }) {
+export async function signIn({ email, password }: { email: string; password: string }) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
@@ -58,19 +59,19 @@ export async function signInWithGoogle() {
   return data;
 }
 
-export async function signOut() {
+export async function signOut(): Promise<void> {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
 
-export async function resetPassword(email) {
+export async function resetPassword(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: window.location.origin,
   });
   if (error) throw error;
 }
 
-export async function updatePassword(newPassword) {
+export async function updatePassword(newPassword: string): Promise<void> {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw error;
 }
@@ -78,28 +79,40 @@ export async function updatePassword(newPassword) {
 // ── Plano (nutrição + treino) ────────────────────────────────────────────────
 // Deduplica leituras simultâneas de user_plans.plan_data (ex.: HomeDashboard +
 // hooks de água/agenda/horários montando juntos disparam apenas 1 SELECT em vez de 5).
-let _planCache = { userId: null, at: 0, promise: null, data: null };
+interface PlanCacheEntry {
+  userId: string | null;
+  at: number;
+  promise: Promise<UserPlanDataBlob | null> | null;
+  data: UserPlanDataBlob | null;
+}
+
+let _planCache: PlanCacheEntry = { userId: null, at: 0, promise: null, data: null };
 const PLAN_CACHE_TTL_MS = 2500;
 
-export function invalidateUserPlanCache() {
+export function invalidateUserPlanCache(): void {
   _planCache = { userId: null, at: 0, promise: null, data: null };
 }
 
-export async function fetchUserPlanData(userId, { fresh = false } = {}) {
+export async function fetchUserPlanData(
+  userId: string | null | undefined,
+  { fresh = false }: { fresh?: boolean } = {}
+): Promise<UserPlanDataBlob | null> {
   if (!userId) return null;
   const now = Date.now();
   if (!fresh && _planCache.userId === userId) {
     if (_planCache.promise) return _planCache.promise;
     if (now - _planCache.at < PLAN_CACHE_TTL_MS) return _planCache.data;
   }
-  const p = supabase
-    .from('user_plans')
-    .select('plan_data')
-    .eq('user_id', userId)
-    .maybeSingle()
+  const p: Promise<UserPlanDataBlob | null> = Promise.resolve(
+    supabase
+      .from('user_plans')
+      .select('plan_data')
+      .eq('user_id', userId)
+      .maybeSingle()
+  )
     .then(({ data, error }) => {
       if (error) throw error;
-      const pd = data?.plan_data || null;
+      const pd = (data?.plan_data as UserPlanDataBlob | null) || null;
       if (_planCache.promise === p) {
         _planCache = { userId, at: Date.now(), promise: null, data: pd };
       }
@@ -113,19 +126,19 @@ export async function fetchUserPlanData(userId, { fresh = false } = {}) {
   return p;
 }
 
-export function extractPlanDays(pd) {
+export function extractPlanDays(pd: UserPlanDataBlob | null | undefined): MealPlanDay[] | null {
   if (!pd) return null;
   const days = Object.keys(pd)
     .filter(k => /^\d+$/.test(k))
-    .sort((a, b) => a - b)
-    .map(k => pd[k]);
+    .sort((a, b) => Number(a) - Number(b))
+    .map(k => pd[k] as MealPlanDay);
   return days.length ? days : null;
 }
 
-// O App.jsx guarda o array de 7 dias espalhado como chaves numéricas dentro
+// O App guarda o array de 7 dias espalhado como chaves numéricas dentro
 // de plan_data (junto com "shopping" e "workoutProfiles"), então aqui a gente
 // reconstrói o array na leitura e preserva os outros campos na escrita.
-export async function loadUserPlan(userId) {
+export async function loadUserPlan(userId: string | null | undefined): Promise<MealPlanDay[] | null> {
   try {
     const pd = await fetchUserPlanData(userId);
     return extractPlanDays(pd);
@@ -134,12 +147,10 @@ export async function loadUserPlan(userId) {
   }
 }
 
-export async function saveUserPlan(userId, plan) {
+export async function saveUserPlan(userId: string, plan: MealPlanDay[]): Promise<void> {
   // Preserva QUALQUER campo extra já salvo em plan_data (shopping,
   // workoutProfiles, workoutGoalPerWeek, workoutLog, etc.) e apenas
-  // sobrescreve os índices numéricos (os 7 dias do plano). Antes este
-  // merge só preservava "shopping" e "workoutProfiles" manualmente, o que
-  // apagava silenciosamente qualquer novo campo adicionado depois.
+  // sobrescreve os índices numéricos (os 7 dias do plano).
   invalidateUserPlanCache();
   const { data: existing, error: readErr } = await supabase
     .from('user_plans')

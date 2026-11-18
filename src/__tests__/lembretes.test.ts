@@ -4,7 +4,7 @@ import {
   proximoVencimento,
   vencimentosProximos,
   textoVencimento,
-} from '../lembretes.js';
+} from '../lembretes';
 
 describe('lembretes (fonte única reexportada de supabase/functions/_shared/vencimentos.js)', () => {
   it('extrai o dia do vencimento de textos livres válidos', () => {

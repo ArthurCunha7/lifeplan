@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { searchTACO, computeFoodMetrics } from '../App.jsx';
+import { searchTACO, computeFoodMetrics } from '../App';
 
 describe('searchTACO', () => {
   it('retorna vazio para busca muito curta (menos de 2 letras)', () => {
@@ -32,12 +32,12 @@ describe('computeFoodMetrics', () => {
     // 500g por R$10 => R$20/kg
     const result = computeFoodMetrics({ food, qty: 500, price: 10 });
     expect(result).not.toBeNull();
-    expect(result.pricePerKg).toBeCloseTo(20, 5);
+    expect(result!.pricePerKg).toBeCloseTo(20, 5);
     // 500g = fator 5 -> 1000kcal totais, 100g proteína
-    expect(result.totalKcal).toBeCloseTo(1000, 5);
-    expect(result.totalP).toBeCloseTo(100, 5);
-    expect(result.kcalPerReal).toBeCloseTo(100, 5); // 1000kcal / R$10
-    expect(result.proteinPerReal).toBeCloseTo(10, 5); // 100g / R$10
+    expect(result!.totalKcal).toBeCloseTo(1000, 5);
+    expect(result!.totalP).toBeCloseTo(100, 5);
+    expect(result!.kcalPerReal).toBeCloseTo(100, 5); // 1000kcal / R$10
+    expect(result!.proteinPerReal).toBeCloseTo(10, 5); // 100g / R$10
   });
 
   it('retorna null quando falta alimento, preço ou quantidade', () => {

@@ -1,5 +1,5 @@
-// src/Notifications.jsx — sino de avisos (tela Início) e configuração de push (Perfil).
-import { useState, useEffect, useRef, useCallback } from "react";
+// src/Notifications.tsx — sino de avisos (tela Início) e configuração de push (Perfil).
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
 import { Icon } from "./ui";
 import { getPrivacy } from "./privacySettings";
 import {
@@ -7,30 +7,31 @@ import {
   sendTestNotification, timeAgo, brl, noticeAmount, getPushStatus, enablePush, disablePush,
   ensureServiceWorker,
 } from "./notificationsApi";
+import type { AppNotification, PushStatus, ScreenId } from "./types";
 
-const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, margin: "0 16px 12px", padding: 16 };
-const labelStyle = { fontSize: 12, fontWeight: 700, color: "var(--muted)", letterSpacing: 0.8 };
-const ghostBtn = { background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, minHeight: 44, padding: "10px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-body)" };
-const mainBtn = { ...ghostBtn, background: "var(--accent)", color: "var(--on-accent)", border: "none" };
+const card: CSSProperties = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, margin: "0 16px 12px", padding: 16 };
+const labelStyle: CSSProperties = { fontSize: 12, fontWeight: 700, color: "var(--muted)", letterSpacing: 0.8 };
+const ghostBtn: CSSProperties = { background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, minHeight: 44, padding: "10px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-body)" };
+const mainBtn: CSSProperties = { ...ghostBtn, background: "var(--accent)", color: "var(--on-accent)", border: "none" };
 
 // Aparecem para quem toca em "Ativar push": traduz o motivo da falha
-function pushErrorText(e) {
-  const m = e && e.message;
+function pushErrorText(e: unknown): string {
+  const m = e instanceof Error ? e.message : "";
   if (m === "permissao-negada") return "Você não permitiu as notificações. Libere nas configurações do navegador para o site.";
   if (m === "push-indisponivel") return "Push não está disponível neste navegador.";
   return "Não foi possível ativar o push agora. Tente de novo em instantes.";
 }
 
-export function NotificationBell({ userId, onNavigate }) {
-  const [items, setItems] = useState([]);
+export function NotificationBell({ userId, onNavigate }: { userId: string | null; onNavigate?: (screen: ScreenId) => void }) {
+  const [items, setItems] = useState<AppNotification[]>([]);
   const [open, setOpen] = useState(false);
   const [showValues, setShowValues] = useState(() => !getPrivacy().hideValues);
-  const [pushStatus, setPushStatus] = useState(null);
+  const [pushStatus, setPushStatus] = useState<PushStatus | null>(null);
   const [pushErr, setPushErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadErr, setLoadErr] = useState(false);
-  const btnRef = useRef(null);
-  const closeRef = useRef(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
 
   const load = useCallback(async () => {
     try { setItems(await fetchNotifications()); setLoadErr(false); } catch (e) { console.error("Avisos:", e); setLoadErr(true); }
@@ -45,7 +46,7 @@ export function NotificationBell({ userId, onNavigate }) {
     const onVis = () => { if (document.visibilityState === "visible") { load(); syncVencimentos(userId).then((n) => { if (n) load(); }); } };
     document.addEventListener("visibilitychange", onVis);
     const t = setInterval(load, 120000);
-    const onSw = (e) => {
+    const onSw = (e: MessageEvent) => {
       if (e.data && e.data.lifeplanPush) load();
       if (e.data && e.data.lifeplanOpenNotifications) { load(); setOpen(true); }
     };
@@ -60,7 +61,7 @@ export function NotificationBell({ userId, onNavigate }) {
     if (!open) return undefined;
     setShowValues(!getPrivacy().hideValues);
     getPushStatus().then(setPushStatus);
-    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("keydown", onKey);
     setTimeout(() => closeRef.current && closeRef.current.focus(), 0);
     return () => { document.removeEventListener("keydown", onKey); if (btnRef.current) btnRef.current.focus(); };
@@ -68,7 +69,7 @@ export function NotificationBell({ userId, onNavigate }) {
 
   const unread = items.filter((n) => !n.read_at).length;
 
-  async function openItem(n) {
+  async function openItem(n: AppNotification) {
     if (!n.read_at) {
       const now = new Date().toISOString();
       setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read_at: now } : x)));
@@ -78,11 +79,13 @@ export function NotificationBell({ userId, onNavigate }) {
     if (onNavigate) onNavigate("financas");
   }
   async function readAll() {
+    if (!userId) return;
     const now = new Date().toISOString();
     setItems((prev) => prev.map((x) => (x.read_at ? x : { ...x, read_at: now })));
     markAllRead(userId).catch((e) => console.error("Marcar todos lidos:", e));
   }
   async function turnOnPush() {
+    if (!userId) return;
     setBusy(true); setPushErr("");
     try { await enablePush(userId); } catch (e) { setPushErr(pushErrorText(e)); }
     setPushStatus(await getPushStatus()); setBusy(false);
@@ -157,8 +160,8 @@ export function NotificationBell({ userId, onNavigate }) {
 }
 
 // Cartão do Perfil: liga/desliga o push NESTE aparelho e envia um aviso de teste
-export function NotificationSettings({ userId }) {
-  const [status, setStatus] = useState(null);
+export function NotificationSettings({ userId }: { userId: string }) {
+  const [status, setStatus] = useState<PushStatus | null>(null);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -177,8 +180,8 @@ export function NotificationSettings({ userId }) {
     catch { setErr("Não consegui enviar o teste. Falta rodar o SQL das notificações no Supabase?"); }
   }
 
-  const hint = { fontSize: 13, color: "var(--muted)", lineHeight: 1.45 };
-  const texts = {
+  const hint: CSSProperties = { fontSize: 13, color: "var(--muted)", lineHeight: 1.45 };
+  const texts: Partial<Record<PushStatus, string>> = {
     "nao-configurado": "O push ainda não foi configurado neste app (falta a chave VAPID). Os avisos dentro do app, no sino do Início, já funcionam.",
     "bloqueado": "As notificações estão bloqueadas para este site. Libere nas permissões do navegador para ativar o push.",
     "ios-instalar": "No iPhone, o push só funciona com o app instalado: toque em Compartilhar → Adicionar à Tela de Início e abra o LifePlan por lá.",
@@ -188,7 +191,7 @@ export function NotificationSettings({ userId }) {
     <div style={{ ...card, display: "flex", flexDirection: "column", gap: 10 }} id="notif-settings">
       <div style={labelStyle}>NOTIFICAÇÕES</div>
       <div style={hint}>Você é avisado quando alguém faz um lançamento para você, faz um fechamento ou marca um fechamento como pago, entra na sua família ou quando uma fatura está perto de vencer. Os avisos nunca mostram valores no texto.</div>
-      {texts[status] && <div style={hint}>{texts[status]}</div>}
+      {status && texts[status] && <div style={hint}>{texts[status]}</div>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {status === "desligado" && <button onClick={on} disabled={busy} style={mainBtn}>Ativar push neste aparelho</button>}
         {status === "ligado" && <button onClick={off} disabled={busy} style={ghostBtn}>Desligar push neste aparelho</button>}
