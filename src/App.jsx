@@ -10,7 +10,7 @@ import { resumoSemanal } from "./weeklySummary";
 import { cruzarSaudeDinheiro } from "./crossInsights";
 import { MODELOS, treinosDeForca, montarModelo } from "./workoutTemplates";
 import { dividirTitulo, lerExercicios, rotuloSemana, diaDaSemana } from "./workoutFormat";
-import { supabase, signUp, signIn, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
+import { supabase, signUp, signIn, signInWithGoogle, resetPassword, updatePassword, loadUserPlan, saveUserPlan, fetchUserPlanData, extractPlanDays, invalidateUserPlanCache } from "./supabaseClient";
 
 // Tema compartilhado (cores + fontes), o mesmo arquivo usado pelas páginas em
 // iframe. Se preferir, mova esse <link> para o index.html para evitar um
@@ -154,8 +154,13 @@ const S={
 // ── AUTH PAGES ────────────────────────────────────────────────────────────────
 function AuthWrap({children}){
   return(
-    <div className="narrow-tab" style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+    <div className="narrow-tab" style={{minHeight:'100vh',background:'var(--bg)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20,gap:14}}>
       <div style={{width:'100%',maxWidth:400,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:20,padding:32}}>{children}</div>
+      <div style={{display:'flex',gap:16,fontSize:13,color:'var(--muted)'}}>
+        <a href="/privacy.html" target="_blank" rel="noopener noreferrer" style={{color:'var(--muted)',textDecoration:'underline'}}>Política de Privacidade</a>
+        <span>·</span>
+        <a href="/terms.html" target="_blank" rel="noopener noreferrer" style={{color:'var(--muted)',textDecoration:'underline'}}>Termos de Serviço</a>
+      </div>
     </div>
   );
 }
@@ -462,7 +467,8 @@ function ProfilePage({userId,initialProfile,onSave,onBack,onLogout,onAccountDele
     if(!form.weight||!form.height||!form.age){alert('Preencha peso, altura e idade');return;}
     setLoading(true);
     try{
-      await supabase.from('profiles').upsert({id:userId,weight:+form.weight,height:+form.height,age:+form.age,sex:form.sex,activity:form.activity,goal:form.goal});
+      const {error:profErr}=await supabase.from('profiles').upsert({id:userId,weight:+form.weight,height:+form.height,age:+form.age,sex:form.sex,activity:form.activity,goal:form.goal});
+      if(profErr) throw profErr;
       const newPlan=generatePlan({weight:+form.weight,height:+form.height,age:+form.age,sex:form.sex,activity:form.activity,goal:form.goal});
       // Preserva os treinos que o usuário já tinha aplicado a cada dia — sem
       // isso, editar o perfil (mesmo só o peso) apagava todos os treinos
@@ -478,7 +484,7 @@ function ProfilePage({userId,initialProfile,onSave,onBack,onLogout,onAccountDele
           });
         }
       }catch{}
-      await saveUserPlan(userId,mergedPlan);
+      await flushAndSaveUserPlan(userId,mergedPlan);
       setDone(true);setTimeout(()=>onSave(mergedPlan,form),1200);
     }catch(e){alert('Erro: '+e.message);}finally{setLoading(false);}
   }
@@ -972,10 +978,12 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
   useEffect(()=>{
     if(!userId) return;
     const flushNow=()=>requestPlanDataSave(userId);
+    const onVis=()=>{if(document.visibilityState==='hidden')flushNow();};
     window.addEventListener('pagehide',flushNow);
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushNow();});
+    document.addEventListener('visibilitychange',onVis);
     return()=>{
       window.removeEventListener('pagehide',flushNow);
+      document.removeEventListener('visibilitychange',onVis);
     };
   },[userId]);
 
@@ -996,25 +1004,20 @@ function MealPlanApp({onLogout,userId,onOpenProfile,onHome,initialTab}){
     return ()=>unregs.forEach(u=>u());
   },[userId,dataLoaded]);
 
-  // Carrega plano e lista do Supabase. Só depois que os DOIS carregamentos
-  // terminarem é que os efeitos de auto-save abaixo são liberados — sem
-  // isso, se a internet demorasse um pouco, o auto-save de compras/treinos
-  // disparava com os valores padrão (vazios) ANTES do carregamento real
-  // terminar, sobrescrevendo os treinos/compras já salvos com nada.
+  // Carrega plano e lista do Supabase numa única leitura compartilhada. Só depois
+  // que o carregamento terminar é que os efeitos de auto-save abaixo são liberados.
   useEffect(()=>{
     setDataLoaded(false);
-    let doneA=false,doneB=false;
-    const checkDone=()=>{ if(doneA&&doneB) setDataLoaded(true); };
-    loadUserPlan(userId).then(saved=>{
-      if(saved&&saved.length) setPlan(saved); else setPlan([]);
-    }).catch(()=>setPlan([])).finally(()=>{doneA=true;checkDone();});
-    // Carrega lista de compras e perfis de treino
-    supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle()
-      .then(({data})=>{
-        if(data?.plan_data?.shopping) setShopping(data.plan_data.shopping);
-        if(data?.plan_data?.workoutProfiles) setWorkoutProfiles(data.plan_data.workoutProfiles);
-        if(data?.plan_data?.workoutGoalPerWeek) setWorkoutGoal(data.plan_data.workoutGoalPerWeek);
-      }).finally(()=>{doneB=true;checkDone();});
+    fetchUserPlanData(userId)
+      .then(pd=>{
+        const saved=extractPlanDays(pd);
+        setPlan(saved&&saved.length?saved:[]);
+        if(pd?.shopping) setShopping(pd.shopping);
+        if(pd?.workoutProfiles) setWorkoutProfiles(pd.workoutProfiles);
+        if(pd?.workoutGoalPerWeek) setWorkoutGoal(pd.workoutGoalPerWeek);
+      })
+      .catch(()=>setPlan([]))
+      .finally(()=>setDataLoaded(true));
   },[userId]);
 
   // Pede o salvamento a cada mudança do plano (a fila central faz a escrita
@@ -1520,7 +1523,36 @@ function useGoogleCalendar(){
 // mesmo tempo, e cada escrita sempre usa o valor mais atual de cada campo
 // (via "getters" que leem refs sempre atualizadas), nunca uma cópia presa
 // de quando foi agendada.
-const planDataQueue = { pending:false, dirty:false, userId:null, getters:{} };
+const planDataQueue = { pending:false, dirty:false, userId:null, getters:{}, inFlight:null };
+
+// Chaves de cache/tokens da conta logada neste aparelho — apagadas ao sair da
+// conta, ao errar o PIN demais ou ao entrar com outra conta no mesmo navegador
+// (mantendo preferências do aparelho como tema claro/escuro e hideValues).
+const USER_LOCAL_KEYS=[
+  'cf_state','cf_state_uid',
+  'studyApp','studyApp_uid',
+  'habitsAppV4','habitsAppV4_uid','habitsAppV3','habitsAppV2','habitsAppV1',
+  'water_v1','water_v1_uid',
+  'agenda_manual','agenda_manual_uid',
+  'timetable_v2','timetable_v2_uid',
+  'gcal_token','gcal_token_expiry',
+  'lifeplan_last_uid',
+];
+function clearUserLocalData(){
+  planDataQueue.userId=null;
+  planDataQueue.dirty=false;
+  invalidateUserPlanCache();
+  try{ USER_LOCAL_KEYS.forEach(k=>localStorage.removeItem(k)); }catch{}
+  try{ sessionStorage.removeItem('cf_cloud_synced'); sessionStorage.removeItem('lifeplan_screen'); }catch{}
+}
+function ensureUserLocalScope(uid){
+  if(!uid) return;
+  try{
+    const prev=localStorage.getItem('lifeplan_last_uid');
+    if(prev&&prev!==uid) clearUserLocalData();
+    localStorage.setItem('lifeplan_last_uid',uid);
+  }catch{}
+}
 
 function registerPlanDataField(key,getter){
   planDataQueue.getters[key]=getter;
@@ -1532,7 +1564,14 @@ function requestPlanDataSave(userId){
   planDataQueue.userId=userId;
   planDataQueue.dirty=true;
   if(planDataQueue.pending) return; // já tem uma gravação em andamento — ela pega essa mudança na próxima volta
-  runPlanDataQueue();
+  planDataQueue.inFlight=runPlanDataQueue();
+}
+
+// Espera qualquer gravação pendente da fila terminar antes de salvar o plano
+// gerado em Perfil, evitando corrida entre a saída da aba anterior e o novo plano.
+async function flushAndSaveUserPlan(userId,plan){
+  if(planDataQueue.inFlight){ try{ await planDataQueue.inFlight; }catch{} }
+  await saveUserPlan(userId,plan);
 }
 
 async function runPlanDataQueue(){
@@ -1543,7 +1582,8 @@ async function runPlanDataQueue(){
       planDataQueue.dirty=false;
       const userId=planDataQueue.userId;
       try{
-        const {data:existing}=await supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle();
+        const {data:existing,error:readErr}=await supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle();
+        if(readErr) throw readErr;
         const patch={};
         for(const [key,getter] of Object.entries(planDataQueue.getters)){
           const val=getter();
@@ -1552,11 +1592,14 @@ async function runPlanDataQueue(){
           else patch[key]=val;
         }
         const plan_data={...(existing?.plan_data||{}),...patch};
-        await supabase.from('user_plans').upsert({user_id:userId,plan_data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+        const {error:writeErr}=await supabase.from('user_plans').upsert({user_id:userId,plan_data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+        if(writeErr) throw writeErr;
+        invalidateUserPlanCache();
       }catch(e){ console.error('Erro ao salvar dados do LifePlan:',e); }
     }
   }finally{
     planDataQueue.pending=false;
+    planDataQueue.inFlight=null;
   }
 }
 
@@ -1571,22 +1614,29 @@ function useWaterTracker(userId){
   };
   const [data,setData]=useState(()=>{
     try{
+      const owner=localStorage.getItem('water_v1_uid');
+      if(owner&&userId&&owner!==userId) return {date:todayKey(),goal:2000,current:0};
       const raw=JSON.parse(localStorage.getItem('water_v1'));
       if(raw&&raw.date===todayKey()) return raw;
     }catch{}
     return {date:todayKey(),goal:2000,current:0};
   });
-  useEffect(()=>{localStorage.setItem('water_v1',JSON.stringify(data));},[data]);
+  useEffect(()=>{
+    try{
+      localStorage.setItem('water_v1',JSON.stringify(data));
+      if(userId) localStorage.setItem('water_v1_uid',userId);
+    }catch{}
+  },[data,userId]);
 
   // Carrega a meta/consumo salvos na nuvem (permite trocar de dispositivo)
   const [waterLoaded,setWaterLoaded]=useState(false);
   useEffect(()=>{
     if(!userId) return;
-    supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle().then(({data:row})=>{
-      const cloud=row?.plan_data?.water;
+    fetchUserPlanData(userId).then(pd=>{
+      const cloud=pd?.water;
       if(cloud&&cloud.date===todayKey()) setData(cloud);
       else if(cloud) setData(d=>({...d,goal:cloud.goal||d.goal})); // dia diferente: mantém só a meta
-    }).finally(()=>setWaterLoaded(true));
+    }).catch(()=>{}).finally(()=>setWaterLoaded(true));
   },[userId]);
 
   // Registra o valor mais atual na fila central (nunca uma cópia presa)
@@ -1624,16 +1674,25 @@ function useWaterTracker(userId){
 
 function useManualAgenda(userId){
   const [items,setItems]=useState(()=>{
-    try{return JSON.parse(localStorage.getItem('agenda_manual'))||[];}catch{return [];}
+    try{
+      const owner=localStorage.getItem('agenda_manual_uid');
+      if(owner&&userId&&owner!==userId) return [];
+      return JSON.parse(localStorage.getItem('agenda_manual'))||[];
+    }catch{return [];}
   });
-  useEffect(()=>{localStorage.setItem('agenda_manual',JSON.stringify(items));},[items]);
+  useEffect(()=>{
+    try{
+      localStorage.setItem('agenda_manual',JSON.stringify(items));
+      if(userId) localStorage.setItem('agenda_manual_uid',userId);
+    }catch{}
+  },[items,userId]);
 
   const [agendaLoaded,setAgendaLoaded]=useState(false);
   useEffect(()=>{
     if(!userId) return;
-    supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle().then(({data:row})=>{
-      if(Array.isArray(row?.plan_data?.agendaManual)) setItems(row.plan_data.agendaManual);
-    }).finally(()=>setAgendaLoaded(true));
+    fetchUserPlanData(userId).then(pd=>{
+      if(Array.isArray(pd?.agendaManual)) setItems(pd.agendaManual);
+    }).catch(()=>{}).finally(()=>setAgendaLoaded(true));
   },[userId]);
 
   // Registra na fila central (sempre lê o valor mais atual via ref)
@@ -1831,21 +1890,28 @@ function uvInfo(uv){
 function useTimetable(userId){
   const [data,setData]=useState(()=>{
     try{
+      const owner=localStorage.getItem('timetable_v2_uid');
+      if(owner&&userId&&owner!==userId) return {rows:[],cells:{}};
       const raw=JSON.parse(localStorage.getItem('timetable_v2'));
       if(raw&&Array.isArray(raw.rows)) return raw;
     }catch{}
     return {rows:[],cells:{}};
   });
-  useEffect(()=>{localStorage.setItem('timetable_v2',JSON.stringify(data));},[data]);
+  useEffect(()=>{
+    try{
+      localStorage.setItem('timetable_v2',JSON.stringify(data));
+      if(userId) localStorage.setItem('timetable_v2_uid',userId);
+    }catch{}
+  },[data,userId]);
 
   // Carrega a grade salva na nuvem (permite editar em qualquer dispositivo)
   const [timetableLoaded,setTimetableLoaded]=useState(false);
   useEffect(()=>{
     if(!userId) return;
-    supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle().then(({data:row})=>{
-      const cloud=row?.plan_data?.timetable;
+    fetchUserPlanData(userId).then(pd=>{
+      const cloud=pd?.timetable;
       if(cloud&&Array.isArray(cloud.rows)) setData(cloud);
-    }).finally(()=>setTimetableLoaded(true));
+    }).catch(()=>{}).finally(()=>setTimetableLoaded(true));
   },[userId]);
 
   // Registra na fila central (sempre lê o valor mais atual via ref)
@@ -1938,9 +2004,17 @@ function getNextMeal(day){
   return {name:sorted[0].name,time:sorted[0].time,when:'amanhã'};
 }
 
-function getNextExam(){
+function readScopedLocal(key,userId){
   try{
-    const data=JSON.parse(localStorage.getItem('studyApp'));
+    const owner=localStorage.getItem(key+'_uid')||localStorage.getItem('lifeplan_last_uid');
+    if(userId&&owner&&owner!==userId) return null;
+    return JSON.parse(localStorage.getItem(key));
+  }catch{return null;}
+}
+
+function getNextExam(userId){
+  try{
+    const data=readScopedLocal('studyApp',userId);
     if(!data?.events) return null;
     const today=new Date(); today.setHours(0,0,0,0);
     const provas=data.events.filter(e=>e.type==='prova'&&e.date)
@@ -1965,9 +2039,17 @@ function getNextExam(){
 // extraídas pra public/finance-formulas.js, carregado via <script> antes
 // deste app (veja index.html). É a MESMA cópia usada dentro do Finanças de
 // verdade, então as duas telas nunca mais podem divergir por acidente.
-function getSaldoPreview(){
+function computeGastoCategoriaSafe(state,profileIdx,categoria){
+  if(!(window.FinanceFormulas.version>=4)){
+    return window.FinanceFormulas.cfGetAllRowsByProfile(state,profileIdx)
+      .reduce((s,r)=>(r.category||'')===categoria?s+(parseFloat(r.value)||0):s,0);
+  }
+  return window.FinanceFormulas.cfComputeGastoCategoria(state,profileIdx,categoria);
+}
+
+function getSaldoPreview(userId){
   try{
-    const state=JSON.parse(localStorage.getItem('cf_state'));
+    const state=readScopedLocal('cf_state',userId);
     if(!state?.balancoTables) return null;
     if(!window.FinanceFormulas) return null; // script compartilhado ainda não carregou
     let saldoFinal=0;
@@ -1976,9 +2058,9 @@ function getSaldoPreview(){
       // cópia antiga de finance-formulas.js em cache (sem "version"): refaz Faturas sem somar Pix
       const total=(t.type==='faturas_auto'&&!(window.FinanceFormulas.version>=2))
         ?(state.faturas||[]).reduce((s,f)=>s+(f.rows||[]).reduce((s2,r)=>s2+(parseFloat(r.value)||0),0),0)
-        // cópia antiga (versão < 3): Planejamento reserva só o que falta gastar (estouro = 0)
-        :(t.type==='planejamento'&&!(window.FinanceFormulas.version>=3))
-          ?(t.rows||[]).filter(r=>r.categoria&&r.profileIdx!=null).reduce((s,r)=>s+Math.max(0,(parseFloat(r.valor)||0)-window.FinanceFormulas.cfComputeGastoCategoria(state,r.profileIdx,r.categoria)),0)
+        // cópia antiga (versão < 4): Planejamento reserva só o que falta gastar (estouro = 0 + soma Pix por categoria)
+        :(t.type==='planejamento'&&!(window.FinanceFormulas.version>=4))
+          ?(t.rows||[]).filter(r=>r.categoria&&r.profileIdx!=null).reduce((s,r)=>s+Math.max(0,(parseFloat(r.valor)||0)-computeGastoCategoriaSafe(state,r.profileIdx,r.categoria)),0)
           :window.FinanceFormulas.cfGetTableTotal(state,t);
       saldoFinal += total*t.sign;
     });
@@ -1988,9 +2070,9 @@ function getSaldoPreview(){
 
 // Lê a tabela "Planejamento Mensal" salva pelo Finanças, pra mostrar uma
 // cópia dinâmica do gráfico de orçamento (expectativa x gasto) na Início.
-function getPlanejamentoPreview(){
+function getPlanejamentoPreview(userId){
   try{
-    const state=JSON.parse(localStorage.getItem('cf_state'));
+    const state=readScopedLocal('cf_state',userId);
     if(!state?.balancoTables) return null;
     if(!window.FinanceFormulas) return null;
     const planTable=state.balancoTables.find(t=>t.type==='planejamento');
@@ -1999,7 +2081,7 @@ function getPlanejamentoPreview(){
       categoria:r.categoria,
       profileName:(typeof state.profiles?.[r.profileIdx]==='object'?state.profiles[r.profileIdx]?.name:state.profiles?.[r.profileIdx])||'—',
       valor:parseFloat(r.valor)||0,
-      gasto:window.FinanceFormulas.cfComputeGastoCategoria(state,r.profileIdx,r.categoria),
+      gasto:computeGastoCategoriaSafe(state,r.profileIdx,r.categoria),
     }));
     return rows.length?rows:null;
   }catch{return null;}
@@ -2098,7 +2180,7 @@ function FocusTimer(){
 // As páginas em iframe (Estudos, Finanças, Hábitos) recebem `embed=1`: assim
 // elas mostram o botão de perfil no próprio cabeçalho e escondem o que é
 // duplicado. O botão de perfil delas avisa o app via postMessage.
-const iframeSrc=(file,extra='')=>`/${file}?sbUrl=${encodeURIComponent(SUPABASE_URL)}&sbKey=${encodeURIComponent(SUPABASE_ANON_KEY)}&embed=1${extra}`;
+const iframeSrc=(file,extra='')=>`/${file}?embed=1${extra}`;
 // Altura da tela menos a barra inferior (76px + área segura do iPhone)
 const NAV_SPACE='calc(76px + env(safe-area-inset-bottom, 0px))';
 
@@ -2362,8 +2444,8 @@ const COMPARATOR_PRIORITIES=[
 
 // Cópia dinâmica do gráfico de orçamento (Planejamento Mensal, dentro de
 // Finanças) mostrada na Início — mesmos dados, sempre atualizada.
-function BudgetChartPreview(){
-  const rows=getPlanejamentoPreview();
+function BudgetChartPreview({userId}){
+  const rows=getPlanejamentoPreview(userId);
   if(!rows) return null;
   const T=HOME_THEME;
   const maxVal=Math.max(1,...rows.map(r=>Math.max(r.valor,r.gasto)));
@@ -2482,19 +2564,18 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
   const workoutDoneToday=!!workoutLog[localDateKey()];
 
   useEffect(()=>{
-    loadUserPlan(userId).then(plan=>{
-      if(!plan||!plan.length) return;
-      const dIdx=new Date().getDay()===0?6:new Date().getDay()-1;
-      const day=plan[dIdx];
-      setPlanPreview({typeLabel:day?.typeLabel||'Descanso',nextMeal:getNextMeal(day)});
-    }).catch(()=>{});
-    supabase.from('user_plans').select('plan_data').eq('user_id',userId).maybeSingle()
-      .then(({data})=>{
-        const shopping=data?.plan_data?.shopping;
-        setShoppingCount(Array.isArray(shopping)?shopping.filter(i=>!i.checked).length:null);
-        setWorkoutLog(data?.plan_data?.workoutLog||{});
-        setWeeklyGoal(data?.plan_data?.workoutGoalPerWeek||null);
-      }).catch(()=>{}).finally(()=>setWorkoutLogLoaded(true));
+    fetchUserPlanData(userId).then(pd=>{
+      const plan=extractPlanDays(pd);
+      if(plan&&plan.length){
+        const dIdx=new Date().getDay()===0?6:new Date().getDay()-1;
+        const day=plan[dIdx];
+        setPlanPreview({typeLabel:day?.typeLabel||'Descanso',nextMeal:getNextMeal(day)});
+      }
+      const shopping=pd?.shopping;
+      setShoppingCount(Array.isArray(shopping)?shopping.filter(i=>!i.checked).length:null);
+      setWorkoutLog(pd?.workoutLog||{});
+      setWeeklyGoal(pd?.workoutGoalPerWeek||null);
+    }).catch(()=>{}).finally(()=>setWorkoutLogLoaded(true));
   },[userId]);
 
   // Registra na fila central (mesma fila usada por água/agenda/horários/plano
@@ -2520,25 +2601,25 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
     setTimeout(()=>requestPlanDataSave(userId),50);
   }
 
-  const nextExam=getNextExam();
+  const nextExam=getNextExam(userId);
   const nextClass=getNextClass(timetableData);
-  const saldo=getSaldoPreview();
+  const saldo=getSaldoPreview(userId);
   // Resumo da semana: junta treinos (nuvem) com hábitos/dieta, estudos e faturas lidos do aparelho
   const dayKeyNow=localDateKey(now);
   const weekly=useMemo(()=>{
     if(!workoutLogLoaded) return null;
-    const read=k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}};
+    const read=k=>readScopedLocal(k,userId);
     return resumoSemanal({
       hoje:new Date(),workoutLog,workoutGoal:weeklyGoal,
       habitsDb:read('habitsAppV4'),studyData:read('studyApp'),faturas:read('cf_state')?.faturas||[]
     });
-  },[workoutLogLoaded,workoutLog,weeklyGoal,dayKeyNow]);
+  },[workoutLogLoaded,workoutLog,weeklyGoal,dayKeyNow,userId]);
   // Saúde e dinheiro: dieta por semana contra o gasto de cada categoria (só aparece se houver dados)
   const cross=useMemo(()=>{
-    const read=k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}};
+    const read=k=>readScopedLocal(k,userId);
     try{return cruzarSaudeDinheiro({hoje:new Date(),habitsDb:read('habitsAppV4'),state:read('cf_state')});}
     catch{return {status:'sem-dados'};}
-  },[dayKeyNow]);
+  },[dayKeyNow,userId]);
   const timeStr=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const agendaItems=gcal.connected?gcal.events:manual.items;
   const T=HOME_THEME;
@@ -2825,7 +2906,7 @@ function HomeDashboard({userId,onNavigate,onOpenProfile,onLogout,onOpenTimetable
           )}
         </section>
 
-        <BudgetChartPreview/>
+        <BudgetChartPreview userId={userId}/>
 
       </div>
     </div>
@@ -2893,11 +2974,12 @@ function AppInner(){
   };
   const lockNowRef=useRef(lockNow);
   lockNowRef.current=lockNow;
-  const wipeLock=()=>{
+  const wipeLock=async()=>{
     // errou o PIN demais, ou esqueceu: sai desta conta neste aparelho e pede a senha
-    clearLock();setLocked(false);setCovered(false);
+    clearLock();setLocked(false);setCovered(false);setProfile(null);
+    try{await disablePush();}catch{}
     supabase.auth.signOut({scope:'local'}).catch(()=>{});
-    try{localStorage.removeItem('cf_state');localStorage.removeItem('cf_state_uid');sessionStorage.removeItem('cf_cloud_synced');}catch{}
+    clearUserLocalData();
     setScreen('login');
   };
   useEffect(()=>{
@@ -2929,6 +3011,7 @@ function AppInner(){
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{
       if(session?.user){
+        ensureUserLocalScope(session.user.id);
         userIdRef.current=session.user.id;setUserId(session.user.id);
         const saved=sessionStorage.getItem('lifeplan_screen');
         setScreen(saved&&RESUMABLE_SCREENS.includes(saved)?saved:'home');
@@ -2953,12 +3036,16 @@ function AppInner(){
       }
       if(session?.user){
         const isNewLogin=userIdRef.current!==session.user.id;
+        ensureUserLocalScope(session.user.id);
+        if(isNewLogin) setProfile(null);
         userIdRef.current=session.user.id;
         setUserId(session.user.id);
         if(isNewLogin && screenRef.current!=='reset-password') setScreen('home');
       }else{
+        if(event==='SIGNED_OUT'||userIdRef.current) clearUserLocalData();
         userIdRef.current=null;
         setUserId(null);
+        setProfile(null);
         setLocked(false);
         setScreen('login');
         sessionStorage.removeItem('lifeplan_screen');
@@ -2992,16 +3079,18 @@ function AppInner(){
       await disablePush();
       // scope 'local': sai só neste aparelho. O padrão do Supabase (global) deslogaria a conta em TODOS os dispositivos.
       try{await supabase.auth.signOut({scope:'local'});}catch(e){console.error(e);}
-      clearLock();setLocked(false); // o PIN é de quem estava logado: sair apaga o PIN deste aparelho
-      // As finanças ficam em cache neste aparelho: apaga ao sair para a próxima pessoa não ver.
-      try{localStorage.removeItem('cf_state');localStorage.removeItem('cf_state_uid');sessionStorage.removeItem('cf_cloud_synced');}catch(e){}
+      clearLock();setLocked(false);setProfile(null); // o PIN é de quem estava logado: sair apaga o PIN deste aparelho
+      // Apaga caches e tokens (finanças, estudos, hábitos, agenda, grade, água e Google Agenda) para outra pessoa não ver nem herdar.
+      clearUserLocalData();
       setScreen('login');
     };
     const onAccountDeleted=async()=>{
       // O login já não existe mais: só encerra a sessão local e apaga tudo o que ficou neste aparelho.
       await disablePush();
       try{await supabase.auth.signOut({scope:'local'});}catch(e){}
+      clearUserLocalData();
       try{const th=localStorage.getItem('lifeplan_theme');localStorage.clear();sessionStorage.clear();if(th)localStorage.setItem('lifeplan_theme',th);}catch(e){}
+      setProfile(null);
       setLocked(false);
       setScreen('login');
     };

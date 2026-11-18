@@ -20,10 +20,12 @@ export async function fetchNotifications(limit = 40) {
 }
 export async function markRead(ids) {
   if (!ids || !ids.length) return;
-  await supabase.from("notifications").update({ read_at: new Date().toISOString() }).in("id", ids);
+  const { error } = await supabase.from("notifications").update({ read_at: new Date().toISOString() }).in("id", ids);
+  if (error) throw error;
 }
 export async function markAllRead(userId) {
-  await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", userId).is("read_at", null);
+  const { error } = await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", userId).is("read_at", null);
+  if (error) throw error;
 }
 // Avisos já lidos há mais de 60 dias saem da caixa (não cresce para sempre)
 export async function cleanupOld(userId) {

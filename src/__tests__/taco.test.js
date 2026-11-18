@@ -13,9 +13,11 @@ describe('searchTACO', () => {
     expect(results.some(r => r.n.toLowerCase().includes('arroz'))).toBe(true);
   });
 
-  it('respeita o limite de resultados', () => {
-    const results = searchTACO('a', 3); // "a" sozinho é curto, mas o limite é o 2º argumento
-    expect(results.length).toBeLessThanOrEqual(3);
+  it('respeita o limite de resultados quando há mais alimentos correspondentes', () => {
+    const allFrango = searchTACO('frango', 20);
+    expect(allFrango.length).toBeGreaterThan(3);
+    const limited = searchTACO('frango', 3);
+    expect(limited).toHaveLength(3);
   });
 
   it('não quebra com uma busca sem nenhum resultado', () => {

@@ -72,7 +72,7 @@ export function NotificationBell({ userId, onNavigate }) {
     if (!n.read_at) {
       const now = new Date().toISOString();
       setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read_at: now } : x)));
-      markRead([n.id]);
+      markRead([n.id]).catch((e) => console.error("Marcar aviso lido:", e));
     }
     setOpen(false);
     if (onNavigate) onNavigate("financas");
@@ -80,7 +80,7 @@ export function NotificationBell({ userId, onNavigate }) {
   async function readAll() {
     const now = new Date().toISOString();
     setItems((prev) => prev.map((x) => (x.read_at ? x : { ...x, read_at: now })));
-    markAllRead(userId);
+    markAllRead(userId).catch((e) => console.error("Marcar todos lidos:", e));
   }
   async function turnOnPush() {
     setBusy(true); setPushErr("");

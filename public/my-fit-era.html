@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#3F5A38">
 <title>LifePlan</title>
 <link rel="stylesheet" href="/lifeplan-theme.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <style>
   :root {
     --safe-top: env(safe-area-inset-top, 0px);
@@ -1174,6 +1174,11 @@ body.hide-chrome .page-header{display:none!important;}
 </div>
 
 <script>
+// Segurança: escapa todo texto digitado pelo usuário antes de ir para innerHTML / atributos HTML
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 // ================= TEMA / GRÁFICOS =================
 // Canvas não entende var(--x): lemos o valor computado do tema atual a cada uso
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
@@ -1201,8 +1206,10 @@ const CHART = {
 // parâmetros, ele deve mostrar "não configurado", nunca cair silenciosamente
 // num projeto Supabase de terceiros.
 const __params = new URLSearchParams(window.location.search);
-const SUPABASE_URL = __params.get('sbUrl') || '';
-const SUPABASE_KEY = __params.get('sbKey') || '';
+let __parentCfg = null;
+try { if (window.parent && window.parent !== window) __parentCfg = window.parent.__LIFEPLAN_SUPABASE__ || null; } catch (e) {}
+const SUPABASE_URL = (__parentCfg && __parentCfg.url) || __params.get('sbUrl') || '';
+const SUPABASE_KEY = (__parentCfg && __parentCfg.anonKey) || __params.get('sbKey') || '';
 const supaConfigured = () => SUPABASE_URL && SUPABASE_KEY;
 let supa = null;
 if (supaConfigured()) {
@@ -1328,6 +1335,7 @@ let authMode = 'login';
 
 const save = () => {
   localStorage.setItem(KEY, JSON.stringify(db));
+  if (currentUser) localStorage.setItem(KEY + '_uid', currentUser.id);
   if (currentUser && supa) scheduleCloudSave();
 };
 const scheduleCloudSave = () => {
@@ -1426,10 +1434,10 @@ function performSearch(query) {
     item.innerHTML = `
       <span style="color:var(--accent);display:inline-flex">${r.icon}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</div>
-        <div style="font-size:12px;color:var(--text-subtle)">${r.subtitle}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.title)}</div>
+        <div style="font-size:12px;color:var(--text-subtle)">${esc(r.subtitle)}</div>
       </div>
-      <div style="font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap">${r.value}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap">${esc(r.value)}</div>
     `;
     item.onclick = r.onClick;
     resultsEl.appendChild(item);
@@ -1521,6 +1529,13 @@ async function logout() {
   if (!confirm('Sair da conta?')) return;
   // scope 'local': sai só neste aparelho (o padrão encerraria a conta em todos os dispositivos)
   if (supa) { try { await supa.auth.signOut({ scope: 'local' }); } catch (e) { console.error(e); } }
+  try {
+    [KEY, KEY + '_uid', KEY_V3, KEY_V2, KEY_V1, 'cf_state', 'cf_state_uid', 'studyApp', 'studyApp_uid',
+     'water_v1', 'water_v1_uid', 'agenda_manual', 'agenda_manual_uid', 'timetable_v2', 'timetable_v2_uid',
+     'gcal_token', 'gcal_token_expiry', 'lifeplan_last_uid'].forEach(k => localStorage.removeItem(k));
+    sessionStorage.removeItem('cf_cloud_synced');
+    sessionStorage.removeItem('lifeplan_screen');
+  } catch (e) {}
   currentUser = null;
   bodyMetrics = [];
   location.reload();
@@ -1530,6 +1545,13 @@ async function loadFromCloud() {
   if (!currentUser || !supa) return;
   setCloudStatus('Sincronizando...', 'sync');
   try {
+    const lastUid = localStorage.getItem(KEY + '_uid');
+    if (lastUid && lastUid !== currentUser.id) {
+      [KEY, KEY_V3, KEY_V2, KEY_V1].forEach(k => localStorage.removeItem(k));
+      db = migrateOrDefault();
+      localStorage.setItem(KEY, JSON.stringify(db));
+    }
+    localStorage.setItem(KEY + '_uid', currentUser.id);
     const [{ data: appRow, error: appErr }, { data: metrics, error: metErr }] = await Promise.all([
       supa.from('app_data').select('data').eq('user_id', currentUser.id).maybeSingle(),
       supa.from('body_metrics').select('*').eq('user_id', currentUser.id).order('recorded_at', { ascending: true })
@@ -1543,7 +1565,7 @@ async function loadFromCloud() {
       if (!db.alertConfig) db.alertConfig = { threshold: 0.5, window: 7 };
       if (!db.dismissedAlerts) db.dismissedAlerts = {};
       localStorage.setItem(KEY, JSON.stringify(db));
-    } else if (Object.keys(db.records || {}).length || (db.habits && db.habits.length)) {
+    } else if ((!lastUid || lastUid === currentUser.id) && (Object.keys(db.records || {}).length || (db.habits && db.habits.length))) {
       await syncAppDataToCloud();
     }
     bodyMetrics = metrics || [];
@@ -1657,7 +1679,7 @@ function loadEntries() {
   if (db.contextTags.length) {
     const dayTags = (rec.tags || []);
     tagsDiv.innerHTML = db.contextTags.map(t =>
-      `<div class="chip selectable ${dayTags.includes(t)?'active':''}" onclick="toggleDayTag('${t.replace(/'/g,"\\'")}')">${t}</div>`
+      `<div class="chip selectable ${dayTags.includes(t)?'active':''}" data-tag="${esc(t)}" onclick="toggleDayTag(this.dataset.tag)">${esc(t)}</div>`
     ).join('');
     document.getElementById('dayTagsSection').style.display = 'block';
   } else { document.getElementById('dayTagsSection').style.display = 'none'; }
@@ -1674,7 +1696,7 @@ function loadEntries() {
         const done = weeklyCount(h.id, date);
         const pct = Math.min(100, (done/h.times)*100);
         const ok = done >= h.times;
-        return `<div style="margin-top:8px;"><strong>${h.name}</strong>: ${done}/${h.times}
+        return `<div style="margin-top:8px;"><strong>${esc(h.name)}</strong>: ${esc(done)}/${esc(h.times)}
           <div class="bar"><div style="width:${pct}%"></div></div></div>`;
       }).join('') + '</div>';
   } else { wpDiv.innerHTML = ''; }
@@ -1688,36 +1710,36 @@ function loadEntries() {
     const collapsed = isDone && !expandedHabits.has(h.id);
     const cls = isDone ? 'done' : r.status === 'fail' ? 'failed' : '';
     const optCls = isOpt ? 'optional' : '';
-    const clickExpand = isDone ? `onclick="toggleHabitExpand('${h.id}')"` : '';
+    const clickExpand = isDone ? `data-hid="${esc(h.id)}" onclick="toggleHabitExpand(this.dataset.hid)"` : '';
     const fullUi = `
         <div class="habit-full">
         <div class="habit-head">
-          <div class="habit-name">${h.name} <span class="freq-tag">${describeFreq(h)}</span> ${h.perMeal ? '<span class="meal-tag">refeição</span>' : ''} ${isOpt?'<span class="badge badge-skip">avulso</span>':''}</div>
+          <div class="habit-name">${esc(h.name)} <span class="freq-tag">${esc(describeFreq(h))}</span> ${h.perMeal ? '<span class="meal-tag">refeição</span>' : ''} ${isOpt?'<span class="badge badge-skip">avulso</span>':''}</div>
           <div class="toggle-group" onclick="event.stopPropagation()">
-            <button type="button" class="toggle-btn toggle-done ${r.status==='done'?'active-done':''}" onclick="setStatus('${h.id}','done')">Cumpri</button>
-            <button type="button" class="toggle-btn toggle-fail ${r.status==='fail'?'active-fail':''}" onclick="setStatus('${h.id}','fail')">Errei</button>
-            ${h.freq!=='weekly' ? `<button type="button" class="toggle-btn toggle-skip ${r.status==='skip'?'active-skip':''}" onclick="setStatus('${h.id}','skip')">Pular</button>`:''}
+            <button type="button" class="toggle-btn toggle-done ${r.status==='done'?'active-done':''}" data-hid="${esc(h.id)}" onclick="setStatus(this.dataset.hid,'done')">Cumpri</button>
+            <button type="button" class="toggle-btn toggle-fail ${r.status==='fail'?'active-fail':''}" data-hid="${esc(h.id)}" onclick="setStatus(this.dataset.hid,'fail')">Errei</button>
+            ${h.freq!=='weekly' ? `<button type="button" class="toggle-btn toggle-skip ${r.status==='skip'?'active-skip':''}" data-hid="${esc(h.id)}" onclick="setStatus(this.dataset.hid,'skip')">Pular</button>`:''}
           </div>
         </div>
         <div class="reason-area" style="display:${r.status==='fail'?'block':'none'}">
           <div class="form-row">
-            ${h.perMeal ? `<div><label>Refeição</label><select id="meal-${h.id}">
+            ${h.perMeal ? `<div><label>Refeição</label><select id="meal-${esc(h.id)}">
               <option value="">--</option>
-              ${db.meals.map(m=>`<option ${r.meal===m?'selected':''}>${m}</option>`).join('')}
+              ${db.meals.map(m=>`<option value="${esc(m)}" ${r.meal===m?'selected':''}>${esc(m)}</option>`).join('')}
             </select></div>`:''}
-            <div><label>Motivo</label><select id="reason-${h.id}">
+            <div><label>Motivo</label><select id="reason-${esc(h.id)}">
               <option value="">--</option>
-              ${db.reasons.map(rs=>`<option ${r.reason===rs?'selected':''}>${rs}</option>`).join('')}
+              ${db.reasons.map(rs=>`<option value="${esc(rs)}" ${r.reason===rs?'selected':''}>${esc(rs)}</option>`).join('')}
             </select></div>
           </div>
           <div><label>Observação</label>
-            <input type="text" id="note-${h.id}" value="${r.note||''}" placeholder="Detalhes..." style="width:100%;"></div>
+            <input type="text" id="note-${esc(h.id)}" value="${esc(r.note||'')}" placeholder="Detalhes..." style="width:100%;"></div>
         </div>
         </div>`;
     const compactUi = `
         <div class="habit-compact">
           <div class="status-bar done"></div>
-          <div class="habit-name-compact">${h.name}</div>
+          <div class="habit-name-compact">${esc(h.name)}</div>
         </div>`;
     return `
       <div class="habit-entry ${cls} ${optCls} ${collapsed?'collapsed':''}" ${clickExpand}>
@@ -1746,7 +1768,7 @@ function loadEntries() {
     html += `<details style="margin-top:14px;"><summary style="cursor:pointer; color:var(--accent); font-weight:500; padding:8px 0;">+ Registrar hábito avulso</summary>
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
         <select id="addOptHabit" style="flex:1; min-width:200px;">
-          ${remaining.map(h=>`<option value="${h.id}">${h.name}</option>`).join('')}
+          ${remaining.map(h=>`<option value="${esc(h.id)}">${esc(h.name)}</option>`).join('')}
         </select>
         <button class="small" onclick="addOptional()">Adicionar</button>
       </div></details>`;
@@ -1923,41 +1945,41 @@ function renderDietPanel() {
     const collapsed = isFull && !expandedMeals.has(meal.id);
     const cls = isFull ? 'full' : r.followed === 'partial' ? 'partial' : r.followed === 'no' ? 'no' : r.followed === 'skip' ? 'skip' : '';
     const checkedFoods = r.foods || {};
-    const clickExpand = isFull ? `onclick="toggleMealExpand('${meal.id}')"` : '';
+    const clickExpand = isFull ? `data-mid="${esc(meal.id)}" onclick="toggleMealExpand(this.dataset.mid)"` : '';
 
     const optionPicker = options.length > 1 ? `
       <div class="menu-option-picker" onclick="event.stopPropagation()">
         ${options.map(opt => `
           <button type="button" class="menu-option-chip ${selectedOpt && selectedOpt.id === opt.id ? 'active' : ''}"
-            onclick="selectMealOption('${meal.id}','${opt.id}')">${opt.name}</button>
+            data-mid="${esc(meal.id)}" data-oid="${esc(opt.id)}" onclick="selectMealOption(this.dataset.mid, this.dataset.oid)">${esc(opt.name)}</button>
         `).join('')}
       </div>` : (options.length === 1 && options[0].name !== 'Opção 1' && options[0].name !== 'Cardápio padrão'
-        ? `<div style="font-size:0.8125rem; color:var(--text-muted); font-weight:500; margin-bottom:10px;">${options[0].name}</div>` : '');
+        ? `<div style="font-size:0.8125rem; color:var(--text-muted); font-weight:500; margin-bottom:10px;">${esc(options[0].name)}</div>` : '');
 
     const foodsHtml = activeFoods.map((food, i) => {
       const isChecked = checkedFoods[i] === true;
       return `<div class="food-item">
-        <div class="food-checkbox ${isChecked?'checked':''}" onclick="toggleFood('${meal.id}', ${i})">${isChecked?'✓':''}</div>
-        <div class="food-name">${food.name}</div>
-        <div class="food-amount">${food.amount}</div>
+        <div class="food-checkbox ${isChecked?'checked':''}" data-mid="${esc(meal.id)}" onclick="toggleFood(this.dataset.mid, ${i})">${isChecked?'✓':''}</div>
+        <div class="food-name">${esc(food.name)}</div>
+        <div class="food-amount">${esc(food.amount)}</div>
       </div>`;
     }).join('');
 
     const compactUi = `
       <div class="meal-compact">
         <div class="status-bar full"></div>
-        <span style="font-size:1.2em;">${meal.emoji || '🍽️'}</span>
-        <div class="meal-name-compact">${meal.name}${selectedOpt && options.length > 1 ? ` · ${selectedOpt.name}` : ''}</div>
+        <span style="font-size:1.2em;">${esc(meal.emoji || '🍽️')}</span>
+        <div class="meal-name-compact">${esc(meal.name)}${selectedOpt && options.length > 1 ? ` · ${esc(selectedOpt.name)}` : ''}</div>
       </div>`;
 
     const fullUi = `
       <div class="meal-full">
       <div class="meal-header">
         <div class="meal-title">
-          <div class="meal-emoji">${meal.emoji || '🍽️'}</div>
+          <div class="meal-emoji">${esc(meal.emoji || '🍽️')}</div>
           <div class="meal-name-time">
-            <div class="meal-name">${meal.name}</div>
-            ${meal.time ? `<div class="meal-time">${meal.time}</div>` : ''}
+            <div class="meal-name">${esc(meal.name)}</div>
+            ${meal.time ? `<div class="meal-time">${esc(meal.time)}</div>` : ''}
           </div>
         </div>
       </div>
@@ -1966,20 +1988,20 @@ function renderDietPanel() {
 
       ${activeFoods.length ? `
       <div class="food-list">
-        <div class="food-list-header">${selectedOpt ? selectedOpt.name : 'Cardápio'} (${activeFoods.length} ${activeFoods.length === 1 ? 'item' : 'itens'})</div>
+        <div class="food-list-header">${selectedOpt ? esc(selectedOpt.name) : 'Cardápio'} (${activeFoods.length} ${activeFoods.length === 1 ? 'item' : 'itens'})</div>
         ${foodsHtml}
       </div>` : '<div style="color:var(--muted); font-size:0.85em; padding:8px 0;">Sem alimentos nesta opção</div>'}
 
       <div class="meal-toggles" onclick="event.stopPropagation()">
-        <button type="button" class="toggle-btn toggle-done ${r.followed==='full'?'active-done':''}" onclick="setMealStatus('${meal.id}','full')">100% segui</button>
-        <button type="button" class="toggle-btn toggle-partial ${r.followed==='partial'?'active-partial':''}" onclick="setMealStatus('${meal.id}','partial')">Parcial</button>
-        <button type="button" class="toggle-btn toggle-fail ${r.followed==='no'?'active-fail':''}" onclick="setMealStatus('${meal.id}','no')">Não fiz</button>
-        <button type="button" class="toggle-btn toggle-skip ${r.followed==='skip'?'active-skip':''}" onclick="setMealStatus('${meal.id}','skip')">Pular</button>
+        <button type="button" class="toggle-btn toggle-done ${r.followed==='full'?'active-done':''}" data-mid="${esc(meal.id)}" onclick="setMealStatus(this.dataset.mid,'full')">100% segui</button>
+        <button type="button" class="toggle-btn toggle-partial ${r.followed==='partial'?'active-partial':''}" data-mid="${esc(meal.id)}" onclick="setMealStatus(this.dataset.mid,'partial')">Parcial</button>
+        <button type="button" class="toggle-btn toggle-fail ${r.followed==='no'?'active-fail':''}" data-mid="${esc(meal.id)}" onclick="setMealStatus(this.dataset.mid,'no')">Não fiz</button>
+        <button type="button" class="toggle-btn toggle-skip ${r.followed==='skip'?'active-skip':''}" data-mid="${esc(meal.id)}" onclick="setMealStatus(this.dataset.mid,'skip')">Pular</button>
       </div>
 
       <div class="meal-note-area" onclick="event.stopPropagation()">
         <label style="font-size:0.8125rem;">Observação desta refeição</label>
-        <textarea id="mealNote-${meal.id}" placeholder="Ex: Substituí arroz por quinoa, comi um pouco mais de sobremesa, etc.">${r.note || ''}</textarea>
+        <textarea id="mealNote-${esc(meal.id)}" placeholder="Ex: Substituí arroz por quinoa, comi um pouco mais de sobremesa, etc.">${esc(r.note || '')}</textarea>
       </div>
       </div>`;
 
@@ -2146,12 +2168,12 @@ function renderSettings() {
   document.getElementById('habitList').innerHTML = db.habits.map(h => `
     <div class="habit-card-cfg">
       <div class="info">
-        <div class="nm">${h.name}${h.perMeal ? ' <span style="color:var(--text-subtle);font-weight:500;">· refeição</span>' : ''}</div>
-        <div class="freq">${describeFreq(h)}</div>
+        <div class="nm">${esc(h.name)}${h.perMeal ? ' <span style="color:var(--text-subtle);font-weight:500;">· refeição</span>' : ''}</div>
+        <div class="freq">${esc(describeFreq(h))}</div>
       </div>
       <div style="display:flex; gap:6px;">
-        <button class="small" onclick="editHabit('${h.id}')" aria-label="Editar hábito">${ico('pencil')}</button>
-        <button class="small danger" onclick="delHabit('${h.id}')" aria-label="Remover hábito">${ico('trash')}</button>
+        <button class="small" data-hid="${esc(h.id)}" onclick="editHabit(this.dataset.hid)" aria-label="Editar hábito">${ico('pencil')}</button>
+        <button class="small danger" data-hid="${esc(h.id)}" onclick="delHabit(this.dataset.hid)" aria-label="Remover hábito">${ico('trash')}</button>
       </div>
     </div>
   `).join('') || '<div class="empty">Nenhum hábito.</div>';
@@ -2162,23 +2184,23 @@ function renderSettings() {
     <div class="meal-cfg-card">
       <div class="meal-cfg-header">
         <div style="display:flex; align-items:center; gap:8px; flex:1;">
-          <span style="font-size:1.4em;">${m.emoji || '🍽️'}</span>
+          <span style="font-size:1.4em;">${esc(m.emoji || '🍽️')}</span>
           <div>
-            <div class="nm">${m.name}</div>
-            ${m.time ? `<div style="font-size:0.82em; color:var(--muted);">⏰ ${m.time}</div>` : ''}
+            <div class="nm">${esc(m.name)}</div>
+            ${m.time ? `<div style="font-size:0.82em; color:var(--muted);">⏰ ${esc(m.time)}</div>` : ''}
           </div>
         </div>
         <div style="display:flex; gap:6px;">
-          <button class="small" onclick="editMealPlan('${m.id}')">${ico('pencil')} Editar</button>
-          <button class="small danger" onclick="delMealPlan('${m.id}')" aria-label="Remover refeição">${ico('trash')}</button>
+          <button class="small" data-mid="${esc(m.id)}" onclick="editMealPlan(this.dataset.mid)">${ico('pencil')} Editar</button>
+          <button class="small danger" data-mid="${esc(m.id)}" onclick="delMealPlan(this.dataset.mid)" aria-label="Remover refeição">${ico('trash')}</button>
         </div>
       </div>
       ${getMealOptions(m).map(opt => `
         <div style="margin-top:10px; padding-top:8px; border-top:1px dashed var(--border);">
-          <div style="font-size:0.8125rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">${opt.name}</div>
+          <div style="font-size:0.8125rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">${esc(opt.name)}</div>
           ${opt.foods && opt.foods.length ? opt.foods.map(f => `<div class="food-cfg-row">
-            <span class="nm">${f.name}</span>
-            <span class="amt">${f.amount}</span>
+            <span class="nm">${esc(f.name)}</span>
+            <span class="amt">${esc(f.amount)}</span>
           </div>`).join('') : '<div style="font-size:0.82em; color:var(--muted);">Sem alimentos</div>'}
         </div>
       `).join('') || '<div style="font-size:0.85em; color:var(--muted); padding:6px 0;">Sem opções de cardápio</div>'}
@@ -2186,14 +2208,14 @@ function renderSettings() {
   `).join('') || '<div class="empty">Nenhuma refeição cadastrada.</div>';
 
   document.getElementById('tagList').innerHTML = db.contextTags.map((t,i) =>
-    `<div class="chip">${t}<button onclick="delTag(${i})">×</button></div>`
+    `<div class="chip">${esc(t)}<button onclick="delTag(${i})">×</button></div>`
   ).join('') || '<span style="color:var(--muted);">Nenhuma tag.</span>';
 
   document.getElementById('reasonList').innerHTML = db.reasons.map((r,i) =>
-    `<div class="chip">${r}<button onclick="delReason(${i})">×</button></div>`
+    `<div class="chip">${esc(r)}<button onclick="delReason(${i})">×</button></div>`
   ).join('') || '<span style="color:var(--muted);">Nenhum motivo.</span>';
   document.getElementById('mealList').innerHTML = db.meals.map((m,i) =>
-    `<div class="chip">${m}<button onclick="delMeal(${i})">×</button></div>`
+    `<div class="chip">${esc(m)}<button onclick="delMeal(${i})">×</button></div>`
   ).join('') || '<span style="color:var(--muted);">Nenhuma refeição.</span>';
 
   document.getElementById('alertThreshold').value = db.alertConfig.threshold;
@@ -2279,14 +2301,14 @@ function renderMealOptionsEditor() {
   div.innerHTML = editingMealOptions.map((opt, oi) => `
     <div class="menu-option-card">
       <div class="menu-option-head">
-        <input type="text" value="${opt.name.replace(/"/g, '&quot;')}" placeholder="Nome da opção (ex: Opção A — Frango)"
+        <input type="text" value="${esc(opt.name)}" placeholder="Nome da opção (ex: Opção A — Frango)"
           onchange="updateMealOptionName(${oi}, this.value)" style="flex:1;">
         ${editingMealOptions.length > 1 ? `<button type="button" class="small danger" onclick="removeMealOption(${oi})">Remover opção</button>` : ''}
       </div>
       ${(opt.foods || []).map((f, fi) => `
         <div class="food-cfg-row">
-          <input type="text" value="${f.name.replace(/"/g, '&quot;')}" onchange="updateOptionFood(${oi}, ${fi}, 'name', this.value)" style="flex:1; font-size:0.9em; padding:6px 10px;">
-          <input type="text" value="${(f.amount||'').replace(/"/g, '&quot;')}" onchange="updateOptionFood(${oi}, ${fi}, 'amount', this.value)" style="max-width:120px; font-size:0.9em; padding:6px 10px;">
+          <input type="text" value="${esc(f.name)}" onchange="updateOptionFood(${oi}, ${fi}, 'name', this.value)" style="flex:1; font-size:0.9em; padding:6px 10px;">
+          <input type="text" value="${esc(f.amount||'')}" onchange="updateOptionFood(${oi}, ${fi}, 'amount', this.value)" style="max-width:120px; font-size:0.9em; padding:6px 10px;">
           <button type="button" class="small danger" onclick="removeOptionFood(${oi}, ${fi})">×</button>
         </div>
       `).join('') || '<div style="font-size:0.82em; color:var(--muted); margin-bottom:8px;">Nenhum alimento nesta opção</div>'}
@@ -2562,7 +2584,7 @@ function renderDashboard() {
     let html = `<div style="overflow-x:auto;"><div class="heatmap" style="grid-template-columns: ${isMobile?'100px':'180px'} repeat(7, minmax(38px,1fr)); min-width:${isMobile?'400px':'600px'};">`;
     html += `<div></div>` + weekdaysShort.map(w=>`<div style="text-align:center; font-weight:600; font-size:0.78em; padding:5px;">${w}</div>`).join('');
     db.habits.forEach(h => {
-      html += `<div style="padding:6px; font-weight:600; font-size:0.82em;">${h.name}</div>`;
+      html += `<div style="padding:6px; font-weight:600; font-size:0.82em;">${esc(h.name)}</div>`;
       matrix[h.id].forEach(v => {
         const i = max ? v/max : 0;
         const bg = v===0 ? 'var(--surface2)' : `color-mix(in srgb, var(--warning) ${Math.round((0.2 + i*0.7)*100)}%, transparent)`;
@@ -2790,7 +2812,7 @@ function detectAlerts() {
     if (pendingHabits.length > 0) {
       alerts.push({ id: 'streak_risk', priority: 1, severity: 'high', icon: '🔥',
         title: `Streak de ${streak} dias em risco!`,
-        desc: `${pendingHabits.length} hábito${pendingHabits.length>1?'s':''} pendente${pendingHabits.length>1?'s':''} hoje: <strong>${pendingHabits.map(h=>h.name).join(', ')}</strong>.` });
+        desc: `${pendingHabits.length} hábito${pendingHabits.length>1?'s':''} pendente${pendingHabits.length>1?'s':''} hoje: <strong>${pendingHabits.map(h=>esc(h.name)).join(', ')}</strong>.` });
     }
   }
 
@@ -2848,13 +2870,13 @@ function renderAlerts() {
     return;
   }
   div.innerHTML = alerts.map(a => `
-    <div class="alert-card ${a.severity}">
+    <div class="alert-card ${esc(a.severity)}">
       <div class="alert-content">
         <div class="alert-pill">${a.severity === 'high' ? 'Urgente' : a.severity === 'medium' ? 'Atenção' : 'Aviso'}</div>
-        <div class="alert-title">${a.title}</div>
+        <div class="alert-title">${esc(a.title)}</div>
         <div class="alert-desc">${a.desc}</div>
       </div>
-      <button class="small ghost" onclick="dismissAlert('${a.id}')" style="padding:4px 8px; min-height:auto; font-size:0.75em;">✕</button>
+      <button class="small ghost" data-aid="${esc(a.id)}" onclick="dismissAlert(this.dataset.aid)" style="padding:4px 8px; min-height:auto; font-size:0.75em;">✕</button>
     </div>`).join('');
 }
 
@@ -2948,7 +2970,7 @@ function renderPredictions() {
   const tagDiv = document.getElementById('predTagPicker');
   if (db.contextTags.length) {
     tagDiv.innerHTML = db.contextTags.map(t =>
-      `<div class="chip selectable ${predictionTags.includes(t)?'active':''}" onclick="togglePredTag('${t.replace(/'/g,"\\'")}')">${t}</div>`
+      `<div class="chip selectable ${predictionTags.includes(t)?'active':''}" data-tag="${esc(t)}" onclick="togglePredTag(this.dataset.tag)">${esc(t)}</div>`
     ).join('');
     document.getElementById('predContextSection').style.display = 'block';
   } else { document.getElementById('predContextSection').style.display = 'none'; }
@@ -2962,11 +2984,11 @@ function renderPredictions() {
   list.innerHTML = predictions.map(p => {
     if (p.notScheduled) return `<div class="pred-card" style="opacity:0.5;"><div class="pred-row">
         <div class="pred-icon">${ico('moon')}</div><div class="pred-info">
-          <div class="pred-name">${p.habit.name}</div><div class="pred-confidence">${p.message}</div>
+          <div class="pred-name">${esc(p.habit.name)}</div><div class="pred-confidence">${esc(p.message)}</div>
         </div></div></div>`;
     if (p.alreadyMet) return `<div class="pred-card" style="background:var(--success-soft);"><div class="pred-row">
         <div class="pred-info">
-          <div class="pred-name">${p.habit.name}</div><div class="pred-confidence">${p.message}</div>
+          <div class="pred-name">${esc(p.habit.name)}</div><div class="pred-confidence">${esc(p.message)}</div>
         </div></div></div>`;
     const pct = Math.round(p.probability*100);
     const cls = pct >= 70 ? 'high' : pct >= 40 ? 'medium' : 'low';
@@ -2975,15 +2997,15 @@ function renderPredictions() {
       if (f.isTag) {
         const sym = f.diff > 0 ? '↑' : '↓';
         const color = f.diff > 0 ? CHART.success : CHART.danger;
-        return `<span style="color:${color};">${sym} ${f.name} (${f.diff>0?'+':''}${Math.round(f.diff*100)}%)</span>`;
+        return `<span style="color:${color};">${sym} ${esc(f.name)} (${f.diff>0?'+':''}${Math.round(f.diff*100)}%)</span>`;
       }
-      return `${f.name}: ${Math.round(f.value*100)}%`;
+      return `${esc(f.name)}: ${Math.round(f.value*100)}%`;
     }).join(' · ');
     return `<div class="pred-card"><div class="pred-row">
         <div class="pred-icon">${icon}</div><div class="pred-info">
-          <div class="pred-name">${p.habit.name}</div>
+          <div class="pred-name">${esc(p.habit.name)}</div>
           <div class="pred-bar-wrap"><div class="pred-bar ${cls}" style="width:${pct}%;">${pct}%</div></div>
-          <div class="pred-confidence">Confiança: ${p.confidence} · ${factorsList}</div>
+          <div class="pred-confidence">Confiança: ${esc(p.confidence)} · ${factorsList}</div>
         </div></div></div>`;
   }).join('');
 
@@ -3146,8 +3168,8 @@ function renderDietAnalysis() {
   let html = `
     <div class="grid grid-3" style="margin-bottom:14px;">
       <div class="stat diet"><div class="v">${avg}%</div><div class="l">Média geral<br>${dietScores.length} dias</div></div>
-      <div class="stat stat-success"><div class="v stat-truncate" title="${best ? best.meal.name : ''}">${best ? `${best.meal.name} (${Math.round(best.rate.rate)}%)` : '-'}</div><div class="l">Melhor refeição</div></div>
-      <div class="stat stat-danger"><div class="v stat-truncate" title="${worst && worst.rate.rate < 80 ? worst.meal.name : ''}">${worst && worst.rate.rate < 80 ? `${worst.meal.name} (${Math.round(worst.rate.rate)}%)` : '-'}</div><div class="l">Mais difícil</div></div>
+      <div class="stat stat-success"><div class="v stat-truncate" title="${best ? esc(best.meal.name) : ''}">${best ? `${esc(best.meal.name)} (${Math.round(best.rate.rate)}%)` : '-'}</div><div class="l">Melhor refeição</div></div>
+      <div class="stat stat-danger"><div class="v stat-truncate" title="${worst && worst.rate.rate < 80 ? esc(worst.meal.name) : ''}">${worst && worst.rate.rate < 80 ? `${esc(worst.meal.name)} (${Math.round(worst.rate.rate)}%)` : '-'}</div><div class="l">Mais difícil</div></div>
     </div>
 
     <h3 style="margin-bottom:10px; font-size:1em; color:var(--text-2);">Cumprimento por refeição</h3>`;
@@ -3155,7 +3177,7 @@ function renderDietAnalysis() {
     const pct = Math.round(rate.rate);
     const color = pct >= 80 ? CHART.success : pct >= 50 ? CHART.warning : CHART.danger;
     html += `<div class="trend-row">
-      <div class="trend-name">${meal.emoji || '🍽️'} ${meal.name}</div>
+      <div class="trend-name">${esc(meal.emoji || '🍽️')} ${esc(meal.name)}</div>
       <div class="trend-bar-wrap"><div class="trend-bar" style="width:${pct}%; background:${color};"></div></div>
       <div class="trend-pct">${pct}%</div>
       <div style="font-size:0.85em; color:var(--muted); min-width:80px;">${rate.n} reg.</div>
@@ -3300,14 +3322,14 @@ function renderHabitTrends() {
   const div = document.getElementById('habitTrends');
   if (!trends.length) { div.innerHTML = '<div class="empty">Sem hábitos.</div>'; return; }
   div.innerHTML = trends.map(t => {
-    if (!t.current && !t.prev) return `<div class="trend-row"><div class="trend-name">${t.habit.name}</div><div style="color:var(--muted);">Sem dados</div></div>`;
+    if (!t.current && !t.prev) return `<div class="trend-row"><div class="trend-name">${esc(t.habit.name)}</div><div style="color:var(--muted);">Sem dados</div></div>`;
     const cur = t.current ? Math.round(t.current.rate*100) : 0;
     const prev = t.prev ? Math.round(t.prev.rate*100) : 0;
     const diff = t.diff !== null ? Math.round(t.diff*100) : 0;
     const arrow = diff > 5 ? '▲' : diff < -5 ? '▼' : '→';
     const color = diff > 5 ? CHART.success : diff < -5 ? CHART.danger : CHART.muted;
     return `<div class="trend-row">
-      <div class="trend-name">${t.habit.name}</div>
+      <div class="trend-name">${esc(t.habit.name)}</div>
       <div class="trend-bar-wrap"><div class="trend-bar" style="width:${cur}%; background:${color};"></div></div>
       <div class="trend-pct">${cur}%</div>
       <div style="color:${color};">${arrow}</div>
@@ -3339,12 +3361,13 @@ function renderCorrelations() {
 
   div.innerHTML = pairs.slice(0, 12).map(p => {
     const cls = p.r > 0.2 ? 'pos' : p.r < -0.2 ? 'neg' : 'neutral';
+    const aName = esc(p.a), bName = esc(p.b);
     let interpret;
-    if (p.r > 0.5) interpret = `<strong>${p.a}</strong> e <strong>${p.b}</strong> andam fortemente juntos.`;
-    else if (p.r > 0.2) interpret = `<strong>${p.a}</strong> e <strong>${p.b}</strong> têm correlação positiva.`;
-    else if (p.r < -0.5) interpret = `<strong>${p.a}</strong> e <strong>${p.b}</strong> são fortemente opostos.`;
-    else if (p.r < -0.2) interpret = `<strong>${p.a}</strong> e <strong>${p.b}</strong> têm leve oposição.`;
-    else interpret = `<strong>${p.a}</strong> e <strong>${p.b}</strong> são independentes.`;
+    if (p.r > 0.5) interpret = `<strong>${aName}</strong> e <strong>${bName}</strong> andam fortemente juntos.`;
+    else if (p.r > 0.2) interpret = `<strong>${aName}</strong> e <strong>${bName}</strong> têm correlação positiva.`;
+    else if (p.r < -0.5) interpret = `<strong>${aName}</strong> e <strong>${bName}</strong> são fortemente opostos.`;
+    else if (p.r < -0.2) interpret = `<strong>${aName}</strong> e <strong>${bName}</strong> têm leve oposição.`;
+    else interpret = `<strong>${aName}</strong> e <strong>${bName}</strong> são independentes.`;
     return `<div class="corr-row">
       <div class="desc">${interpret}<br><small style="color:var(--muted);">${p.n} dias com ambos${p.type === 'diet' ? ' · inclui dieta' : ''}</small></div>
       <div class="value ${cls}">${p.r > 0 ? '+' : ''}${p.r.toFixed(2)}</div>
@@ -3386,8 +3409,8 @@ function renderTagImpact() {
     const cls = imp.diff > 0.1 ? 'pos' : imp.diff < -0.1 ? 'neg' : 'neutral';
     const verb = imp.diff > 0 ? 'cumpre mais' : 'cumpre menos';
     return `<div class="corr-row">
-      <div class="desc">Em dias com <strong style="background:var(--surface3); padding:2px 8px; border-radius:6px;">${imp.tag}</strong>,
-        você ${verb} <strong>${imp.habit}</strong>.<br>
+      <div class="desc">Em dias com <strong style="background:var(--surface3); padding:2px 8px; border-radius:6px;">${esc(imp.tag)}</strong>,
+        você ${verb} <strong>${esc(imp.habit)}</strong>.<br>
         <small style="color:var(--muted);">${Math.round(imp.withRate*100)}% com tag · ${Math.round(imp.withoutRate*100)}% sem (${imp.nWith} vs ${imp.nWithout} dias)</small>
       </div><div class="value ${cls}">${pct > 0 ? '+' : ''}${pct}%</div></div>`;
   }).join('');
@@ -3405,7 +3428,7 @@ function renderWeekdayPatterns() {
     if (worstDay.fails === 0) return;
     const pct = Math.round((worstDay.fails/totalFails)*100);
     html += `<div class="corr-row">
-      <div class="desc"><strong>${h.name}</strong>: falha mais às <strong>${weekdays[worstDay.i]}s</strong>.<br>
+      <div class="desc"><strong>${esc(h.name)}</strong>: falha mais às <strong>${weekdays[worstDay.i]}s</strong>.<br>
         <small style="color:var(--muted);">${worstDay.fails} de ${totalFails} erros (${pct}%)</small></div>
       <div class="value neg">${pct}%</div></div>`;
   });
@@ -3435,7 +3458,7 @@ function renderAutoInsights() {
     if (mealRates.length) {
       const worst = mealRates.sort((a,b) => a.rate.rate - b.rate.rate)[0];
       if (worst.rate.rate < 60) {
-        insights.push({ type:'warning', icon:'🍽️', text:`<strong>${worst.name}</strong> é sua refeição mais difícil: apenas <span class="stat-num">${Math.round(worst.rate.rate)}%</span> de cumprimento.` });
+        insights.push({ type:'warning', icon:'🍽️', text:`<strong>${esc(worst.name)}</strong> é sua refeição mais difícil: apenas <span class="stat-num">${Math.round(worst.rate.rate)}%</span> de cumprimento.` });
       }
     }
   }
@@ -3444,9 +3467,9 @@ function renderAutoInsights() {
   db.habits.forEach(h => {
     const c = dietHabitCorrelation(h.id);
     if (c && c.n >= 5 && c.r > 0.4) {
-      insights.push({ type:'diet', icon:'🔗', text:`Quando você segue a dieta, também tende a cumprir <strong>${h.name}</strong> (correlação +${c.r.toFixed(2)}). Use isso a seu favor!` });
+      insights.push({ type:'diet', icon:'🔗', text:`Quando você segue a dieta, também tende a cumprir <strong>${esc(h.name)}</strong> (correlação +${c.r.toFixed(2)}). Use isso a seu favor!` });
     } else if (c && c.n >= 5 && c.r < -0.4) {
-      insights.push({ type:'warning', icon:'⚖️', text:`Curiosamente, em dias de dieta apertada você cumpre menos <strong>${h.name}</strong> (correlação ${c.r.toFixed(2)}).` });
+      insights.push({ type:'warning', icon:'⚖️', text:`Curiosamente, em dias de dieta apertada você cumpre menos <strong>${esc(h.name)}</strong> (correlação ${c.r.toFixed(2)}).` });
     }
   });
 
@@ -3460,8 +3483,8 @@ function renderAutoInsights() {
   if (trends.length) {
     const sorted = [...trends].sort((a,b)=>b.diff-a.diff);
     const best = sorted[0]; const worst = sorted[sorted.length-1];
-    if (best.diff > 0.1) insights.push({ type:'positive', icon:'🌟', text:`<strong>${best.habit.name}</strong> subiu para <span class="stat-num">${Math.round(best.current.rate*100)}%</span>.` });
-    if (worst.diff < -0.1) insights.push({ type:'warning', icon:'👀', text:`<strong>${worst.habit.name}</strong> caiu para <span class="stat-num">${Math.round(worst.current.rate*100)}%</span>.` });
+    if (best.diff > 0.1) insights.push({ type:'positive', icon:'🌟', text:`<strong>${esc(best.habit.name)}</strong> subiu para <span class="stat-num">${Math.round(best.current.rate*100)}%</span>.` });
+    if (worst.diff < -0.1) insights.push({ type:'warning', icon:'👀', text:`<strong>${esc(worst.habit.name)}</strong> caiu para <span class="stat-num">${Math.round(worst.current.rate*100)}%</span>.` });
   }
   let streak = 0;
   for (let i = 0; i < 365; i++) {
@@ -3473,7 +3496,7 @@ function renderAutoInsights() {
   if (streak >= 3) insights.push({ type:'positive', icon:'🔥', text:`<strong>${streak} dias consecutivos</strong> com 100%!` });
 
   if (!insights.length) { div.innerHTML = '<div class="empty">Registre mais dias.</div>'; return; }
-    div.innerHTML = insights.map(i => `<div class="insight-card ${i.type}"><div class="content">${i.text}</div></div>`).join('');
+    div.innerHTML = insights.map(i => `<div class="insight-card ${esc(i.type)}"><div class="content">${i.text}</div></div>`).join('');
 }
 
 // ============ COMPOSIÇÃO CORPORAL ============
@@ -3517,7 +3540,7 @@ async function viewProgressPhoto(path) {
   try {
     const { data, error } = await supa.storage.from('progress-photos').createSignedUrl(path, 300);
     if (error) throw error;
-    window.open(data.signedUrl, '_blank');
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
   } catch (e) {
     alert('Não foi possível abrir a foto: ' + (e.message || e));
   }
@@ -3593,10 +3616,10 @@ function renderBodyPanel() {
     listEl.innerHTML = [...sorted].reverse().map(m => `
       <div style="background:var(--surface2); padding:12px; border-radius:10px; margin-bottom:8px; border:1px solid var(--border);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-          <strong>${new Date(m.recorded_at + 'T00:00').toLocaleDateString('pt-BR')}</strong>
+          <strong>${esc(new Date(m.recorded_at + 'T00:00').toLocaleDateString('pt-BR'))}</strong>
           <div style="display:flex;gap:6px">
-            ${m.photo_path ? `<button class="small" onclick="viewProgressPhoto('${m.photo_path}')" title="Ver foto de progresso" aria-label="Ver foto de progresso">${ico('camera')}</button>` : ''}
-            <button class="small danger" onclick="deleteBodyMetric('${m.id}')">Excluir</button>
+            ${m.photo_path ? `<button class="small" data-path="${esc(m.photo_path)}" onclick="viewProgressPhoto(this.dataset.path)" title="Ver foto de progresso" aria-label="Ver foto de progresso">${ico('camera')}</button>` : ''}
+            <button class="small danger" data-mid="${esc(m.id)}" onclick="deleteBodyMetric(this.dataset.mid)">Excluir</button>
           </div>
         </div>
         <div style="margin-top:8px; display:flex; gap:12px; flex-wrap:wrap; font-size:0.95em;">
@@ -3604,7 +3627,7 @@ function renderBodyPanel() {
           ${m.muscle_pct != null ? `<span>${ico('dumbbell')} <strong>${Number(m.muscle_pct).toFixed(1)}%</strong> músculo</span>` : ''}
           ${m.fat_pct != null ? `<span>${ico('trendDown')} <strong>${Number(m.fat_pct).toFixed(1)}%</strong> gordura</span>` : ''}
         </div>
-        ${m.notes ? `<p style="margin-top:8px; color:var(--muted); font-size:0.88em;">${m.notes}</p>` : ''}
+        ${m.notes ? `<p style="margin-top:8px; color:var(--muted); font-size:0.88em;">${esc(m.notes)}</p>` : ''}
       </div>
     `).join('');
   }
@@ -3668,14 +3691,14 @@ function renderHistory() {
     const ds = dietDayScore(d);
     const wd = weekdaysShort[new Date(d+'T00:00').getDay()];
     const rec = db.records[d];
-    const tags = (rec.tags || []).map(t => `<span class="badge badge-extra">${t}</span>`).join(' ');
+    const tags = (rec.tags || []).map(t => `<span class="badge badge-extra">${esc(t)}</span>`).join(' ');
     const items = db.habits.map(h => {
       const r = rec[h.id];
       if (!r || !r.status) return null;
-      if (r.status === 'done') return `<span class="badge badge-ok">${h.name}</span>`;
-      if (r.status === 'skip') return `<span class="badge badge-skip">${h.name}</span>`;
-      let txt = `<span class="badge badge-fail">${h.name}</span>`;
-      const extras = [r.meal, r.reason].filter(Boolean).join(' • ');
+      if (r.status === 'done') return `<span class="badge badge-ok">${esc(h.name)}</span>`;
+      if (r.status === 'skip') return `<span class="badge badge-skip">${esc(h.name)}</span>`;
+      let txt = `<span class="badge badge-fail">${esc(h.name)}</span>`;
+      const extras = [r.meal, r.reason].filter(Boolean).map(esc).join(' • ');
       if (extras) txt += ` <small style="color:var(--muted);">(${extras})</small>`;
       return txt;
     }).filter(Boolean);
@@ -3686,10 +3709,10 @@ function renderHistory() {
       const dItems = db.dietPlan.map(m => {
         const r = rec.diet.meals[m.id];
         if (!r || !r.followed) return null;
-        if (r.followed === 'full') return `<span class="badge badge-diet">${m.name}</span>`;
-        if (r.followed === 'partial') return `<span class="badge badge-partial">${m.name}</span>`;
-        if (r.followed === 'no') return `<span class="badge badge-fail">${m.name}</span>`;
-        if (r.followed === 'skip') return `<span class="badge badge-skip">${m.name}</span>`;
+        if (r.followed === 'full') return `<span class="badge badge-diet">${esc(m.name)}</span>`;
+        if (r.followed === 'partial') return `<span class="badge badge-partial">${esc(m.name)}</span>`;
+        if (r.followed === 'no') return `<span class="badge badge-fail">${esc(m.name)}</span>`;
+        if (r.followed === 'skip') return `<span class="badge badge-skip">${esc(m.name)}</span>`;
         return null;
       }).filter(Boolean);
       if (dItems.length) dietItems = `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);"><small style="color:var(--info); font-weight:600;">🥗 Dieta:</small><br>${dItems.join(' ')}</div>`;

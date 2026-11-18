@@ -3,68 +3,61 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/lifeplan-theme.css">
 <title>Política de Privacidade - LifePlan</title>
 <style>
-  body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 720px; margin: 0 auto; padding: 40px 20px; line-height: 1.6; color: #222; }
-  h1 { font-size: 28px; }
-  h2 { font-size: 20px; margin-top: 32px; }
-  p, li { font-size: 15px; }
-  .updated { color: #666; font-size: 13px; margin-bottom: 32px; }
+  body { font-family: var(--font-body, -apple-system, Segoe UI, Roboto, sans-serif); max-width: 720px; margin: 0 auto; padding: 40px 20px; line-height: 1.65; background: var(--bg, #F3EEE4); color: var(--text, #1E2A21); }
+  h1 { font-family: var(--font-display, Georgia, serif); font-weight: 500; font-size: 30px; margin-bottom: 4px; }
+  h2 { font-family: var(--font-display, Georgia, serif); font-weight: 500; font-size: 21px; margin-top: 30px; }
+  p, li { font-size: 15px; color: var(--text-2, #3B473B); }
+  .updated { color: var(--muted, #5B6659); font-size: 13px; margin-bottom: 28px; }
+  a { color: var(--accent, #3F5A38); }
 </style>
 </head>
 <body>
   <h1>Política de Privacidade</h1>
-  <p class="updated">Última atualização: 12 de julho de 2026</p>
+  <p class="updated">Última atualização: 17 de novembro de 2026</p>
 
-  <p>Esta Política de Privacidade descreve como o LifePlan ("nós", "nosso" ou "aplicativo") coleta, usa e protege as informações dos usuários ("você").</p>
+  <p>Esta Política de Privacidade descreve como o LifePlan ("nós", "nosso" ou "aplicativo") coleta, utiliza e protege as informações dos usuários ("você"), em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).</p>
 
   <h2>1. Informações que coletamos</h2>
-  <p>Quando você faz login com sua conta do Google, coletamos as seguintes informações fornecidas pelo Google, mediante sua autorização explícita:</p>
   <ul>
-    <li>Nome</li>
-    <li>Endereço de e-mail</li>
-    <li>Foto de perfil</li>
+    <li><strong>Dados de cadastro e autenticação:</strong> nome e endereço de e-mail informados no cadastro com senha ou recebidos mediante sua autorização via login com Google (OAuth).</li>
+    <li><strong>Dados inseridos por você no app:</strong> perfil físico, plano alimentar, lista de compras, treinos, hábitos, medições corporais, estudos, notas, grade de horários, registros financeiros e fotos opcionais de progresso ou recibos.</li>
+    <li><strong>Google Agenda (opcional):</strong> caso você opte por conectar sua Google Agenda, solicitamos permissão ao escopo <code>calendar.events</code> exclusivamente para exibir seus próximos compromissos no painel do LifePlan e sincronizar eventos de estudo criados por você. O token de acesso fica guardado apenas no navegador do seu aparelho.</li>
+    <li><strong>Localização para clima (opcional):</strong> caso você autorize a localização no navegador, as coordenadas são usadas apenas no momento da consulta para exibir a previsão do tempo e o nome da sua cidade, sem histórico de rastreamento no banco de dados.</li>
+    <li><strong>Notificações Push (opcional):</strong> caso ative os avisos no celular/navegador, salvamos o identificador técnico de envio (endpoint Web Push e chaves criptográficas públicas do navegador) associado à sua conta. Os textos enviados por push nunca exibem valores financeiros em reais.</li>
   </ul>
-  <p>Também podemos armazenar informações que você insere diretamente no aplicativo, como dados de planejamento pessoal, tarefas, metas e configurações de uso.</p>
 
   <h2>2. Como usamos suas informações</h2>
-  <p>Usamos as informações coletadas exclusivamente para:</p>
+  <p>Utilizamos os dados exclusivamente para operar e sincronizar os recursos do LifePlan na sua conta (e, quando você participa voluntariamente do Modo Família em Finanças, exibir entre líder e membro apenas os lançamentos atribuídos àquele membro). Não vendemos, alugamos nem compartilhamos seus dados pessoais para fins publicitários ou de marketing.</p>
+
+  <h2>3. Armazenamento, bloqueio local e segurança</h2>
+  <p>Seus dados na nuvem são armazenados no <strong>Supabase</strong> com políticas de segurança em nível de linha (Row Level Security — RLS) e buckets privados para fotos. Os recursos opcionais de bloqueio por PIN (derivado via PBKDF2) e biometria (WebAuthn) funcionam localmente no seu aparelho para proteger a tela contra acesso físico não autorizado.</p>
+
+  <h2>4. Serviços de terceiros utilizados</h2>
   <ul>
-    <li>Autenticar sua identidade e permitir o acesso à sua conta;</li>
-    <li>Personalizar sua experiência dentro do aplicativo;</li>
-    <li>Armazenar e sincronizar os dados que você cria no LifePlan;</li>
-    <li>Comunicar informações importantes sobre o serviço, quando necessário.</li>
+    <li><strong>Supabase</strong> — autenticação, banco de dados PostgreSQL, armazenamento privado de arquivos e funções de envio de notificações;</li>
+    <li><strong>Google (OAuth, Calendar API e Weather API)</strong> — login opcional, sincronização opcional de agenda e consulta de clima;</li>
+    <li><strong>Open-Meteo e BigDataCloud</strong> — consulta meteorológica e identificação da cidade quando a localização é permitida;</li>
+    <li><strong>Vercel</strong> — hospedagem da aplicação web.</li>
   </ul>
-  <p>Não vendemos, alugamos ou compartilhamos suas informações pessoais com terceiros para fins de marketing.</p>
 
-  <h2>3. Armazenamento e segurança</h2>
-  <p>Seus dados são armazenados de forma segura utilizando o Supabase como provedor de infraestrutura e banco de dados. Adotamos medidas razoáveis para proteger suas informações contra acesso não autorizado, alteração, divulgação ou destruição.</p>
-
-  <h2>4. Compartilhamento de dados com terceiros</h2>
-  <p>Utilizamos os seguintes serviços de terceiros para operar o LifePlan:</p>
+  <h2>5. Seus direitos (LGPD), exportação e exclusão de conta</h2>
+  <p>Diretamente no aplicativo, em <strong>Meu perfil → Privacidade e dados</strong>, você pode a qualquer momento:</p>
   <ul>
-    <li><strong>Google OAuth</strong> — para autenticação de login;</li>
-    <li><strong>Supabase</strong> — para armazenamento de dados e autenticação;</li>
-    <li><strong>Vercel</strong> — para hospedagem do aplicativo.</li>
-  </ul>
-  <p>Esses serviços podem processar seus dados exclusivamente para viabilizar o funcionamento técnico do LifePlan, conforme suas próprias políticas de privacidade.</p>
-
-  <h2>5. Seus direitos</h2>
-  <p>Você pode, a qualquer momento:</p>
-  <ul>
-    <li>Solicitar acesso aos dados que temos sobre você;</li>
-    <li>Solicitar a correção de dados incorretos;</li>
-    <li>Solicitar a exclusão da sua conta e dos dados associados;</li>
-    <li>Revogar o acesso do LifePlan à sua conta Google a qualquer momento, através das configurações da sua Conta do Google.</li>
+    <li><strong>Baixar meus dados:</strong> gerar e baixar um arquivo JSON com todos os registros vinculados à sua conta;</li>
+    <li><strong>Excluir minha conta:</strong> remover permanentemente seu login, seus registros no banco de dados e suas fotos armazenadas nos buckets privados;</li>
+    <li>Revogar permissões concedidas à sua Conta do Google diretamente em <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">myaccount.google.com/permissions</a>.</li>
   </ul>
 
   <h2>6. Retenção de dados</h2>
-  <p>Mantemos seus dados enquanto sua conta estiver ativa. Caso solicite a exclusão da conta, seus dados serão removidos de nossos sistemas em prazo razoável.</p>
+  <p>Seus dados permanecem armazenados apenas enquanto sua conta estiver ativa. Avisos já lidos há mais de 60 dias são limpos automaticamente. Ao excluir sua conta pelo aplicativo, seus dados e fotos são removidos imediatamente.</p>
 
   <h2>7. Alterações a esta política</h2>
-  <p>Podemos atualizar esta Política de Privacidade periodicamente. Notificaremos sobre alterações significativas através do aplicativo ou por e-mail.</p>
+  <p>Podemos atualizar esta Política de Privacidade periodicamente para refletir melhorias no aplicativo ou requisitos legais, mantendo a data de revisão atualizada no topo desta página.</p>
 
   <h2>8. Contato</h2>
-  <p>Em caso de dúvidas sobre esta Política de Privacidade, entre em contato pelo e-mail: <strong>cunhaarthur212@gmail.com</strong></p>
+  <p>Em caso de dúvidas ou solicitações relacionadas à privacidade e proteção de dados, entre em contato pelo e-mail: <strong>cunhaarthur212@gmail.com</strong></p>
 </body>
 </html>

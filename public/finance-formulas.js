@@ -44,15 +44,9 @@
   }
 
   function cfComputeGastoCategoria(state, profileIdx, categoria) {
-    let total = 0;
-    (state.faturas || []).forEach(f => {
-      (f.rows || []).forEach(r => {
-        if (r.profileIdx === profileIdx && (r.category || '') === categoria) {
-          total += parseFloat(r.value) || 0;
-        }
-      });
-    });
-    return total;
+    return cfGetAllRowsByProfile(state, profileIdx).reduce((total, r) => {
+      return (r.category || '') === categoria ? total + (parseFloat(r.value) || 0) : total;
+    }, 0);
   }
 
   function cfGetTableTotal(state, t) {
@@ -80,9 +74,10 @@
   }
 
   global.FinanceFormulas = {
-    // versão 3: o Planejamento só reserva o que falta gastar (estouro = 0). Versão 2: o total de "Faturas" não soma Pix. As telas conferem este número para não
-    // errar a conta caso o navegador ainda tenha uma cópia antiga deste arquivo em cache.
-    version: 3,
+    // versão 4: cfComputeGastoCategoria soma também Pix (state.pixRows), além das faturas.
+    // versão 3: o Planejamento só reserva o que falta gastar (estouro = 0). Versão 2: o total de "Faturas" não soma Pix.
+    // As telas conferem este número para não errar a conta caso o navegador ainda tenha uma cópia antiga em cache.
+    version: 4,
     cfGetAllRowsByProfile,
     cfComputeEntradasTotal,
     cfComputeGastoCategoria,

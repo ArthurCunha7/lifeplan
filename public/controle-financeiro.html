@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Finanças — LifePlan</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="/lifeplan-theme.css">
 <style>
   html.cf-boot body { visibility: hidden; }
@@ -789,7 +789,7 @@
   </div>
 </div>
 
-<script src="/finance-formulas.js?v=3"></script>
+<script src="/finance-formulas.js?v=4"></script>
 <script>
 // ══════════════════════════════════════════════════════
 //  CONSTANTS
@@ -797,6 +797,10 @@
 
 // ── Ícones de linha (SVG inline, herdam a cor do texto) ──
 const IC_PATHS = {"search": "<circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/>", "x": "<path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/>", "plus": "<path d=\"M5 12h14\"/><path d=\"M12 5v14\"/>", "check": "<path d=\"M20 6 9 17l-5-5\"/>", "eye": "<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>", "eyeOff": "<path d=\"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49\"/><path d=\"M14.084 14.158a3 3 0 0 1-4.242-4.242\"/><path d=\"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143\"/><path d=\"m2 2 20 20\"/>", "trash": "<path d=\"M3 6h18\"/><path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/>", "copy": "<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/>", "camera": "<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/>", "image": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/><circle cx=\"9\" cy=\"9\" r=\"2\"/><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\"/>", "fileText": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/><path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/><path d=\"M10 9H8\"/><path d=\"M16 13H8\"/><path d=\"M16 17H8\"/>", "users": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/><path d=\"M16 3.13a4 4 0 0 1 0 7.75\"/>", "trendUp": "<path d=\"M22 7 13.5 15.5 8.5 10.5 2 17\"/><path d=\"M16 7h6v6\"/>", "trendDown": "<path d=\"M22 17 13.5 8.5 8.5 13.5 2 7\"/><path d=\"M16 17h6v-6\"/>", "landmark": "<path d=\"M3 22h18\"/><path d=\"M6 18v-7\"/><path d=\"M10 18v-7\"/><path d=\"M14 18v-7\"/><path d=\"M18 18v-7\"/><path d=\"m12 2 9 5H3z\"/>", "card": "<rect width=\"20\" height=\"14\" x=\"2\" y=\"5\" rx=\"2\"/><path d=\"M2 10h20\"/>", "utensils": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\"/><path d=\"M7 2v20\"/><path d=\"M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/>", "car": "<path d=\"M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2\"/><circle cx=\"7\" cy=\"17\" r=\"2\"/><path d=\"M9 17h6\"/><circle cx=\"17\" cy=\"17\" r=\"2\"/>", "scissors": "<circle cx=\"6\" cy=\"6\" r=\"3\"/><path d=\"M8.12 8.12 12 12\"/><path d=\"M20 4 8.12 15.88\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M14.8 14.8 20 20\"/>", "gift": "<rect x=\"3\" y=\"8\" width=\"18\" height=\"4\" rx=\"1\"/><path d=\"M12 8v13\"/><path d=\"M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7\"/><path d=\"M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5\"/>", "dots": "<circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/><circle cx=\"5\" cy=\"12\" r=\"1\"/>", "home": "<path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/>", "book": "<path d=\"M12 7v14\"/><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\"/>", "leaf": "<path d=\"M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z\"/><path d=\"M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12\"/>", "dumbbell": "<path d=\"M6.5 6.5v11\"/><path d=\"M17.5 6.5v11\"/><path d=\"M3.5 9v6\"/><path d=\"M20.5 9v6\"/><path d=\"M6.5 12h11\"/>", "wallet": "<path d=\"M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1\"/><path d=\"M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4\"/>", "link": "<path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\"/><path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\"/>"};
+function escHtml(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 // Seta de abrir/fechar (no lugar dos caracteres ▸ ▾, que ficam pequenos e
 // mudam de cara conforme a fonte). Gira 90° quando aberto.
 function chevSvg(open) {
@@ -812,7 +816,7 @@ function setToggle(btn, open, what) {
 function ic(name, size, label) {
   size = size || 18;
   const body = IC_PATHS[name] || IC_PATHS.dots;
-  const a11y = label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"';
+  const a11y = label ? `role="img" aria-label="${escHtml(label)}"` : 'aria-hidden="true"';
   return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" ${a11y}>${body}</svg>`;
 }
 // Ícone da categoria de gasto a partir de palavras-chave do nome
@@ -860,8 +864,10 @@ const CATEGORIES = ['Academia','Restaurantes','Salão','Uber','Dieta','Lista de 
 // de login já feita, e sincroniza faturas/perfis/lançamentos na tabela
 // "finance_data" (uma linha por usuário).
 const __params = new URLSearchParams(window.location.search);
-const SUPABASE_URL = __params.get('sbUrl') || '';
-const SUPABASE_KEY = __params.get('sbKey') || '';
+let __parentCfg = null;
+try { if (window.parent && window.parent !== window) __parentCfg = window.parent.__LIFEPLAN_SUPABASE__ || null; } catch (e) {}
+const SUPABASE_URL = (__parentCfg && __parentCfg.url) || __params.get('sbUrl') || '';
+const SUPABASE_KEY = (__parentCfg && __parentCfg.anonKey) || __params.get('sbKey') || '';
 let supa = null, currentUser = null, familyId = null, familyInviteCode = null, familyOwnerId = null, isLeader = false;
 // Só vira true depois de CONFIRMAR o que existe na nuvem. Antes disso nada é gravado,
 // para nunca sobrescrever dados já salvos com uma tela ainda vazia.
@@ -1124,9 +1130,6 @@ async function loadFinanceFromCloud() {
 //  • Membro: vê esses gastos numa fatura "Cartão de <líder>" (somente leitura) e eles
 //    entram no saldo do mês dele. Ninguém vê as finanças pessoais de ninguém.
 // ══════════════════════════════════════════════════════
-function escHtml(v) {
-  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
 
 // Conta nova: troca "Perfil 1" pelo primeiro nome usado no cadastro (o mesmo da saudação do Início).
 // Só mexe se a pessoa ainda tem um único perfil com o nome padrão; depois disso o nome é dela.
@@ -1675,7 +1678,7 @@ function getDefaultState() {
     // profileCategories[idx] = array of category name strings for that profile.
     // Empty array / missing = profile has no categories (shows "—").
     profileCategories: {
-      0: ['Academia', 'Restaurante', 'Uber', 'Lista de desejos']
+      0: ['Academia', 'Restaurantes', 'Uber', 'Lista de desejos']
     },
     // Which profiles appear in the ENTRADAS table (idx -> boolean). Default: all true.
     entradasProfiles: {},
@@ -1710,7 +1713,7 @@ function getDefaultState() {
         id: genId(), name: 'Planejamento Mensal', icon: '', type: 'planejamento',
         rows: [
           { id: genId(), categoria: 'Academia', profileIdx: 0, valor: 0 },
-          { id: genId(), categoria: 'Restaurante', profileIdx: 0, valor: 0 },
+          { id: genId(), categoria: 'Restaurantes', profileIdx: 0, valor: 0 },
           { id: genId(), categoria: 'Uber', profileIdx: 0, valor: 0 },
           { id: genId(), categoria: 'Lista de desejos', profileIdx: 0, valor: 0 },
         ],
@@ -1998,10 +2001,10 @@ function performSearch(query) {
     item.innerHTML = `
       <span class="row-ic">${ic(r.icon,18)}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</div>
-        <div style="font-size:12px;color:var(--muted)">${r.subtitle}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(r.title)}</div>
+        <div style="font-size:12px;color:var(--muted)">${escHtml(r.subtitle)}</div>
       </div>
-      <div style="font-size:13px;font-weight:700;color:var(--accent2);white-space:nowrap">${r.value}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent2);white-space:nowrap">${escHtml(r.value)}</div>
     `;
     item.onclick = r.onClick;
     resultsEl.appendChild(item);
@@ -2029,14 +2032,14 @@ function buildAndPrintFinanceReport() {
   }
   state.faturas.forEach(f => {
     const total = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
-    html += `<h3>${f.name} — Total: ${fmt(total)}</h3>`;
+    html += `<h3>${escHtml(f.name)} — Total: ${fmt(total)}</h3>`;
     if (!f.rows.length) {
       html += `<div class="pdf-empty">Sem lançamentos.</div>`;
     } else {
       html += `<table><thead><tr><th>Data</th><th>Descrição</th><th>Parcelas</th><th>Perfil</th><th>Categoria</th><th>Valor</th></tr></thead><tbody>`;
       f.rows.forEach(r => {
         const profileName = r.profileIdx != null ? (state.profiles[r.profileIdx]?.name||'—') : '—';
-        html += `<tr><td>${formatDateBR(r.date)||'—'}</td><td>${r.name||'—'}</td><td>${r.parcelas||'—'}</td><td>${profileName}</td><td>${r.category||'—'}</td><td>${fmt(r.value)}</td></tr>`;
+        html += `<tr><td>${escHtml(formatDateBR(r.date)||'—')}</td><td>${escHtml(r.name||'—')}</td><td>${escHtml(r.parcelas||'—')}</td><td>${escHtml(profileName)}</td><td>${escHtml(r.category||'—')}</td><td>${fmt(r.value)}</td></tr>`;
       });
       html += `<tr class="pdf-total-row"><td colspan="5">Total</td><td>${fmt(total)}</td></tr>`;
       html += `</tbody></table>`;
@@ -2052,7 +2055,7 @@ function buildAndPrintFinanceReport() {
     html += `<table><thead><tr><th>Data</th><th>Descrição</th><th>Perfil</th><th>Valor</th></tr></thead><tbody>`;
     [...state.payments].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(p => {
       const profileName = p.profileIdx != null ? (state.profiles[p.profileIdx]?.name||'—') : '—';
-      html += `<tr><td>${formatDateBR(p.date)||'—'}</td><td>${p.desc||'—'}</td><td>${profileName}</td><td class="pdf-pos">${fmt(p.value)}</td></tr>`;
+      html += `<tr><td>${escHtml(formatDateBR(p.date)||'—')}</td><td>${escHtml(p.desc||'—')}</td><td>${escHtml(profileName)}</td><td class="pdf-pos">${fmt(p.value)}</td></tr>`;
     });
     html += `<tr class="pdf-total-row"><td colspan="3">Total pago</td><td>${fmt(totalPagoGeral)}</td></tr>`;
     html += `</tbody></table>`;
@@ -2069,7 +2072,7 @@ function buildAndPrintFinanceReport() {
     const tp = pays.reduce((s,p) => s + (parseFloat(p.value)||0), 0);
     const sl = tp - tg;
     gtGastos += tg; gtPago += tp;
-    html += `<tr><td>${pName}</td><td class="pdf-neg">${fmt(tg)}</td><td class="pdf-pos">${fmt(tp)}</td><td class="${sl>=0?'pdf-pos':'pdf-neg'}">${fmt(sl)}</td></tr>`;
+    html += `<tr><td>${escHtml(pName)}</td><td class="pdf-neg">${fmt(tg)}</td><td class="pdf-pos">${fmt(tp)}</td><td class="${sl>=0?'pdf-pos':'pdf-neg'}">${fmt(sl)}</td></tr>`;
   });
   html += `<tr class="pdf-total-row"><td>Total Geral</td><td>${fmt(gtGastos)}</td><td>${fmt(gtPago)}</td><td>${fmt(gtPago-gtGastos)}</td></tr>`;
   html += `</tbody></table>`;
@@ -2079,7 +2082,7 @@ function buildAndPrintFinanceReport() {
   let saldoFinal = 0;
   state.balancoTables.forEach(t => {
     if (t.includeInSaldo && t.sign !== 0) saldoFinal += getTableTotal(t) * t.sign;
-    html += `<h3>${t.name}</h3>`;
+    html += `<h3>${escHtml(t.name)}</h3>`;
     if (t.type === 'planejamento') {
       const rows = (t.rows||[]).filter(r => r.categoria && r.profileIdx != null);
       if (!rows.length) { html += `<div class="pdf-empty">Nenhuma categoria cadastrada.</div>`; }
@@ -2088,18 +2091,18 @@ function buildAndPrintFinanceReport() {
         rows.forEach(r => {
           const gasto = computeGastoCategoria(r.profileIdx, r.categoria);
           const restante = (parseFloat(r.valor)||0) - gasto;
-          html += `<tr><td>${r.categoria}</td><td>${state.profiles[r.profileIdx]?.name||'—'}</td><td>${fmt(r.valor)}</td><td class="pdf-neg">${fmt(gasto)}</td><td class="${restante>=0?'pdf-pos':'pdf-neg'}">${fmt(restante)}</td></tr>`;
+          html += `<tr><td>${escHtml(r.categoria)}</td><td>${escHtml(state.profiles[r.profileIdx]?.name||'—')}</td><td>${fmt(r.valor)}</td><td class="pdf-neg">${fmt(gasto)}</td><td class="${restante>=0?'pdf-pos':'pdf-neg'}">${fmt(restante)}</td></tr>`;
         });
         html += `</tbody></table>`;
       }
     } else if (t.type === 'custom' && t.columns && t.columns.length) {
       if (!t.rows.length) { html += `<div class="pdf-empty">Sem lançamentos.</div>`; }
       else {
-        html += `<table><thead><tr>${t.columns.map(c=>`<th>${c.name}</th>`).join('')}</tr></thead><tbody>`;
+        html += `<table><thead><tr>${t.columns.map(c=>`<th>${escHtml(c.name)}</th>`).join('')}</tr></thead><tbody>`;
         t.rows.forEach(r => {
           html += `<tr>${t.columns.map(c=>{
             const v = r.values?.[c.id];
-            return `<td>${c.type==='number' ? fmt(v||0) : (v||'—')}</td>`;
+            return `<td>${c.type==='number' ? fmt(v||0) : escHtml(v||'—')}</td>`;
           }).join('')}</tr>`;
         });
         html += `</tbody></table>`;
@@ -2299,7 +2302,7 @@ async function viewReceipt(path) {
   try {
     const { data, error } = await supa.storage.from('receipts').createSignedUrl(path, 300);
     if (error) throw error;
-    window.open(data.signedUrl, '_blank');
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
   } catch (e) {
     alert('Não foi possível abrir a foto: ' + (e.message || e));
   }
@@ -2667,8 +2670,8 @@ function getTableTotal(t) {
   // única, compartilhada com a prévia da Início) — aqui só repassamos.
   // Cópia antiga do arquivo em cache (sem "version")? Então refaz a conta de Faturas aqui:
   // só as faturas, sem Pix (o Pix já saiu da conta e não há nada a pagar depois).
-  // Cópia antiga (versão < 3) refaz o Planejamento aqui: estouro de categoria reserva 0.
-  if (t.type === 'planejamento' && !(FinanceFormulas.version >= 3)) {
+  // Cópia antiga (versão < 4) refaz o Planejamento aqui (estouro = 0 + soma de Pix por categoria).
+  if (t.type === 'planejamento' && !(FinanceFormulas.version >= 4)) {
     return (t.rows || []).filter(r => r.categoria && r.profileIdx != null)
       .reduce((s, r) => s + Math.max(0, (parseFloat(r.valor) || 0) - computeGastoCategoria(r.profileIdx, r.categoria)), 0);
   }
@@ -3070,7 +3073,7 @@ function renderEntradasCard(card, t) {
     tr.style.transition = 'opacity .15s';
 
     const tdName = document.createElement('td');
-    tdName.innerHTML = `${dot}${name}`;
+    tdName.innerHTML = `${dot}${escHtml(name)}`;
     tdName.style.cursor = 'pointer';
     tdName.title = included ? 'Toque para excluir' : 'Toque para incluir';
 
@@ -3118,6 +3121,10 @@ function renderEntradasCard(card, t) {
 // faturas e o pix — é isso que faz o "Gasto" da tabela de Planejamento e o
 // gráfico ficarem dinâmicos, sem precisar editar nada manualmente.
 function computeGastoCategoria(profileIdx, categoria) {
+  if (!(FinanceFormulas.version >= 4)) {
+    return FinanceFormulas.cfGetAllRowsByProfile(state, profileIdx)
+      .reduce((s, r) => (r.category || '') === categoria ? s + (parseFloat(r.value) || 0) : s, 0);
+  }
   return FinanceFormulas.cfComputeGastoCategoria(state, profileIdx, categoria);
 }
 
@@ -3139,7 +3146,7 @@ function removePlanejamentoRow(t, rowId) {
 function renderFaturasAutoCard(card, t) {
   const header = document.createElement('div');
   header.className = 'card-header';
-  header.innerHTML = `<div class="card-title">${ic('card')} ${t.name}</div>`;
+  header.innerHTML = `<div class="card-title">${ic('card')} ${escHtml(t.name)}</div>`;
   card.appendChild(header);
 
   const note = document.createElement('div');
@@ -3161,7 +3168,7 @@ function renderFaturasAutoCard(card, t) {
       const val = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
       total += val;
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${f.name}</td><td>${f.fechamento||'—'}</td><td>${f.vencimento||'—'}</td><td class="val-cell negative">${fmt(val)}</td>`;
+      tr.innerHTML = `<td>${escHtml(f.name)}</td><td>${escHtml(f.fechamento||'—')}</td><td>${escHtml(f.vencimento||'—')}</td><td class="val-cell negative">${fmt(val)}</td>`;
       tbody.appendChild(tr);
     });
     const tfoot = document.createElement('tfoot');
@@ -3366,7 +3373,7 @@ function renderLancamentosCard(card, t) {
     const restCls = restante > 0 ? 'lancamento-diff-positive' : restante < 0 ? 'lancamento-diff-negative' : 'lancamento-diff-neutral';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${catName}</td>
+      <td>${escHtml(catName)}</td>
       <td class="val-cell">${fmt(refVal)}</td>
       <td class="val-cell negative">${spent > 0 ? '− ' + fmt(spent) : '—'}</td>
       <td class="val-cell ${restCls}">${restante !== 0 ? (restante > 0 ? '+' : '') + fmt(restante) : fmt(0)}</td>`;
@@ -3431,7 +3438,7 @@ function renderCustomCard(card, t) {
   const wrap = document.createElement('div'); wrap.className = 'table-wrap';
   const table = document.createElement('table');
   const thead = document.createElement('thead');
-  thead.innerHTML = `<tr>${t.columns.map(c => `<th>${c.name}</th>`).join('')}<th></th></tr>`;
+  thead.innerHTML = `<tr>${t.columns.map(c => `<th>${escHtml(c.name)}</th>`).join('')}<th></th></tr>`;
   const tbody = document.createElement('tbody');
 
   // Find first number column for total
@@ -3487,7 +3494,11 @@ function renderCustomCard(card, t) {
 
   const addRowBtn = document.createElement('div');
   addRowBtn.className = 'balanco-add-btn';
-  addRowBtn.innerHTML = `<button class="btn btn-ghost btn-sm" onclick="addTableRow('${t.id}')">＋ Adicionar linha</button>`;
+  const addRowTrigger = document.createElement('button');
+  addRowTrigger.className = 'btn btn-ghost btn-sm';
+  addRowTrigger.textContent = '＋ Adicionar linha';
+  addRowTrigger.onclick = () => addTableRow(t.id);
+  addRowBtn.appendChild(addRowTrigger);
   card.appendChild(addRowBtn);
 }
 
@@ -3530,7 +3541,7 @@ function renderSaldoBuilder() {
 
     const lab = document.createElement('span');
     lab.style.cssText = 'display:flex;align-items:center;gap:12px;flex:1;min-width:0';
-    lab.innerHTML = `<span class="row-ic">${ic(tableIconName(t), 20)}</span><span class="row-name">${t.name}</span><span class="row-chev">${chevSvg(isOpen)}</span>`;
+    lab.innerHTML = `<span class="row-ic">${ic(tableIconName(t), 20)}</span><span class="row-name">${escHtml(t.name)}</span><span class="row-chev">${chevSvg(isOpen)}</span>`;
 
     const moves = document.createElement('span');
     moves.className = 'row-moves';
@@ -3608,7 +3619,7 @@ function renderSaldoBuilder() {
 
           const row = document.createElement('div');
           row.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:7px 22px;border-bottom:1px solid var(--border2);opacity:${included ? 1 : .4};cursor:pointer;transition:opacity .15s`;
-          row.innerHTML = `<span style="font-size:13px">${dot}${name}</span><span class="val-cell ${saldoCls}" style="font-size:12px">${saldo >= 0 ? '+' : ''}${fmt(saldo)}</span>`;
+          row.innerHTML = `<span style="font-size:13px">${dot}${escHtml(name)}</span><span class="val-cell ${saldoCls}" style="font-size:12px">${saldo >= 0 ? '+' : ''}${fmt(saldo)}</span>`;
           row.title = included ? 'Toque para excluir das Entradas' : 'Toque para incluir nas Entradas';
           row.onclick = () => { state.entradasProfiles[idx] = !included; saveState(); renderSaldoBuilder(); renderBalancoTables(); };
           body.appendChild(row);
@@ -3626,7 +3637,7 @@ function renderSaldoBuilder() {
             const val = f.rows.reduce((s,r) => s + (parseFloat(r.value)||0), 0);
             const rowEl = document.createElement('div');
             rowEl.style.cssText = 'display:flex;justify-content:space-between;padding:7px 18px;border-bottom:1px solid var(--border2);font-size:12px';
-            rowEl.innerHTML = `<span>${f.name}</span><span class="val-cell negative">${fmt(val)}</span>`;
+            rowEl.innerHTML = `<span>${escHtml(f.name)}</span><span class="val-cell negative">${fmt(val)}</span>`;
             body.appendChild(rowEl);
           });
         }
@@ -4191,7 +4202,7 @@ function buildExtratoPerfil(pIdx, visible) {
       const isPay = tx.txKind === 'payment';
       tdTipo.innerHTML = isPay
         ? '<span class="val-cell positive" style="font-size:12px;font-weight:700">Pagamento</span>'
-        : `<span class="val-cell negative" style="font-size:12px;font-weight:700">${tx.faturaName||'Gasto'}</span>`;
+        : `<span class="val-cell negative" style="font-size:12px;font-weight:700">${escHtml(tx.faturaName||'Gasto')}</span>`;
 
       const tdDesc = document.createElement('td');
       const inDesc = document.createElement('input');
@@ -4300,7 +4311,7 @@ function renderPagamentos() {
 
     const titleEl = document.createElement('div');
     titleEl.className = 'card-title';
-    titleEl.innerHTML = `${dot} ${pName}`;
+    titleEl.innerHTML = `${dot} ${escHtml(pName)}`;
 
     const eyeBtn = document.createElement('button');
     eyeBtn.className = 'btn btn-ghost btn-sm';
@@ -4338,7 +4349,7 @@ function renderPagamentos() {
         const tdDel = document.createElement('td');
         tdDel.appendChild(delBtn);
 
-        tr.innerHTML = `<td>${formatDateBR(p.date)||'—'}</td><td>${p.desc}</td><td class="val-cell positive">${visible?fmtRaw(p.value):'••••'}</td>`;
+        tr.innerHTML = `<td>${escHtml(formatDateBR(p.date)||'—')}</td><td>${escHtml(p.desc)}</td><td class="val-cell positive">${visible?fmtRaw(p.value):'••••'}</td>`;
         tr.appendChild(tdDel);
         tbody.appendChild(tr);
       });

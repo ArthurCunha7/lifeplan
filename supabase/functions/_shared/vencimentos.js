@@ -1,6 +1,6 @@
 // Lógica dos lembretes de vencimento de fatura. JavaScript puro, sem dependências:
-// a MESMA lógica roda no app (src/lembretes.js é cópia idêntica deste arquivo) e na
-// função agendada do Supabase. Se mudar aqui, copie para src/lembretes.js.
+// fonte única usada tanto na Edge Function agendada do Supabase quanto no app
+// React (que reexporta este arquivo em src/lembretes.js).
 //
 // As datas são sempre texto "AAAA-MM-DD" no fuso de quem usa (hoje = dia local).
 

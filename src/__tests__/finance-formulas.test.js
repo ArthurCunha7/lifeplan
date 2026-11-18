@@ -92,6 +92,18 @@ describe('cfComputeGastoCategoria', () => {
     expect(cfComputeGastoCategoria(state, 0, 'Restaurantes')).toBe(50);
   });
 
+  it('soma também gastos pagos via Pix (pixRows) na categoria e perfil certos', () => {
+    const state = makeState({
+      faturas: [{ id: 'f1', rows: [{ profileIdx: 0, value: 50, category: 'Restaurantes' }] }],
+      pixRows: [
+        { id: 'p1', profileIdx: 0, value: 35, category: 'Restaurantes' },
+        { id: 'p2', profileIdx: 0, value: 20, category: 'Uber' },
+        { id: 'p3', profileIdx: 1, value: 500, category: 'Restaurantes' },
+      ],
+    });
+    expect(cfComputeGastoCategoria(state, 0, 'Restaurantes')).toBe(85);
+  });
+
   it('retorna 0 quando não há gastos na categoria', () => {
     const state = makeState();
     expect(cfComputeGastoCategoria(state, 0, 'Academia')).toBe(0);
@@ -128,6 +140,24 @@ describe('cfGetTableTotal — cada tipo de tabela do Balanço Mensal', () => {
       ],
     };
     expect(cfGetTableTotal(state, t)).toBe(250);
+  });
+
+  it('tabela "planejamento" desconta Pix categorizado e não reserva negativo quando estoura', () => {
+    const state = makeState({
+      faturas: [{ id: 'f1', rows: [{ profileIdx: 0, value: 120, category: 'Restaurantes' }] }],
+      pixRows: [
+        { id: 'p1', profileIdx: 0, value: 100, category: 'Restaurantes' }, // total = 220 > 200 (estourou -> reserva 0)
+        { id: 'p2', profileIdx: 0, value: 40, category: 'Uber' },          // restante = 100 - 40 = 60
+      ],
+    });
+    const t = {
+      type: 'planejamento',
+      rows: [
+        { categoria: 'Restaurantes', profileIdx: 0, valor: 200 },
+        { categoria: 'Uber', profileIdx: 0, valor: 100 },
+      ],
+    };
+    expect(cfGetTableTotal(state, t)).toBe(60);
   });
 
   it('tabela "faturas_auto" soma o total de todas as faturas de verdade, sempre atualizado', () => {
