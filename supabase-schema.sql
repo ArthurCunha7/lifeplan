@@ -155,6 +155,8 @@ create table if not exists families (
   created_at timestamptz default now()
 );
 
+alter table families add column if not exists name text not null default 'Minha Família';
+
 create table if not exists family_members (
   family_id uuid not null references families(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -196,17 +198,45 @@ alter table family_charges enable row level security;
 alter table family_closings enable row level security;
 
 drop policy if exists "Membros veem a família" on families;
+drop policy if exists "Usuário vê a própria participação na família" on family_members;
+drop function if exists is_family_member(uuid);
+drop function if exists is_family_owner(uuid);
+
+-- Funções auxiliares SECURITY DEFINER para evitar recursão infinita de RLS entre families e family_members
+create or replace function is_family_member(fid uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from family_members
+    where family_id = fid and user_id = auth.uid()
+  );
+$$;
+
+create or replace function is_family_owner(fid uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from families
+    where id = fid and owner_id = auth.uid()
+  );
+$$;
+
 create policy "Membros veem a família"
   on families for select using (
-    owner_id = auth.uid()
-    or exists (select 1 from family_members fm where fm.family_id = families.id and fm.user_id = auth.uid())
+    owner_id = auth.uid() or is_family_member(id)
   );
 
-drop policy if exists "Usuário vê a própria participação na família" on family_members;
 create policy "Usuário vê a própria participação na família"
   on family_members for select using (
-    user_id = auth.uid()
-    or exists (select 1 from families f where f.id = family_members.family_id and f.owner_id = auth.uid())
+    user_id = auth.uid() or is_family_owner(family_id)
   );
 
 drop policy if exists "Líder e membro veem os gastos compartilhados" on family_charges;
@@ -301,6 +331,10 @@ begin
 end $$;
 
 -- ── 8. Funções RPC (Modo Família + Exclusão LGPD) ───────────────────────────
+-- PostgreSQL exige DROP FUNCTION antes de recriar caso uma versão anterior da
+-- função já exista no banco com tipo de retorno ou nome de parâmetro diferente (erro 42P13).
+drop function if exists create_family(text);
+drop function if exists create_family();
 create or replace function create_family(new_name text default 'Minha Família')
 returns setof families
 language plpgsql
@@ -326,6 +360,7 @@ begin
 end;
 $$;
 
+drop function if exists join_family_by_code(text);
 create or replace function join_family_by_code(code text)
 returns void
 language plpgsql
@@ -352,6 +387,7 @@ begin
 end;
 $$;
 
+drop function if exists family_members_overview();
 create or replace function family_members_overview()
 returns table (user_id uuid, email text, is_leader boolean)
 language plpgsql
@@ -378,6 +414,8 @@ begin
 end;
 $$;
 
+drop function if exists delete_my_account(text);
+drop function if exists delete_my_account();
 create or replace function delete_my_account(confirmacao text)
 returns void
 language plpgsql
@@ -394,6 +432,11 @@ begin
   delete from auth.users where id = uid;
 end;
 $$;
+
+grant execute on function create_family(text) to authenticated;
+grant execute on function join_family_by_code(text) to authenticated;
+grant execute on function family_members_overview() to authenticated;
+grant execute on function delete_my_account(text) to authenticated;
 
 -- ── 9. Gatilhos de avisos automáticos do Modo Família (sem valores no texto) ─
 create or replace function notify_family_charge_insert()
