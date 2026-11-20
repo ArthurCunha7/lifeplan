@@ -8,6 +8,7 @@ import { resumoSemanal } from './weeklySummary';
 import { cruzarSaudeDinheiro, type CruzamentoSaudeDinheiro } from './crossInsights';
 import { supabase, fetchUserPlanData, extractPlanDays } from './supabaseClient';
 import { readScopedLocal, registerPlanDataField, requestPlanDataSave } from './planDataQueue';
+import { cfComputeGastoCategoria, cfGetTableTotal } from './financeFormulas';
 import { useTimetable, getNextClass } from './StudyAndSchedule';
 import { HOME_THEME } from './styles';
 import type {
@@ -467,31 +468,14 @@ export function getNextExam(userId: string | null): { title?: string; subject?: 
   } catch { return null; }
 }
 
-function computeGastoCategoriaSafe(state: FinanceState, profileIdx: number, categoria: string): number {
-  const ff = window.FinanceFormulas;
-  if (!ff) return 0;
-  if (!(ff.version >= 4)) {
-    return ff.cfGetAllRowsByProfile(state, profileIdx)
-      .reduce((s, r) => (r.category || '') === categoria ? s + (parseFloat(String(r.value ?? 0)) || 0) : s, 0);
-  }
-  return ff.cfComputeGastoCategoria(state, profileIdx, categoria);
-}
-
 export function getSaldoPreview(userId: string | null): number | null {
   try {
     const state = readScopedLocal<FinanceState>('cf_state', userId);
     if (!state?.balancoTables) return null;
-    const ff = window.FinanceFormulas;
-    if (!ff) return null;
     let saldoFinal = 0;
     state.balancoTables.forEach(t => {
       if (!t.includeInSaldo || !t.sign) return;
-      const total = (t.type === 'faturas_auto' && !(ff.version >= 2))
-        ? (state.faturas || []).reduce((s, f) => s + (f.rows || []).reduce((s2, r) => s2 + (parseFloat(String(r.value ?? 0)) || 0), 0), 0)
-        : (t.type === 'planejamento' && !(ff.version >= 4))
-          ? (t.rows || []).filter(r => r.categoria && r.profileIdx != null).reduce((s, r) => s + Math.max(0, (parseFloat(String(r.valor ?? 0)) || 0) - computeGastoCategoriaSafe(state, r.profileIdx as number, r.categoria as string)), 0)
-          : ff.cfGetTableTotal(state, t);
-      saldoFinal += total * t.sign;
+      saldoFinal += cfGetTableTotal(state, t) * t.sign;
     });
     return saldoFinal;
   } catch { return null; }
@@ -508,7 +492,6 @@ export function getPlanejamentoPreview(userId: string | null): PlanejamentoPrevi
   try {
     const state = readScopedLocal<FinanceState>('cf_state', userId);
     if (!state?.balancoTables) return null;
-    if (!window.FinanceFormulas) return null;
     const planTable = state.balancoTables.find(t => t.type === 'planejamento');
     if (!planTable) return null;
     const rows = (planTable.rows || [])
@@ -520,7 +503,7 @@ export function getPlanejamentoPreview(userId: string | null): PlanejamentoPrevi
           categoria: r.categoria,
           profileName,
           valor: parseFloat(String(r.valor ?? 0)) || 0,
-          gasto: computeGastoCategoriaSafe(state, r.profileIdx, r.categoria),
+          gasto: cfComputeGastoCategoria(state, r.profileIdx, r.categoria),
         };
       });
     return rows.length ? rows : null;

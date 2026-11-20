@@ -1,0 +1,1071 @@
+/* src/financas/financas.css — Estilos escopados exclusivamente em .lp-financas */
+
+.lp-financas {
+  --accent2: var(--success);
+  --p0: #3F5A38;
+  --p1: #2F5F7E;
+  --p2: #7A4E16;
+  --p3: #7A3E5C;
+  --p4: #5A4A8A;
+  --p5: #8A4A2A;
+  --p6: #2F6B6B;
+  --p7: #66742A;
+  --p8: #8A3E6E;
+  --p9: #5B6659;
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.4;
+  min-height: 100vh;
+  padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  transition: background-color 0.2s, color 0.2s;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .lp-financas {
+  --p0: #A9C29A;
+  --p1: #8FB8D4;
+  --p2: #EBB872;
+  --p3: #D49BB9;
+  --p4: #B7A9E0;
+  --p5: #E0A682;
+  --p6: #8CCBC4;
+  --p7: #C5D08A;
+  --p8: #E0A0CF;
+  --p9: #B8C4B5;
+}
+
+.lp-financas *,
+.lp-financas *::before,
+.lp-financas *::after {
+  box-sizing: border-box;
+}
+
+/* Valores escondidos: campos numéricos ficam borrados até a pessoa tocar para editar. */
+.lp-financas.cf-mask input[type="number"]:not(:focus) {
+  color: transparent !important;
+  text-shadow: 0 0 9px var(--text);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.lp-financas header {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.lp-financas .head-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.lp-financas .page-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+
+.lp-financas .header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.lp-financas nav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.lp-financas nav button {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+  padding: 12px 14px 9px;
+  min-height: 48px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.lp-financas nav button:hover {
+  color: var(--text);
+}
+
+.lp-financas nav button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.lp-financas .tab {
+  display: none;
+  padding: 20px 16px 32px;
+}
+
+.lp-financas .tab.active {
+  display: block;
+}
+
+.lp-financas svg.ic {
+  flex-shrink: 0;
+  vertical-align: -0.2em;
+}
+
+.lp-financas .section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lp-financas .section-title {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-financas .badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+
+.lp-financas .card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.lp-financas .card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lp-financas .card-title {
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-financas .card-total {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--accent2);
+  white-space: nowrap;
+}
+
+.lp-financas .table-wrap {
+  overflow-x: auto;
+}
+
+.lp-financas table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lp-financas thead th {
+  background: var(--surface2);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-financas tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border2);
+  vertical-align: middle;
+}
+
+.lp-financas tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.lp-financas tbody tr:hover td {
+  background: var(--row-hover);
+}
+
+.lp-financas input[type="text"],
+.lp-financas input[type="number"],
+.lp-financas input[type="date"],
+.lp-financas select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  min-height: 40px;
+  padding: 6px 10px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.lp-financas input[type="text"]:focus,
+.lp-financas input[type="number"]:focus,
+.lp-financas input[type="date"]:focus,
+.lp-financas select:focus {
+  border-color: var(--accent);
+}
+
+.lp-financas input[type="date"] {
+  min-width: 130px;
+}
+
+.lp-financas .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  min-height: 44px;
+  justify-content: center;
+  border-radius: 12px;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lp-financas .btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.lp-financas .btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.lp-financas .btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.lp-financas .btn-ghost:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.lp-financas .btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid transparent;
+  padding: 4px 8px;
+}
+
+.lp-financas .btn-danger:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.lp-financas .btn-sm {
+  padding: 4px 10px;
+  font-size: 13px;
+  min-height: 40px;
+  min-width: 40px;
+}
+
+.lp-financas .profile-select {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 160px;
+}
+
+.lp-financas .chip {
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.15s;
+  opacity: 0.6;
+  white-space: nowrap;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+}
+
+.lp-financas .chip.selected {
+  opacity: 1;
+}
+
+/* cores por perfil (tokens --p0…--p9, claro e escuro) */
+.lp-financas .chip[data-p="0"] { color: var(--p0); border-color: var(--p0); }
+.lp-financas .chip[data-p="0"].selected { background: color-mix(in srgb, var(--p0) 18%, transparent); }
+.lp-financas .profile-card[data-p="0"]::before { background: var(--p0); }
+.lp-financas .profile-card[data-p="0"] .profile-card-name { color: var(--p0); }
+
+.lp-financas .chip[data-p="1"] { color: var(--p1); border-color: var(--p1); }
+.lp-financas .chip[data-p="1"].selected { background: color-mix(in srgb, var(--p1) 18%, transparent); }
+.lp-financas .profile-card[data-p="1"]::before { background: var(--p1); }
+.lp-financas .profile-card[data-p="1"] .profile-card-name { color: var(--p1); }
+
+.lp-financas .chip[data-p="2"] { color: var(--p2); border-color: var(--p2); }
+.lp-financas .chip[data-p="2"].selected { background: color-mix(in srgb, var(--p2) 18%, transparent); }
+.lp-financas .profile-card[data-p="2"]::before { background: var(--p2); }
+.lp-financas .profile-card[data-p="2"] .profile-card-name { color: var(--p2); }
+
+.lp-financas .chip[data-p="3"] { color: var(--p3); border-color: var(--p3); }
+.lp-financas .chip[data-p="3"].selected { background: color-mix(in srgb, var(--p3) 18%, transparent); }
+.lp-financas .profile-card[data-p="3"]::before { background: var(--p3); }
+.lp-financas .profile-card[data-p="3"] .profile-card-name { color: var(--p3); }
+
+.lp-financas .chip[data-p="4"] { color: var(--p4); border-color: var(--p4); }
+.lp-financas .chip[data-p="4"].selected { background: color-mix(in srgb, var(--p4) 18%, transparent); }
+.lp-financas .profile-card[data-p="4"]::before { background: var(--p4); }
+.lp-financas .profile-card[data-p="4"] .profile-card-name { color: var(--p4); }
+
+.lp-financas .chip[data-p="5"] { color: var(--p5); border-color: var(--p5); }
+.lp-financas .chip[data-p="5"].selected { background: color-mix(in srgb, var(--p5) 18%, transparent); }
+.lp-financas .profile-card[data-p="5"]::before { background: var(--p5); }
+.lp-financas .profile-card[data-p="5"] .profile-card-name { color: var(--p5); }
+
+.lp-financas .chip[data-p="6"] { color: var(--p6); border-color: var(--p6); }
+.lp-financas .chip[data-p="6"].selected { background: color-mix(in srgb, var(--p6) 18%, transparent); }
+.lp-financas .profile-card[data-p="6"]::before { background: var(--p6); }
+.lp-financas .profile-card[data-p="6"] .profile-card-name { color: var(--p6); }
+
+.lp-financas .chip[data-p="7"] { color: var(--p7); border-color: var(--p7); }
+.lp-financas .chip[data-p="7"].selected { background: color-mix(in srgb, var(--p7) 18%, transparent); }
+.lp-financas .profile-card[data-p="7"]::before { background: var(--p7); }
+.lp-financas .profile-card[data-p="7"] .profile-card-name { color: var(--p7); }
+
+.lp-financas .chip[data-p="8"] { color: var(--p8); border-color: var(--p8); }
+.lp-financas .chip[data-p="8"].selected { background: color-mix(in srgb, var(--p8) 18%, transparent); }
+.lp-financas .profile-card[data-p="8"]::before { background: var(--p8); }
+.lp-financas .profile-card[data-p="8"] .profile-card-name { color: var(--p8); }
+
+.lp-financas .chip[data-p="9"] { color: var(--p9); border-color: var(--p9); }
+.lp-financas .chip[data-p="9"].selected { background: color-mix(in srgb, var(--p9) 18%, transparent); }
+.lp-financas .profile-card[data-p="9"]::before { background: var(--p9); }
+.lp-financas .profile-card[data-p="9"] .profile-card-name { color: var(--p9); }
+
+.lp-financas .val-cell {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.lp-financas .negative {
+  color: var(--warning) !important;
+}
+
+.lp-financas .positive {
+  color: var(--accent2) !important;
+}
+
+.lp-financas tfoot td {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  font-weight: 600;
+  background: var(--surface2);
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-financas .profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.lp-financas .profile-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.lp-financas .profile-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.lp-financas .profile-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.lp-financas .profile-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.lp-financas .profile-card-row:last-child {
+  border-bottom: none;
+}
+
+.lp-financas .profile-card-toggle {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 4px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.lp-financas .profile-card-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lp-financas .profile-card-toggle .row-chev {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.lp-financas .profile-card-summary {
+  cursor: pointer;
+}
+
+.lp-financas .profile-card-hint {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.lp-financas .profile-card:hover .profile-card-hint {
+  color: var(--text-2, var(--text));
+}
+
+.lp-financas .profile-card-extrato {
+  margin: 14px -20px -20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+@media (max-width: 560px) {
+  .lp-financas .profile-card-extrato table { table-layout: fixed; width: 100%; }
+  .lp-financas .profile-card-extrato th,
+  .lp-financas .profile-card-extrato td { padding: 8px 3px; min-width: 0; }
+  .lp-financas .profile-card-extrato th:first-child,
+  .lp-financas .profile-card-extrato td:first-child { padding-left: 12px; }
+  .lp-financas .profile-card-extrato th:last-child,
+  .lp-financas .profile-card-extrato td:last-child { padding-right: 8px; }
+  .lp-financas .profile-card-extrato th:nth-child(1),
+  .lp-financas .profile-card-extrato td:nth-child(1) { width: 106px; }
+  .lp-financas .profile-card-extrato th:nth-child(2),
+  .lp-financas .profile-card-extrato td:nth-child(2) { width: 54px; }
+  .lp-financas .profile-card-extrato th:nth-child(4),
+  .lp-financas .profile-card-extrato td:nth-child(4) { width: 66px; }
+  .lp-financas .profile-card-extrato th:nth-child(5),
+  .lp-financas .profile-card-extrato td:nth-child(5) { width: 44px; }
+  .lp-financas .profile-card-extrato td:nth-child(2) { overflow: hidden; text-overflow: ellipsis; padding-left: 8px; }
+  .lp-financas .profile-card-extrato td:nth-child(2) span { font-size: 11px !important; }
+  .lp-financas .profile-card-extrato input { font-size: 12px !important; padding: 6px 4px !important; width: 100% !important; box-sizing: border-box; min-height: 40px; }
+  .lp-financas .profile-card-extrato input[type="date"] { padding-right: 0 !important; }
+  .lp-financas .profile-card-extrato input[type="date"]::-webkit-calendar-picker-indicator { display: none; }
+  .lp-financas .profile-card-extrato td:nth-child(5) .btn { min-width: 40px; min-height: 40px; padding: 0; }
+  .lp-financas .profile-card-extrato td[colspan] { width: auto; }
+}
+
+.lp-financas .profile-card-row .label {
+  color: var(--muted);
+}
+
+.lp-financas .profile-card-final {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  font-size: 18px;
+  font-weight: 700;
+  padding-top: 4px;
+}
+
+.lp-financas .payment-add-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.lp-financas .payment-add-row input,
+.lp-financas .payment-add-row select {
+  flex: 1;
+  min-width: 120px;
+}
+
+.lp-financas .empty {
+  text-align: center;
+  padding: 32px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.lp-financas .profile-name-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border);
+  border-radius: 0;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  width: auto;
+  padding: 2px 4px;
+}
+
+.lp-financas .profile-name-input:focus {
+  border-bottom-color: var(--accent);
+  outline: none;
+}
+
+.lp-financas .add-row-bar {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+}
+
+.lp-financas .add-row-bar.top {
+  border-top: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-financas *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.lp-financas *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lp-financas *::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.lp-financas select option {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.lp-financas .category-select {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 220px;
+}
+
+.lp-financas .cat-chip {
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--info);
+  color: var(--info);
+  background: transparent;
+  transition: all 0.15s;
+  opacity: 0.4;
+  white-space: nowrap;
+}
+
+.lp-financas .cat-chip.selected {
+  opacity: 1;
+  background: var(--info-soft);
+}
+
+.lp-financas .balanco-section {
+  margin-bottom: 20px;
+}
+
+.lp-financas .balanco-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Compact "balões" inside Balanço Mensal tab */
+.lp-financas #tab-balanco .card {
+  margin-bottom: 14px;
+  border-radius: var(--card-radius);
+}
+
+.lp-financas #tab-balanco .card-header {
+  padding: 8px 12px;
+}
+
+.lp-financas #tab-balanco .card-title {
+  font-size: 13px;
+  gap: 6px;
+}
+
+.lp-financas #tab-balanco .card-total {
+  font-size: 13px;
+}
+
+.lp-financas #tab-balanco table th,
+.lp-financas #tab-balanco table td {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.lp-financas #tab-balanco .profile-manager-card {
+  padding: 8px !important;
+  margin-bottom: 6px !important;
+}
+
+.lp-financas #tab-balanco .balanco-add-btn {
+  padding: 6px 10px;
+}
+
+.lp-financas .balanco-add-btn {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.lp-financas .balanco-editable-row td input[type="number"] {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border);
+  border-radius: 0;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  padding: 2px 4px;
+  width: 120px;
+  outline: none;
+}
+
+.lp-financas .balanco-editable-row td input[type="number"]:focus {
+  border-bottom-color: var(--accent);
+}
+
+.lp-financas .balanco-editable-row td input[type="text"] {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border);
+  border-radius: 0;
+  color: var(--text);
+  font-size: 13px;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.lp-financas .balanco-editable-row td input[type="text"]:focus {
+  border-bottom-color: var(--accent);
+}
+
+/* Profile management styles */
+.lp-financas .profile-manager-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border2);
+  flex-wrap: wrap;
+}
+
+.lp-financas .profile-manager-row:last-child {
+  border-bottom: none;
+}
+
+.lp-financas .profile-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.lp-financas .profile-manager-name {
+  flex: 1;
+  min-width: 120px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border);
+  border-radius: 0;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 6px;
+  outline: none;
+}
+
+.lp-financas .profile-manager-name:focus {
+  border-bottom-color: var(--accent);
+}
+
+.lp-financas .lancamento-diff-positive {
+  color: var(--accent2);
+}
+
+.lp-financas .lancamento-diff-negative {
+  color: var(--warning);
+}
+
+.lp-financas .lancamento-diff-neutral {
+  color: var(--muted);
+}
+
+/* ── Saldo do mês (hero) ── */
+.lp-financas .saldo-hero {
+  padding: 22px 20px 20px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-financas .saldo-hero.neg {
+  background: var(--warning-soft);
+}
+
+.lp-financas .saldo-hero-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.2px;
+}
+
+.lp-financas .saldo-hero-val {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 500;
+  line-height: 1.15;
+  margin: 4px 0 6px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-financas .saldo-hero.neg .saldo-hero-val {
+  color: var(--warning);
+}
+
+.lp-financas .saldo-hero-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.lp-financas .saldo-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  min-height: 60px;
+  border-bottom: 1px solid var(--border2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.lp-financas .saldo-line:hover {
+  background: var(--row-hover);
+}
+
+.lp-financas .row-ic,
+.lp-financas .plan-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lp-financas .plan-ic.over {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.lp-financas .row-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lp-financas .row-chev {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.lp-financas .row-moves {
+  display: flex;
+  gap: 2px;
+}
+
+/* ── Planejamento mensal ── */
+.lp-financas .plan-row {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border2);
+}
+
+.lp-financas .plan-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lp-financas .plan-mid {
+  flex: 1;
+  min-width: 0;
+}
+
+.lp-financas .plan-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.lp-financas .plan-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.lp-financas .plan-sub {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-financas .plan-rest {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-dark);
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-financas .plan-rest.over {
+  color: var(--warning);
+}
+
+.lp-financas .plan-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--track);
+  margin: 10px 0 2px;
+  overflow: hidden;
+}
+
+.lp-financas .plan-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent-fill);
+  transition: width 0.2s;
+}
+
+.lp-financas .plan-fill.over {
+  background: var(--warning);
+}
+
+.lp-financas .plan-edit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.lp-financas .plan-edit label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.lp-financas .pix-row {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-financas .pix-row:last-child {
+  border-bottom: none;
+}
+
+.lp-financas .pix-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lp-financas .plan-closing {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--text-2);
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+}
+
+/* ── Relatório em PDF (impressão) ────────────────────────────────────── */
+.lp-financas #pdf-report {
+  display: none;
+  padding: 24px;
+  color: #1a1a1a;
+  background: #fff;
+}
+
+.lp-financas #pdf-report h1 {
+  font-size: 22px;
+  margin: 0 0 2px;
+}
+
+.lp-financas #pdf-report .pdf-subtitle {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.lp-financas #pdf-report h2 {
+  font-size: 16px;
+  margin: 22px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid #333;
+}
+
+.lp-financas #pdf-report h3 {
+  font-size: 13px;
+  margin: 14px 0 6px;
+  color: #333;
+}
+
+.lp-financas #pdf-report table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+
+.lp-financas #pdf-report th,
+.lp-financas #pdf-report td {
+  border: 1px solid #ccc;
+  padding: 5px 7px;
+  text-align: left;
+}
+
+.lp-financas #pdf-report th {
+  background: #eee;
+}
+
+.lp-financas #pdf-report .pdf-total-row td {
+  font-weight: bold;
+  background: #f7f7f7;
+}
+
+.lp-financas #pdf-report .pdf-neg {
+  color: #b03a2e;
+}
+
+.lp-financas #pdf-report .pdf-pos {
+  color: #1e7e34;
+}
+
+.lp-financas #pdf-report .pdf-empty {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
+  margin-bottom: 10px;
+}
+
+@media print {
+  body:has(.lp-financas) * {
+    visibility: hidden;
+  }
+  .lp-financas #pdf-report,
+  .lp-financas #pdf-report * {
+    visibility: visible;
+  }
+  .lp-financas #pdf-report {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px 20px;
+  }
+}

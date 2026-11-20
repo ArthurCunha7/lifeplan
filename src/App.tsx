@@ -192,8 +192,8 @@ function AppInner() {
       <MealPlanApp userId={userId} initialTab="workout" onHome={() => setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile} />
     );
     else if (screen === 'estudos') screenContent = <StudyTab userId={userId} onOpenTimetable={() => setScreen('timetable')} />;
-    else if (screen === 'financas') screenContent = <FinanceTab />;
-    else if (screen === 'habitos') screenContent = <HabitsTab onHome={() => setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile} />;
+    else if (screen === 'financas') screenContent = <FinanceTab userId={userId} onOpenProfile={onOpenProfile} />;
+    else if (screen === 'habitos') screenContent = <HabitsTab userId={userId} onHome={() => setScreen('home')} onLogout={onLogout} onOpenProfile={onOpenProfile} />;
     else if (screen === 'reset-password') screenContent = <ResetPasswordPage onDone={() => setScreen('home')} />;
     else if (screen === 'register') screenContent = <RegisterPage onSwitch={() => setScreen('login')} onLogin={() => setScreen('home')} />;
     else screenContent = <LoginPage onSwitch={() => setScreen('register')} onLogin={() => setScreen('home')} />;

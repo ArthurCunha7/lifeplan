@@ -1,0 +1,473 @@
+/* src/estudos/estudos.css — Estilos isolados da aba Estudos (.lp-estudos) */
+.lp-estudos {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.lp-estudos *,
+.lp-estudos *::before,
+.lp-estudos *::after {
+  box-sizing: border-box;
+}
+
+.lp-estudos .est-header {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1rem 0;
+}
+
+.lp-estudos .head-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.lp-estudos .est-header h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+  margin-right: auto;
+  color: var(--text);
+}
+
+.lp-estudos .cloud-status {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.lp-estudos .icon-btn {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+.lp-estudos .icon-btn:hover {
+  background: var(--accent-soft);
+}
+
+.lp-estudos .est-nav {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  max-width: 960px;
+  margin: 0.25rem auto 0;
+  scrollbar-width: none;
+}
+
+.lp-estudos .est-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.lp-estudos .est-nav button {
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  min-height: 48px;
+  padding: 0 1rem;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lp-estudos .est-nav button:hover {
+  color: var(--text);
+}
+
+.lp-estudos .est-nav button.active {
+  color: var(--text);
+  font-weight: 700;
+  border-bottom-color: var(--accent);
+}
+
+.lp-estudos .est-main {
+  padding: 1.25rem 1rem 1rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.lp-estudos .est-panel {
+  animation: lpEstudosFadeIn 0.22s ease;
+}
+
+@keyframes lpEstudosFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.lp-estudos h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.5rem;
+  color: var(--text);
+  margin: 0 0 1rem;
+  letter-spacing: -0.01em;
+}
+
+.lp-estudos h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.2rem;
+  color: var(--text);
+  margin: 1.5rem 0 0.6rem;
+}
+
+.lp-estudos .form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.lp-estudos .form-row > * {
+  flex: 1 1 150px;
+}
+
+.lp-estudos input,
+.lp-estudos select,
+.lp-estudos textarea,
+.lp-estudos .btn {
+  font-family: inherit;
+  font-size: 0.95rem;
+  border-radius: 12px;
+}
+
+.lp-estudos input,
+.lp-estudos select,
+.lp-estudos textarea {
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.lp-estudos input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.lp-estudos input:focus,
+.lp-estudos select:focus,
+.lp-estudos textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.lp-estudos .btn {
+  min-height: 44px;
+  padding: 0.55rem 1rem;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.lp-estudos .btn:hover {
+  filter: brightness(1.08);
+}
+
+.lp-estudos .btn-danger {
+  background: var(--danger);
+}
+
+.lp-estudos .btn-sm {
+  min-height: 36px;
+  padding: 0.3rem 0.7rem;
+}
+
+.lp-estudos .btn-ghost {
+  background: transparent;
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
+}
+
+.lp-estudos .card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+}
+
+.lp-estudos .card.aprovado {
+  background: var(--success-soft);
+  border-color: var(--success);
+}
+
+.lp-estudos .card.reprovado {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+}
+
+.lp-estudos .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lp-estudos .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.lp-estudos .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.lp-estudos .stat {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  padding: 1rem;
+  border-radius: var(--radius);
+}
+
+.lp-estudos .stat h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.lp-estudos .stat p {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  margin: 0.2rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-estudos .table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin-top: 0.75rem;
+}
+
+.lp-estudos table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lp-estudos th,
+.lp-estudos td {
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border2);
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-estudos th {
+  background: var(--surface2);
+  color: var(--text-2);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.lp-estudos tr:last-child td {
+  border-bottom: none;
+}
+
+.lp-estudos tr:hover td {
+  background: var(--row-hover);
+}
+
+.lp-estudos .progress {
+  background: var(--track);
+  height: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 0.3rem;
+}
+
+.lp-estudos .progress-bar {
+  height: 100%;
+  min-width: 2.6rem;
+  background: var(--accent-fill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: width 0.5s;
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-estudos .calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 1rem;
+}
+
+.lp-estudos .day-name {
+  background: var(--surface2);
+  color: var(--text-2);
+  padding: 0.4rem 0;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+
+.lp-estudos .day {
+  background: var(--surface);
+  padding: 0.35rem;
+  min-height: 76px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.lp-estudos .day.has-event {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+}
+
+.lp-estudos .day.today {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.lp-estudos .day .num {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-estudos .calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.lp-estudos .calendar-header h3 {
+  margin: 0;
+  text-align: center;
+}
+
+.lp-estudos .badge {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.1rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--on-accent);
+}
+
+.lp-estudos .badge.prova {
+  background: var(--danger);
+}
+
+.lp-estudos .badge.trabalho {
+  background: var(--warning);
+}
+
+.lp-estudos .badge.outro {
+  background: var(--info);
+}
+
+.lp-estudos .empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 1.5rem 1rem;
+}
+
+.lp-estudos .empty .btn {
+  margin-top: 0.75rem;
+}
+
+.lp-estudos small {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 520px) {
+  .lp-estudos .day {
+    min-height: 56px;
+    padding: 0.2rem;
+  }
+  .lp-estudos .day .badge {
+    font-size: 0.62rem;
+    padding: 0 0.3rem;
+  }
+  .lp-estudos .btn-label {
+    display: none;
+  }
+}
+
+/* ── Relatório em PDF (impressão) — mantém cores fixas, é papel ───────── */
+#estudos-pdf-report {
+  display: none;
+  padding: 24px;
+  color: #1a1a1a;
+  background: #fff;
+  font-family: 'Segoe UI', sans-serif;
+}
+#estudos-pdf-report h1 { font-size: 22px; margin-bottom: 2px; font-family: inherit; }
+#estudos-pdf-report .pdf-subtitle { font-size: 12px; color: #666; margin-bottom: 20px; }
+#estudos-pdf-report h2 { font-size: 16px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #333; color: #1a1a1a; font-family: inherit; }
+#estudos-pdf-report h3 { font-size: 13px; margin: 14px 0 6px; color: #333; font-family: inherit; }
+#estudos-pdf-report table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 11px; }
+#estudos-pdf-report th, #estudos-pdf-report td { border: 1px solid #ccc; padding: 5px 7px; text-align: left; }
+#estudos-pdf-report th { background: #eee; color: #1a1a1a; text-transform: none; letter-spacing: 0; }
+#estudos-pdf-report .pdf-ok { color: #1e7e34; font-weight: bold; }
+#estudos-pdf-report .pdf-bad { color: #b03a2e; font-weight: bold; }
+#estudos-pdf-report .pdf-empty { font-size: 11px; color: #888; font-style: italic; margin-bottom: 10px; }
+
+@media print {
+  body.lp-printing-estudos * {
+    visibility: hidden;
+  }
+  body.lp-printing-estudos #estudos-pdf-report,
+  body.lp-printing-estudos #estudos-pdf-report * {
+    visibility: visible;
+  }
+  body.lp-printing-estudos #estudos-pdf-report {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px 20px;
+  }
+}

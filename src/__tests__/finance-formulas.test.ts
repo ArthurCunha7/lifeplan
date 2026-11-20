@@ -1,15 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import type { FinanceState } from '../types';
 
-// Importa o MESMO arquivo usado de verdade pelo app (public/finance-formulas.js)
-// — não uma cópia. Ele se anexa a window.FinanceFormulas quando carregado.
-import '../../public/finance-formulas.js';
-const {
+// Importa o módulo TypeScript compartilhado entre a prévia do Início e a aba Finanças
+import {
   cfGetAllRowsByProfile,
   cfComputeEntradasTotal,
   cfComputeGastoCategoria,
   cfGetTableTotal,
-} = window.FinanceFormulas!;
+} from '../financeFormulas';
 
 function makeState(overrides: Partial<FinanceState> = {}): FinanceState {
   return {

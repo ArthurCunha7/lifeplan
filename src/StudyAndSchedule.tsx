@@ -1,10 +1,13 @@
-// src/StudyAndSchedule.tsx — Estudos, Finanças, Hábitos (iframes), Timer de Foco e Grade de Horários
+// src/StudyAndSchedule.tsx — Estudos, Finanças, Hábitos (componentes nativos), Timer de Foco e Grade de Horários
 import { useState, useRef, useEffect, type CSSProperties, type RefObject } from 'react';
 import { Icon, Glyph, TopBar, EmptyState } from './ui';
 import { fetchUserPlanData } from './supabaseClient';
 import { registerPlanDataField, requestPlanDataSave } from './planDataQueue';
 import { S, HOME_THEME } from './styles';
 import type { TimetableData } from './types';
+import { EstudosApp } from './estudos/EstudosApp';
+import { HabitsApp } from './habitos/HabitsApp';
+import { FinanceApp } from './financas/FinanceApp';
 
 export const WEEK_DAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] as const;
 
@@ -262,13 +265,10 @@ function useAutoHeight(ref: RefObject<HTMLIFrameElement | null>) {
 }
 
 export function StudyTab({ userId, onOpenTimetable }: { userId: string | null; onOpenTimetable: () => void }) {
-  const frameRef = useRef<HTMLIFrameElement | null>(null);
-  useAutoHeight(frameRef);
   return (
     <div style={S.wrap}>
-      <iframe ref={frameRef} title="Estudos" src={iframeSrc('estudos.html')} scrolling="no"
-        style={{ display: 'block', width: '100%', height: '70vh', border: 'none', background: 'var(--bg)' }} />
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '8px 16px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <EstudosApp userId={userId} />
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 12px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <FocusTimer />
         <TimetableCard userId={userId} onEdit={onOpenTimetable} />
       </div>
@@ -276,21 +276,28 @@ export function StudyTab({ userId, onOpenTimetable }: { userId: string | null; o
   );
 }
 
-export function FinanceTab() {
+export function FinanceTab({ userId = null, onOpenProfile }: { userId?: string | null; onOpenProfile?: () => void }) {
   return (
     <div style={{ ...S.wrap, paddingBottom: 0 }}>
-      <iframe title="Finanças" src={iframeSrc('controle-financeiro.html')}
-        style={{ display: 'block', width: '100%', height: `calc(100dvh - ${NAV_SPACE})`, border: 'none', background: 'var(--bg)' }} />
+      <FinanceApp userId={userId} onOpenProfile={onOpenProfile} />
     </div>
   );
 }
 
-export function HabitsTab({ onHome, onOpenProfile }: { onHome?: () => void; onLogout?: () => void; onOpenProfile?: () => void }) {
+export function HabitsTab({
+  userId = null,
+  onHome,
+  onOpenProfile,
+}: {
+  userId?: string | null;
+  onHome?: () => void;
+  onLogout?: () => void;
+  onOpenProfile?: () => void;
+}) {
   return (
     <div style={{ ...S.wrap, paddingBottom: 0 }}>
       <TopBar title="Hábitos e performance" onBack={onHome} onOpenProfile={onOpenProfile} />
-      <iframe title="Hábitos e Performance" src={iframeSrc('my-fit-era.html', '&hideHeader=1')}
-        style={{ display: 'block', width: '100%', height: `calc(100dvh - 69px - ${NAV_SPACE})`, border: 'none', background: 'var(--bg)' }} />
+      <HabitsApp userId={userId} onHome={onHome} onOpenProfile={onOpenProfile} />
     </div>
   );
 }

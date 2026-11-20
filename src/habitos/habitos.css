@@ -1,0 +1,713 @@
+/* src/habitos/habitos.css — Estilos isolados do módulo Hábitos, Dieta e Performance */
+.lp-habitos {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --cat-hover: var(--accent-soft);
+  --cat-success: var(--success-soft);
+  --cat-success-text: var(--success);
+  --cat-success-border: var(--success);
+  --cat-danger: var(--danger-soft);
+  --cat-danger-text: var(--danger);
+  --cat-danger-border: var(--danger);
+  --cat-partial: var(--warning-soft);
+  --cat-partial-text: var(--warning);
+  --cat-partial-border: var(--warning);
+  --cat-selected-bg: var(--accent-soft);
+  --cat-selected-border: var(--accent);
+  --cat-selected-text: var(--accent-dark);
+
+  font-family: var(--font-body, Figtree, system-ui, sans-serif);
+  background: var(--bg);
+  min-height: 100%;
+  color: var(--text);
+  padding: calc(var(--safe-top) + 8px) 12px calc(var(--safe-bottom) + 32px) 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
+}
+
+.lp-habitos *,
+.lp-habitos *::before,
+.lp-habitos *::after {
+  box-sizing: border-box;
+}
+
+.lp-habitos .container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.lp-habitos .page-header {
+  margin-bottom: 20px;
+}
+
+.lp-habitos .page-title {
+  font-family: var(--font-display, Newsreader, serif);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.lp-habitos .page-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+.lp-habitos .section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.lp-habitos .dash-section {
+  margin-bottom: 28px;
+}
+
+.lp-habitos .dash-section.dash-charts .card {
+  margin-bottom: 12px;
+}
+
+.lp-habitos .ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+  margin-right: 6px;
+}
+
+.lp-habitos .ico svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lp-habitos .tab .ico,
+.lp-habitos .bottom-nav .ico {
+  margin-right: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.lp-habitos .tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-habitos .tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.lp-habitos .tab {
+  flex: 0 0 auto;
+  padding: 0 16px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: color 0.15s;
+  min-height: 48px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.lp-habitos .tab:hover {
+  background: transparent;
+  color: var(--text);
+}
+
+.lp-habitos .tab.active {
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  border-bottom-color: var(--accent);
+}
+
+.lp-habitos .tab .alert-badge {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  background: var(--danger);
+  color: var(--on-accent, #fff);
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 0.65em;
+  font-weight: 600;
+}
+
+.lp-habitos .card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 12px);
+  padding: 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.lp-habitos .card h2 {
+  margin-bottom: 12px;
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.lp-habitos .card .muted {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-bottom: 14px;
+  line-height: 1.55;
+  font-weight: 400;
+}
+
+.lp-habitos .grid {
+  display: grid;
+  gap: 12px;
+}
+
+.lp-habitos .grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.lp-habitos .grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.lp-habitos .grid-4 {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.lp-habitos .stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 12px);
+  padding: 16px;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+}
+
+.lp-habitos .stat .v {
+  font-family: var(--font-display, Newsreader, serif);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.75rem;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.lp-habitos .stat .l {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.lp-habitos .stat.accent .v { color: var(--accent); }
+.lp-habitos .stat.stat-success .v { color: var(--success); }
+.lp-habitos .stat.stat-warning .v { color: var(--warning); }
+.lp-habitos .stat.stat-danger .v { color: var(--danger); }
+.lp-habitos .stat.neutral .v { color: var(--text); }
+
+.lp-habitos input,
+.lp-habitos select,
+.lp-habitos textarea,
+.lp-habitos button {
+  font-family: inherit;
+  font-size: 15px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.lp-habitos textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.lp-habitos input[type="checkbox"] {
+  -webkit-appearance: checkbox;
+  appearance: checkbox;
+  width: auto;
+  padding: 0;
+}
+
+.lp-habitos input:focus,
+.lp-habitos select:focus,
+.lp-habitos textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.lp-habitos button {
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  padding: 10px 16px;
+  min-height: 44px;
+  border-radius: var(--radius-sm, 8px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.lp-habitos button:hover {
+  filter: brightness(0.97);
+}
+
+.lp-habitos button:active {
+  transform: scale(0.99);
+}
+
+.lp-habitos button.danger { background: var(--danger); color: #fff; }
+.lp-habitos button.success { background: var(--success); color: #fff; }
+.lp-habitos button.ghost {
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+.lp-habitos button.small {
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  min-height: 36px;
+}
+.lp-habitos button.diet { background: var(--text); color: var(--bg); }
+.lp-habitos button.icon-only {
+  padding: 10px;
+  min-width: 44px;
+}
+
+.lp-habitos .form-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.lp-habitos .form-row > * {
+  flex: 1;
+  min-width: 140px;
+}
+
+.lp-habitos label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.lp-habitos .habit-entry {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  padding: 14px;
+  margin-bottom: 10px;
+  background: var(--surface);
+  transition: all 0.2s;
+}
+
+.lp-habitos .habit-entry.done {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+
+.lp-habitos .habit-entry.failed {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.lp-habitos .habit-entry.optional {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.lp-habitos .habit-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  cursor: pointer;
+}
+
+.lp-habitos .habit-compact .status-bar {
+  width: 4px;
+  align-self: stretch;
+  min-height: 28px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: var(--border);
+}
+
+.lp-habitos .habit-compact .status-bar.done { background: var(--success); }
+.lp-habitos .habit-compact .status-bar.failed { background: var(--danger); }
+
+.lp-habitos .habit-head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lp-habitos .habit-name {
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.lp-habitos .toggle-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lp-habitos .toggle-btn {
+  flex: 1;
+  min-width: 90px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  min-height: 40px;
+  color: var(--text);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.lp-habitos .toggle-btn.active-done {
+  background: var(--cat-success);
+  color: var(--cat-success-text);
+  border-color: var(--cat-success-border);
+  font-weight: 600;
+}
+
+.lp-habitos .toggle-btn.active-fail {
+  background: var(--cat-danger);
+  color: var(--cat-danger-text);
+  border-color: var(--cat-danger-border);
+  font-weight: 600;
+}
+
+.lp-habitos .toggle-btn.active-partial {
+  background: var(--cat-partial);
+  color: var(--cat-partial-text);
+  border-color: var(--cat-partial-border);
+  font-weight: 600;
+}
+
+.lp-habitos .toggle-btn.active-skip {
+  background: var(--bg);
+  color: var(--text-muted);
+  border-color: var(--border);
+  font-weight: 600;
+}
+
+/* Dieta */
+.lp-habitos .meal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 12px);
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.15s;
+}
+
+.lp-habitos .meal-card.full { border-color: var(--success); background: var(--success-soft); }
+.lp-habitos .meal-card.partial { border-color: var(--warning); background: var(--warning-soft); }
+.lp-habitos .meal-card.no { border-color: var(--danger); background: var(--danger-soft); }
+.lp-habitos .meal-card.skip { border-color: var(--border); background: var(--bg); }
+
+.lp-habitos .meal-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  cursor: pointer;
+}
+
+.lp-habitos .meal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lp-habitos .food-list {
+  background: var(--bg);
+  border-radius: var(--radius-sm, 8px);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  margin: 10px 0;
+  font-size: 0.92em;
+}
+
+.lp-habitos .food-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.lp-habitos .food-item:last-child {
+  border-bottom: none;
+}
+
+.lp-habitos .food-checkbox {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  font-weight: 700;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.lp-habitos .food-checkbox.checked {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--on-accent, #fff);
+}
+
+.lp-habitos .food-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.lp-habitos .food-amount {
+  background: var(--surface2, rgba(0,0,0,0.05));
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  color: var(--text-2, var(--text-muted));
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.lp-habitos .diet-summary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 12px);
+  padding: 20px;
+  margin-bottom: 14px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.lp-habitos .diet-summary .big-num {
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: var(--accent);
+  letter-spacing: -0.03em;
+}
+
+.lp-habitos .diet-summary .desc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.lp-habitos .diet-summary .breakdown {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.lp-habitos .diet-summary .breakdown div {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.lp-habitos .heatmap {
+  display: grid;
+  gap: 3px;
+}
+
+.lp-habitos .heat-cell {
+  padding: 10px 4px;
+  text-align: center;
+  border-radius: 5px;
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.lp-habitos .chart-box {
+  position: relative;
+  min-height: 260px;
+  width: 100%;
+}
+
+.lp-habitos .chip {
+  background: var(--surface2, rgba(0,0,0,0.04));
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.88em;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid var(--border);
+}
+
+.lp-habitos .chip.active {
+  background: var(--cat-selected-bg);
+  color: var(--cat-selected-text);
+  border-color: var(--cat-selected-border);
+  font-weight: 600;
+}
+
+.lp-habitos .chips-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lp-habitos .alert-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-sm, 8px);
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.lp-habitos .alert-card.high { border-color: var(--danger); background: var(--danger-soft); }
+.lp-habitos .alert-card.medium { border-color: var(--warning); background: var(--warning-soft); }
+.lp-habitos .alert-card.low { border-color: var(--border); background: var(--bg); }
+
+.lp-habitos .alert-card .alert-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.7em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.lp-habitos .alert-card.high .alert-pill { background: var(--danger); color: #fff; }
+.lp-habitos .alert-card.medium .alert-pill { background: var(--warning); color: #fff; }
+.lp-habitos .alert-card.low .alert-pill { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+
+.lp-habitos .pred-card {
+  background: var(--surface);
+  border-radius: var(--radius-sm, 8px);
+  padding: 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+}
+
+.lp-habitos .pred-bar-wrap {
+  height: 22px;
+  background: var(--surface2, rgba(0,0,0,0.06));
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  margin-top: 4px;
+}
+
+.lp-habitos .pred-bar {
+  height: 100%;
+  transition: width 0.5s;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.78em;
+}
+
+.lp-habitos .pred-bar.high { background: var(--success); }
+.lp-habitos .pred-bar.medium { background: var(--warning); }
+.lp-habitos .pred-bar.low { background: var(--danger); }
+
+.lp-habitos .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.lp-habitos .modal-panel {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 22px;
+  max-width: 600px;
+  width: 100%;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg, 0 10px 25px rgba(0,0,0,0.15));
+}
+
+@media (max-width: 768px) {
+  .lp-habitos .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .lp-habitos .grid-3 { grid-template-columns: 1fr; }
+  .lp-habitos .grid-2 { grid-template-columns: 1fr; }
+  .lp-habitos .chart-box { min-height: 220px; }
+  .lp-habitos .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .lp-habitos .modal-panel {
+    border-radius: 18px 18px 0 0;
+    max-height: 92vh;
+    padding: 20px 18px calc(var(--safe-bottom) + 20px);
+  }
+}
