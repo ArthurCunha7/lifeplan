@@ -4,6 +4,8 @@ import {
   createDefaultDb,
   normalizeDb,
   isScheduled,
+  todayISO,
+  addDaysISO,
 } from '../habitos/habitsStorage';
 import {
   dayScore,
@@ -84,11 +86,15 @@ describe('Habits Analytics', () => {
     const habit = db.habits[0];
     db.habits = [habit]; // Apenas 1 hábito para teste
 
-    db.records['2026-11-18'] = { [habit.id]: { status: 'done' } };
-    db.records['2026-11-19'] = { [habit.id]: { status: 'done' } };
-    db.records['2026-11-20'] = { [habit.id]: { status: 'done' } };
+    const t = todayISO();
+    const tMinus1 = addDaysISO(t, -1);
+    const tMinus2 = addDaysISO(t, -2);
 
-    const streak = computeHabitStreak(db, '2026-11-20');
+    db.records[tMinus2] = { [habit.id]: { status: 'done' } };
+    db.records[tMinus1] = { [habit.id]: { status: 'done' } };
+    db.records[t] = { [habit.id]: { status: 'done' } };
+
+    const streak = computeHabitStreak(db);
     expect(streak).toBe(3);
   });
 });

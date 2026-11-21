@@ -1,5 +1,5 @@
 // src/StudyAndSchedule.tsx — Estudos, Finanças, Hábitos (componentes nativos), Timer de Foco e Grade de Horários
-import { useState, useRef, useEffect, type CSSProperties, type RefObject } from 'react';
+import { useState, useRef, useEffect, type CSSProperties } from 'react';
 import { Icon, Glyph, TopBar, EmptyState } from './ui';
 import { fetchUserPlanData } from './supabaseClient';
 import { registerPlanDataField, requestPlanDataSave } from './planDataQueue';
@@ -231,37 +231,6 @@ export function FocusTimer() {
       </div>
     </div>
   );
-}
-
-// ── ABAS EM IFRAME (Estudos, Finanças, Hábitos) ───────────────────────────────
-const iframeSrc = (file: string, extra = ''): string => `/${file}?embed=1${extra}`;
-const NAV_SPACE = 'calc(76px + env(safe-area-inset-bottom, 0px))';
-
-function useAutoHeight(ref: RefObject<HTMLIFrameElement | null>) {
-  useEffect(() => {
-    const frame = ref.current;
-    if (!frame) return;
-    let ro: ResizeObserver | null = null;
-    const fit = () => {
-      try {
-        const body = frame.contentDocument?.body;
-        if (!body) return;
-        const h = Math.ceil(body.getBoundingClientRect().height);
-        if (h > 0) frame.style.height = h + 'px';
-      } catch { /* ignora */ }
-    };
-    const onLoad = () => {
-      fit();
-      try {
-        ro?.disconnect();
-        const body = frame.contentDocument?.body;
-        if (body) { ro = new ResizeObserver(fit); ro.observe(body); }
-      } catch { /* ignora */ }
-    };
-    frame.addEventListener('load', onLoad);
-    if (frame.contentDocument?.readyState === 'complete') onLoad();
-    return () => { frame.removeEventListener('load', onLoad); ro?.disconnect(); };
-  }, [ref]);
 }
 
 export function StudyTab({ userId, onOpenTimetable }: { userId: string | null; onOpenTimetable: () => void }) {
