@@ -9,6 +9,7 @@ import { flushAndSaveUserPlan } from './planDataQueue';
 import { ACTIVITY_FACTORS, GOAL_ADJUSTMENTS, calcTDEE, calcTargets, generatePlan } from './tacoDb';
 import { S } from './styles';
 import type { ActivityLevel, MealPlanDay, NutritionGoal, Sex, UserProfile } from './types';
+import { alertDialog } from './dialog';
 
 // ── PRIVACIDADE E DADOS (LGPD): exportar e excluir a conta ───────────────────
 const EXPORT_TABLES = [
@@ -141,7 +142,7 @@ export function PrivacyCard({ userId, onAccountDeleted }: { userId: string; onAc
         }
         throw new Error(error.message);
       }
-      alert('Sua conta e todos os seus dados foram excluídos.');
+      void alertDialog('Sua conta e todos os seus dados foram excluídos.', { title: 'Conta excluída' });
       await onAccountDeleted();
     } catch (e) {
       setErr(errText(e));
@@ -243,7 +244,7 @@ export function ProfilePage({
 
   async function handle() {
     if (!userId) return;
-    if (!form.weight || !form.height || !form.age) { alert('Preencha peso, altura e idade'); return; }
+    if (!form.weight || !form.height || !form.age) { void alertDialog('Preencha peso, altura e idade para calcular as suas metas.'); return; }
     setLoading(true);
     try {
       const { error: profErr } = await supabase.from('profiles').upsert({
@@ -279,7 +280,7 @@ export function ProfilePage({
       await flushAndSaveUserPlan(userId, mergedPlan);
       setDone(true); setTimeout(() => onSave(mergedPlan, form), 1200);
     } catch (e) {
-      alert('Erro: ' + errText(e));
+      void alertDialog('Erro: ' + errText(e));
     } finally {
       setLoading(false);
     }

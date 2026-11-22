@@ -54,6 +54,7 @@ import {
   ReasonDoughnutChart,
 } from './habitsCharts';
 import { HabitsIcon, RichText } from './habitsIcons';
+import { alertDialog, confirmDialog } from '../dialog';
 
 export interface HabitsAppProps {
   userId?: string | null;
@@ -339,7 +340,7 @@ export function HabitsApp({ userId = null, onOpenProfile: _onOpenProfile, onHome
   const handleSaveBodyMetric = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId) {
-      alert('Faça login para salvar medições na nuvem.');
+      void alertDialog('Faça login para salvar medições na nuvem.');
       return;
     }
 
@@ -348,7 +349,7 @@ export function HabitsApp({ userId = null, onOpenProfile: _onOpenProfile, onHome
     const f = parseFloat(bodyForm.fat);
 
     if (isNaN(w) && isNaN(m) && isNaN(f)) {
-      alert('Informe ao menos peso, massa muscular ou gordura.');
+      void alertDialog('Informe ao menos peso, massa muscular ou gordura.');
       return;
     }
 
@@ -364,7 +365,7 @@ export function HabitsApp({ userId = null, onOpenProfile: _onOpenProfile, onHome
           .upload(path, bodyForm.photoFile, { upsert: true });
 
         if (uploadErr) {
-          alert('Erro ao enviar foto: ' + uploadErr.message);
+          void alertDialog('Erro ao enviar foto: ' + uploadErr.message);
         } else {
           photo_path = path;
         }
@@ -386,7 +387,7 @@ export function HabitsApp({ userId = null, onOpenProfile: _onOpenProfile, onHome
     const { error } = await supabase.from('body_metrics').upsert(row, { onConflict: 'user_id,recorded_at' });
 
     if (error) {
-      alert('Erro ao salvar medição: ' + error.message);
+      void alertDialog('Erro ao salvar medição: ' + error.message);
       setCloudStatus('Erro ao salvar');
       return;
     }
@@ -414,12 +415,12 @@ export function HabitsApp({ userId = null, onOpenProfile: _onOpenProfile, onHome
 
   // Excluir medição corporal
   const handleDeleteBodyMetric = async (id: string, photoPath?: string | null) => {
-    if (!confirm('Tem certeza que deseja excluir esta medição?')) return;
+    if (!(await confirmDialog('Esta medição será excluída.', { title: 'Excluir medição?', confirmLabel: 'Excluir', danger: true }))) return;
     if (!userId) return;
 
     const { error } = await supabase.from('body_metrics').delete().eq('id', id);
     if (error) {
-      alert('Erro ao excluir: ' + error.message);
+      void alertDialog('Erro ao excluir: ' + error.message);
       return;
     }
 
@@ -443,7 +444,7 @@ export function HabitsApp({ userId = null, onOpenProfile: _onOpenProfile, onHome
         setPhotoPreviewUrl(data.signedUrl);
       }
     } catch (e) {
-      alert('Não foi possível carregar a foto: ' + (e instanceof Error ? e.message : String(e)));
+      void alertDialog('Não foi possível carregar a foto: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -542,7 +543,7 @@ export function HabitsApp({ userId = null, onOpenProfile: _onOpenProfile, onHome
     <div className="lp-habitos">
       <div className="container">
         {/* Topbar com navegação e status de sincronização */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span
@@ -558,7 +559,7 @@ export function HabitsApp({ userId = null, onOpenProfile: _onOpenProfile, onHome
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             <button
               type="button"
               className="ghost small"
@@ -1348,8 +1349,8 @@ export function HabitsApp({ userId = null, onOpenProfile: _onOpenProfile, onHome
                     <button
                       type="button"
                       className="ghost small danger"
-                      onClick={() => {
-                        if (confirm(`Excluir o hábito "${h.name}"?`)) {
+                      onClick={async () => {
+                        if (await confirmDialog('O hábito sai da sua lista.', { title: `Excluir "${h.name}"?`, confirmLabel: 'Excluir', danger: true })) {
                           persistDb({ ...db, habits: db.habits.filter(item => item.id !== h.id) });
                         }
                       }}

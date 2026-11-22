@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Icon } from '../ui';
 import { supabase } from '../supabaseClient';
 import './estudos.css';
+import { alertDialog, confirmDialog } from '../dialog';
 
 export type StudyEventType = 'prova' | 'trabalho' | 'outro';
 export type EstudosSubTab = 'dashboard' | 'materias' | 'estudos' | 'notas' | 'calendario';
@@ -353,8 +354,8 @@ export function EstudosApp({ userId, onOpenProfile }: { userId: string | null; o
     const pass = parseFloat(subjPass);
     const max = parseFloat(subjMax) || 10;
     const stages = parseInt(subjStages, 10);
-    if (!name || isNaN(pass)) { alert('Preencha nome e nota mínima!'); return; }
-    if (!stages || stages < 1) { alert('Diga quantas avaliações/etapas essa matéria terá!'); return; }
+    if (!name || isNaN(pass)) { void alertDialog('Preencha nome e nota mínima!'); return; }
+    if (!stages || stages < 1) { void alertDialog('Diga quantas avaliações/etapas essa matéria terá!'); return; }
     persistData({
       ...data,
       subjects: [...data.subjects, { id: uid(), name, pass, max, stages }],
@@ -362,8 +363,8 @@ export function EstudosApp({ userId, onOpenProfile }: { userId: string | null; o
     setSubjName(''); setSubjPass(''); setSubjMax(''); setSubjStages('');
   }
 
-  function deleteSubject(id: string) {
-    if (!window.confirm('Excluir matéria e todos os dados relacionados?')) return;
+  async function deleteSubject(id: string) {
+    if (!(await confirmDialog('A matéria e todos os dados relacionados serão excluídos.', { title: 'Excluir matéria?', confirmLabel: 'Excluir', danger: true }))) return;
     persistData({
       subjects: data.subjects.filter(s => s.id !== id),
       studies: data.studies.filter(s => s.subjectId !== id),
@@ -375,7 +376,7 @@ export function EstudosApp({ userId, onOpenProfile }: { userId: string | null; o
   function addStudy() {
     const hours = parseFloat(studyHours);
     const topic = studyTopic.trim();
-    if (!studySubject || !studyDate || isNaN(hours)) { alert('Preencha matéria, data e horas!'); return; }
+    if (!studySubject || !studyDate || isNaN(hours)) { void alertDialog('Preencha matéria, data e horas!'); return; }
     persistData({
       ...data,
       studies: [...data.studies, { id: uid(), subjectId: studySubject, date: studyDate, hours, topic }],
@@ -391,7 +392,7 @@ export function EstudosApp({ userId, onOpenProfile }: { userId: string | null; o
     const name = gradeName.trim();
     const value = parseFloat(gradeValue);
     const weight = parseFloat(gradeWeight) || 1;
-    if (!gradeSubject || !name || isNaN(value)) { alert('Preencha todos os campos!'); return; }
+    if (!gradeSubject || !name || isNaN(value)) { void alertDialog('Preencha todos os campos!'); return; }
     persistData({
       ...data,
       grades: [...data.grades, { id: uid(), subjectId: gradeSubject, name, value, weight }],
@@ -406,7 +407,7 @@ export function EstudosApp({ userId, onOpenProfile }: { userId: string | null; o
   function addEvent() {
     const title = evTitle.trim();
     const desc = evDesc.trim();
-    if (!title || !evDate) { alert('Preencha título e data!'); return; }
+    if (!title || !evDate) { void alertDialog('Preencha título e data!'); return; }
     const newEvent: EstudosEvent = { id: uid(), title, type: evType, subjectId: evSubject, date: evDate, desc };
     persistData({ ...data, events: [...data.events, newEvent] });
     syncEventToGoogleCalendar(newEvent);

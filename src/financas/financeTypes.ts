@@ -31,7 +31,8 @@ export type IconName =
   | 'leaf'
   | 'dumbbell'
   | 'wallet'
-  | 'link';
+  | 'link'
+  | 'chevron';
 
 export interface ProfileItem {
   name: string;

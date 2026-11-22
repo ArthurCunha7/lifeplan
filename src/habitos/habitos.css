@@ -301,7 +301,7 @@
 .lp-habitos button.small {
   padding: 6px 12px;
   font-size: 0.8125rem;
-  min-height: 36px;
+  min-height: 44px;
 }
 .lp-habitos button.diet { background: var(--text); color: var(--bg); }
 .lp-habitos button.icon-only {
@@ -402,7 +402,7 @@
   cursor: pointer;
   font-weight: 500;
   font-size: 0.8125rem;
-  min-height: 40px;
+  min-height: 44px;
   color: var(--text);
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }

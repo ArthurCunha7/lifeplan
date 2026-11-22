@@ -13,6 +13,7 @@
   --p8: #8A3E6E;
   --p9: #5B6659;
 
+
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
@@ -72,7 +73,7 @@
 .lp-financas .page-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: clamp(22px, 5.5vw, 26px);
   font-weight: 500;
   letter-spacing: -0.3px;
   color: var(--text);
@@ -116,13 +117,20 @@
   border-bottom-color: var(--accent);
 }
 
-.lp-financas .tab {
-  display: none;
-  padding: 20px 16px 32px;
+/* Seletor de perfil na aba Resumo */
+.lp-financas .profile-chip {
+  background: var(--surface);
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 14px;
+  min-height: 44px;
+  cursor: pointer;
 }
 
-.lp-financas .tab.active {
-  display: block;
+.lp-financas .profile-chip.active {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  border-color: var(--accent) !important;
 }
 
 .lp-financas svg.ic {
@@ -163,6 +171,7 @@
   border-radius: var(--card-radius);
   overflow: hidden;
   margin-bottom: 20px;
+  padding: var(--sp-4);
 }
 
 .lp-financas .card-header {
@@ -238,7 +247,7 @@
   color: var(--text);
   font-family: inherit;
   font-size: 14px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 6px 10px;
   width: 100%;
   outline: none;
@@ -305,10 +314,10 @@
 }
 
 .lp-financas .btn-sm {
-  padding: 4px 10px;
+  padding: 4px 12px;
   font-size: 13px;
-  min-height: 40px;
-  min-width: 40px;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .lp-financas .profile-select {
@@ -1069,3 +1078,44 @@
     padding: 10px 20px;
   }
 }
+
+
+/* Botões pequenos / discretos / de exclusão (classes usadas em FinanceApp e
+ * FamilyModals que perderam o CSS na migração do HTML antigo). Mínimo de 44px. */
+.lp-financas button.small,
+.lp-financas button.ghost,
+.lp-financas button.danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  border: 1.5px solid transparent;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+.lp-financas button.ghost { background: transparent; color: var(--text-2); border-color: var(--border); }
+.lp-financas button.ghost:hover { color: var(--text); border-color: var(--muted); }
+.lp-financas button.danger { background: transparent; color: var(--danger); border-color: var(--border); }
+.lp-financas button.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+
+.lp-financas .card.card--flush { padding: 0; }
+
+/* Seta de abrir/recolher gira 90° quando aberto */
+.lp-financas button[aria-expanded] svg { transition: transform .15s; }
+.lp-financas button[aria-expanded="true"] svg { transform: rotate(90deg); }
+
+/* Cabeçalho da fatura: nome flexível; no desktop nome e total ficam na mesma linha */
+.lp-financas .card-header > .card-title { flex: 1 1 200px; min-width: 0; max-width: 100%; }
+@media (min-width: 768px) {
+  .lp-financas .card-header > .card-title { max-width: 360px; }
+}
+/* Ponto de sincronização junto ao título, não no canto */
+.lp-financas .head-top { justify-content: flex-start; }
+.lp-financas .card input[aria-label^="Fechamento"], .lp-financas .card input[aria-label^="Vencimento"] { flex: 1 1 150px; width: auto !important; min-width: 0; max-width: 220px; }

@@ -1,6 +1,7 @@
 // src/App.tsx — Roteamento central, sessão Supabase, bloqueio de tela e ErrorBoundary
 import { useState, useRef, useEffect, Component, type ErrorInfo, type ReactNode } from 'react';
 import { BottomNav, NAV_SCREENS } from './ui';
+import { DialogHost, alertDialog } from './dialog';
 import { LockScreen, PrivacyCover } from './LockScreen';
 import { getPrivacy, clearLock } from './privacySettings';
 import { disablePush } from './notificationsApi';
@@ -144,7 +145,7 @@ function AppInner() {
   if (screen === 'loading') {
     screenContent = (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}><div style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 600, color: 'var(--accent)', marginBottom: 12 }}>LifePlan</div><div style={{ color: 'var(--muted)' }}>Carregando...</div></div>
+        <div role="status" style={{ textAlign: 'center' }}><div style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 600, color: 'var(--accent)', marginBottom: 12 }}>LifePlan</div><div style={{ color: 'var(--muted)', animation: 'lp-pulse 1.4s ease-in-out infinite' }}>Preparando o seu dia…</div></div>
       </div>
     );
   } else {
@@ -208,8 +209,9 @@ function AppInner() {
         {userId && NAV_SCREENS.includes(screen) && <BottomNav screen={screen} onNavigate={setScreen} />}
       </div>
       {showLock && (locked
-        ? <LockScreen onUnlock={() => { setLocked(false); setCovered(false); }} onForgot={wipeLock} onWipe={() => { wipeLock(); setTimeout(() => alert('Muitos erros de PIN. Por segurança você foi desconectado deste aparelho. Entre de novo com a sua senha.'), 50); }} />
+        ? <LockScreen onUnlock={() => { setLocked(false); setCovered(false); }} onForgot={wipeLock} onWipe={() => { wipeLock(); setTimeout(() => { void alertDialog('Por segurança, você foi desconectado deste aparelho. Entre de novo com a sua senha.', { title: 'Muitos erros de PIN' }); }, 50); }} />
         : <PrivacyCover />)}
+      <DialogHost />
     </>
   );
 }

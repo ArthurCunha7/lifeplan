@@ -134,6 +134,8 @@ function renderIconChildren(name: IconName): ReactNode {
           <path d="m2 2 20 20" />
         </>
       );
+    case 'chevron':
+      return <path d="m9 18 6-6-6-6" />;
     case 'trash':
       return (
         <>

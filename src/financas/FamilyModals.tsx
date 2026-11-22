@@ -22,6 +22,7 @@ import type {
   FamilyPeriodGroup,
   FinanceAppState,
 } from './financeTypes';
+import { alertDialog, confirmDialog } from '../dialog';
 
 export function FamilyChoiceCard({
   busy,
@@ -222,13 +223,13 @@ export function FamilySummaryCard({
 
   const handleCopyCode = () => {
     if (!familyInviteCode) {
-      alert('O código ainda não carregou. Aguarde um instante e tente de novo.');
+      void alertDialog('O código ainda não carregou. Aguarde um instante e tente de novo.');
       return;
     }
     navigator.clipboard
       .writeText(familyInviteCode)
       .then(() => {
-        alert('Código copiado! Envie para quem você quer convidar para o modo família.');
+        void alertDialog('Envie o código para quem você quer convidar para o modo família.', { title: 'Código copiado' });
       })
       .catch(() => {
         window.prompt('Copie o código abaixo:', familyInviteCode);
@@ -504,7 +505,7 @@ export function FamilyAccountsModal({
   const handleTogglePaid = async (cl: FamilyClosingRecord, paid: boolean) => {
     const res = await updateClosingPaid(cl.id, paid);
     if (res.error) {
-      alert(`Não foi possível atualizar: ${res.error.message}`);
+      void alertDialog(`Não foi possível atualizar: ${res.error.message}`);
       return;
     }
     onClosingsChange(
@@ -513,12 +514,12 @@ export function FamilyAccountsModal({
   };
 
   const handleReopen = async (cl: FamilyClosingRecord) => {
-    if (!window.confirm(`Reabrir "${cl.label || 'este mês'}"? Os gastos dele voltam para o mês em aberto.`)) {
+    if (!(await confirmDialog('Os gastos dele voltam para o mês em aberto.', { title: `Reabrir "${cl.label || 'este mês'}"?`, confirmLabel: 'Reabrir' }))) {
       return;
     }
     const res = await deleteFamilyClosing(cl.id);
     if (res.error) {
-      alert(`Não foi possível reabrir: ${res.error.message}`);
+      void alertDialog(`Não foi possível reabrir: ${res.error.message}`);
       return;
     }
     onClosingsChange(familyClosings.filter(c => c.id !== cl.id));

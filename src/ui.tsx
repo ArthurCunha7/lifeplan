@@ -113,24 +113,14 @@ export const NAV_SCREENS = Object.keys(SCREEN_TO_TAB) as ScreenId[];
 export function BottomNav({ screen, onNavigate }: { screen: ScreenId; onNavigate: (screen: ScreenId) => void }) {
   const active = SCREEN_TO_TAB[screen];
   return (
-    <nav aria-label="Principal" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
-      <div style={{ maxWidth: 720, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(5,minmax(0,1fr))', padding: '6px 8px calc(8px + env(safe-area-inset-bottom, 0px))', minHeight: 76, boxSizing: 'border-box' }}>
-        {NAV_ITEMS.map(([id, label, icon]) => {
-          const on = active === id;
-          return (
-            <button
-              key={id}
-              onClick={() => onNavigate(id)}
-              aria-current={on ? 'page' : undefined}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: on ? 'var(--accent)' : 'var(--muted)', fontFamily: 'inherit', fontSize: 12, lineHeight: '16px', fontWeight: on ? 700 : 500, padding: 0, minHeight: 56 }}
-            >
-              <span style={{ width: 56, height: 30, borderRadius: 15, background: on ? 'var(--accent-soft)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name={icon} size={22} />
-              </span>
-              <span>{label}</span>
-            </button>
-          );
-        })}
+    <nav aria-label="Principal" className="lp-nav">
+      <div className="lp-nav__inner">
+        {NAV_ITEMS.map(([id, label, icon]) => (
+          <button key={id} type="button" className="lp-nav__btn" onClick={() => onNavigate(id)} aria-current={active === id ? 'page' : undefined}>
+            <span className="lp-nav__pill"><Icon name={icon} size={22} /></span>
+            <span>{label}</span>
+          </button>
+        ))}
       </div>
     </nav>
   );
@@ -151,14 +141,14 @@ export interface TopBarProps {
 export function TopBar({ title, subtitle, onBack, onOpenProfile, actions, status }: TopBarProps) {
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 90, background: 'var(--bg)', borderBottom: '1px solid var(--border)', marginInline: 'min(0px, calc((960px - 100vw) / 2))' }}>
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8, minHeight: 68, boxSizing: 'border-box' }}>
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '12px 16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, minHeight: 68, boxSizing: 'border-box' }}>
         {onBack && (
           <button onClick={onBack} aria-label="Voltar" style={iconBtn}>
             <Icon name="chevron" size={22} style={{ transform: 'rotate(180deg)' }} />
           </button>
         )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 26, lineHeight: '32px', letterSpacing: '-0.01em', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
+        <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+          <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 'clamp(22px, 5.5vw, 26px)', lineHeight: 1.25, letterSpacing: '-0.01em', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
           {subtitle && <p style={{ margin: '2px 0 0', fontSize: 14, lineHeight: '18px', color: 'var(--muted)' }}>{subtitle}</p>}
         </div>
         {status && <span role="status" style={{ fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{status}</span>}

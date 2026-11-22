@@ -55,6 +55,8 @@ import {
   cfComputeEntradasTotal,
   cfGetTableTotal,
 } from '../financeFormulas';
+import { alertDialog, confirmDialog } from '../dialog';
+import { printFinanceReport } from './financeReport';
 
 export interface FinanceAppProps {
   userId?: string | null;
@@ -66,6 +68,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
   const [state, setState] = useState<FinanceAppState>(() => loadLocalFinanceState() || getDefaultState());
   const [masked, setMasked] = useState<boolean>(false);
   const [cloudStatus, setCloudStatus] = useState<string>('Carregando...');
+  const [openFaturas, setOpenFaturas] = useState<Record<string, boolean>>({});
   const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
 
   // Modais
@@ -185,10 +188,10 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
     });
   };
 
-  const handleDeleteFatura = (faturaId: string) => {
+  const handleDeleteFatura = async (faturaId: string) => {
     const f = state.faturas.find(item => item.id === faturaId);
     if (!f) return;
-    if (!confirm(`Tem certeza que deseja excluir o cartão "${f.name}" e todas as suas despesas?`)) return;
+    if (!(await confirmDialog(`O cartão "${f.name}" e todas as suas despesas serão excluídos.`, { title: 'Excluir cartão?', confirmLabel: 'Excluir', danger: true }))) return;
 
     persistState({
       ...state,
@@ -206,6 +209,12 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
       ...state,
       faturas: state.faturas.map(item => (item.id === faturaId ? { ...item, name: nextName.trim() } : item)),
     });
+  };
+
+  const handleExportPdf = () => printFinanceReport(state);
+
+  const handleRenameFaturaInline = (faturaId: string, name: string) => {
+    persistState({ ...state, faturas: state.faturas.map(item => (item.id === faturaId ? { ...item, name } : item)) });
   };
 
   const handleUpdateFaturaDate = (faturaId: string, field: 'fechamento' | 'vencimento', val: string) => {
@@ -267,7 +276,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
   // Recibo de Linha de Fatura
   const handleUploadFaturaReceipt = async (faturaId: string, rowId: string, file: File) => {
     if (!userId) {
-      alert('Faça login para salvar comprovantes na nuvem.');
+      void alertDialog('Faça login para salvar comprovantes na nuvem.');
       return;
     }
     try {
@@ -276,13 +285,13 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
       handleUpdateFaturaRow(faturaId, rowId, 'receiptPath', path);
       setCloudStatus('Comprovante salvo');
     } catch (e) {
-      alert('Erro ao enviar comprovante: ' + (e instanceof Error ? e.message : String(e)));
+      void alertDialog('Erro ao enviar comprovante: ' + (e instanceof Error ? e.message : String(e)));
       setCloudStatus('Erro no comprovante');
     }
   };
 
   const handleDeleteFaturaReceipt = async (faturaId: string, rowId: string, path: string) => {
-    if (!confirm('Excluir este comprovante?')) return;
+    if (!(await confirmDialog('Este comprovante será removido do lançamento.', { title: 'Excluir comprovante?', confirmLabel: 'Excluir', danger: true }))) return;
     try {
       await deleteReceiptFile(path);
       handleUpdateFaturaRow(faturaId, rowId, 'receiptPath', undefined);
@@ -367,7 +376,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
         setFamilyMembers(mems.members);
       }
     } catch (e) {
-      alert('Erro ao criar família: ' + (e instanceof Error ? e.message : String(e)));
+      void alertDialog('Erro ao criar família: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setFamilyBusy(false);
     }
@@ -386,7 +395,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
         setFamilyMembers(mems.members);
       }
     } catch (e) {
-      alert('Erro ao entrar na família: ' + (e instanceof Error ? e.message : String(e)));
+      void alertDialog('Erro ao entrar na família: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setFamilyBusy(false);
     }
@@ -469,160 +478,88 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
   return (
     <div className={`lp-financas ${masked ? 'cf-mask' : ''}`}>
       <div className="container" style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 12px' }}>
-        {/* Topbar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: isCloudSyncing ? 'var(--warning)' : 'var(--success)',
-                  display: 'inline-block',
-                }}
-              />
-              {cloudStatus}
-            </span>
+        {/* Cabeçalho fixo: título, ações e abas (como no Finanças antigo) */}
+        <header>
+          <div className="head-top">
+            <h1 className="page-title">Finanças</h1>
+            <span
+              role="status"
+              aria-label={cloudStatus}
+              title={cloudStatus}
+              style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: isCloudSyncing ? 'var(--warning)' : 'var(--success)', display: 'inline-block' }}
+            />
           </div>
-
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              type="button"
-              className="ghost small"
-              onClick={() => setMasked(prev => !prev)}
-              title={masked ? 'Mostrar valores' : 'Ocultar valores'}
-            >
-              <FinanceIcon name={masked ? 'eye' : 'eyeOff'} size={16} />
-              {masked ? 'Mostrar' : 'Ocultar'}
+          <div className="header-actions" style={{ marginBottom: 10 }}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMasked(prev => !prev)} aria-pressed={masked} title={masked ? 'Mostrar valores' : 'Ocultar valores'}>
+              <FinanceIcon name={masked ? 'eye' : 'eyeOff'} size={18} /> {masked ? 'Mostrar' : 'Ocultar'}
             </button>
-            <button
-              type="button"
-              className="ghost small"
-              onClick={() => setShowSearch(true)}
-              title="Pesquisar lançamentos"
-            >
-              <FinanceIcon name="search" size={16} /> Buscar
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowSearch(true)} title="Buscar em faturas, pagamentos e balanço">
+              <FinanceIcon name="search" size={18} /> Buscar
             </button>
-            <button
-              type="button"
-              className="ghost small"
-              onClick={() => setShowProfilesModal(true)}
-              title="Gerenciar perfis"
-            >
-              <FinanceIcon name="users" size={16} /> Perfis
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handleExportPdf} title="Baixar o extrato em PDF, com faturas, pagamentos e balanço">
+              <FinanceIcon name="fileText" size={18} /> Exportar PDF
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowProfilesModal(true)} title="Gerenciar perfis">
+              <FinanceIcon name="users" size={18} /> Perfis
             </button>
           </div>
-        </div>
-
-        {/* Abas Principais */}
-        <div className="tabs" style={{ display: 'flex', gap: 6, borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
-          <button
-            type="button"
-            className={`tab ${tab === 'faturas' ? 'active' : ''}`}
-            onClick={() => setTab('faturas')}
-          >
-            <FinanceIcon name="card" size={18} /> Faturas & Cartões
-          </button>
-          <button
-            type="button"
-            className={`tab ${tab === 'resumo' ? 'active' : ''}`}
-            onClick={() => setTab('resumo')}
-          >
-            <FinanceIcon name="user" size={18} /> Resumo por Perfil
-          </button>
-          <button
-            type="button"
-            className={`tab ${tab === 'balanco' ? 'active' : ''}`}
-            onClick={() => setTab('balanco')}
-          >
-            <FinanceIcon name="landmark" size={18} /> Balanço Mensal
-          </button>
-        </div>
+          <nav id="nav" aria-label="Seções de Finanças">
+            <button type="button" className={tab === 'faturas' ? 'active' : ''} aria-current={tab === 'faturas' ? 'page' : undefined} onClick={() => setTab('faturas')}>Faturas</button>
+            <button type="button" className={tab === 'resumo' ? 'active' : ''} aria-current={tab === 'resumo' ? 'page' : undefined} onClick={() => setTab('resumo')}>Resumo</button>
+            <button type="button" className={tab === 'balanco' ? 'active' : ''} aria-current={tab === 'balanco' ? 'page' : undefined} onClick={() => setTab('balanco')}>Balanço</button>
+          </nav>
+        </header>
+        <div style={{ height: 16 }} />
 
         {/* ================= ABA 1: FATURAS & CARTÕES ================= */}
         {tab === 'faturas' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Seus Cartões e Faturas</h2>
-              <button type="button" className="small" onClick={handleAddFatura}>
-                <FinanceIcon name="plus" size={16} /> Novo Cartão
-              </button>
-            </div>
-
             {/* Lista de Faturas */}
             {state.faturas.map(fatura => {
               const totalFatura = fatura.rows.reduce((sum, r) => sum + (Number(r.value) || 0), 0);
+              const isOpen = openFaturas[fatura.id] === true; // vem recolhida, como antes
 
               return (
-                <div key={fatura.id} className="card" style={{ marginBottom: 20 }}>
-                  {/* Cabeçalho do Cartão */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                      gap: 10,
-                      borderBottom: '1px solid var(--border)',
-                      paddingBottom: 12,
-                      marginBottom: 12,
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 600 }}>{fatura.name}</h3>
-                        <button
-                          type="button"
-                          className="ghost small"
-                          style={{ padding: '2px 6px', fontSize: '0.75rem' }}
-                          onClick={() => handleRenameFatura(fatura.id)}
-                        >
-                          Renomear
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', gap: 14, fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                        <span>
-                          Fecha dia:{' '}
-                          <input
-                            type="text"
-                            placeholder="ex: 15"
-                            value={fatura.fechamento || ''}
-                            onChange={e => handleUpdateFaturaDate(fatura.id, 'fechamento', e.target.value)}
-                            style={{ padding: '2px 4px', width: 45, fontSize: '0.8rem', textAlign: 'center' }}
-                          />
-                        </span>
-                        <span>
-                          Vence dia:{' '}
-                          <input
-                            type="text"
-                            placeholder="ex: 22"
-                            value={fatura.vencimento || ''}
-                            onChange={e => handleUpdateFaturaDate(fatura.id, 'vencimento', e.target.value)}
-                            style={{ padding: '2px 4px', width: 45, fontSize: '0.8rem', textAlign: 'center' }}
-                          />
-                        </span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total da Fatura</div>
-                        <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--accent)' }}>
-                          {fmtMoney(totalFatura, masked)}
-                        </div>
-                      </div>
+                <div key={fatura.id} className="card card--flush" style={{ marginBottom: 20 }}>
+                  <div className="card-header">
+                    <input
+                      type="text"
+                      className="profile-name-input card-title"
+                      aria-label="Nome da fatura"
+                      style={{ fontSize: 14, fontWeight: 600 }}
+                      value={fatura.name}
+                      onChange={e => handleRenameFaturaInline(fatura.id, e.target.value)}
+                    />
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <div className="card-total">{fmtMoney(totalFatura, masked)}</div>
                       <button
                         type="button"
-                        className="ghost small danger"
-                        onClick={() => handleDeleteFatura(fatura.id)}
-                        title="Excluir cartão"
+                        className="btn btn-ghost btn-sm"
+                        aria-expanded={isOpen}
+                        aria-label={(isOpen ? 'Recolher fatura ' : 'Abrir fatura ') + fatura.name}
+                        title={isOpen ? 'Recolher' : 'Abrir'}
+                        onClick={() => setOpenFaturas(prev => ({ ...prev, [fatura.id]: !isOpen }))}
                       >
-                        <FinanceIcon name="trash" size={16} />
+                        <FinanceIcon name="chevron" size={18} />
                       </button>
+                      <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDeleteFatura(fatura.id)}>Remover</button>
                     </div>
                   </div>
 
+                  {/* Fechamento e vencimento ficam na própria fatura: o Balanço Mensal puxa daqui */}
+                  <div style={{ display: 'flex', gap: 16, padding: '8px 14px', fontSize: 12, color: 'var(--muted)', flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
+                    Fechamento:
+                    <input type="text" placeholder="Fechamento (ex: dia 5)" aria-label="Fechamento da fatura" value={fatura.fechamento || ''}
+                      onChange={e => handleUpdateFaturaDate(fatura.id, 'fechamento', e.target.value)}
+                      style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 7px', fontSize: 12, color: 'var(--text)', width: 150 }} />
+                    Vencimento:
+                    <input type="text" placeholder="Vencimento (ex: dia 12)" aria-label="Vencimento da fatura" value={fatura.vencimento || ''}
+                      onChange={e => handleUpdateFaturaDate(fatura.id, 'vencimento', e.target.value)}
+                      style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 7px', fontSize: 12, color: 'var(--text)', width: 150 }} />
+                  </div>
+
+                  {isOpen && (
+                  <div style={{ padding: 16 }}>
                   {/* Tabela de Compras */}
                   {fatura.rows.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
@@ -710,7 +647,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                                       const url = await createReceiptSignedUrl(path);
                                       setActiveReceiptUrl(url);
                                     } catch (err) {
-                                      alert('Erro ao carregar recibo: ' + (err instanceof Error ? err.message : String(err)));
+                                      void alertDialog('Erro ao carregar recibo: ' + (err instanceof Error ? err.message : String(err)));
                                     }
                                   }}
                                   onRemove={() => handleDeleteFaturaReceipt(fatura.id, row.id, row.receiptPath!)}
@@ -741,9 +678,17 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                   >
                     + Adicionar Despesa
                   </button>
+                  </div>
+                  )}
                 </div>
               );
             })}
+
+            <div style={{ padding: '0 0 24px' }}>
+              <button type="button" className="btn btn-ghost" onClick={handleAddFatura}>
+                <FinanceIcon name="plus" size={18} /> Nova fatura
+              </button>
+            </div>
 
             {/* Cartão de Pix e Débito */}
             <div className="card" style={{ marginBottom: 20 }}>
@@ -976,7 +921,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                   <button
                     key={p.idx}
                     type="button"
-                    className={`tab ${resumoProfileIdx === p.idx ? 'active' : ''}`}
+                    className={`profile-chip ${resumoProfileIdx === p.idx ? 'active' : ''}`}
                     onClick={() => setResumoProfileIdx(p.idx)}
                     style={{
                       padding: '8px 18px',

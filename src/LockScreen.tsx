@@ -6,6 +6,7 @@ import {
   PIN_LEN, MAX_FAILS, LOCK_AFTER_OPTIONS, getPrivacy, setPrivacy, clearLock,
   savePin, verifyPin, bioAvailable, bioEnroll, bioUnlock, type VerifyPinResult,
 } from "./privacySettings";
+import { confirmDialog } from './dialog';
 
 const card: CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, margin: '0 16px 12px', padding: 16 };
 const labelStyle: CSSProperties = { fontSize: 12, fontWeight: 700, color: 'var(--muted)', letterSpacing: 0.8 };
@@ -140,7 +141,7 @@ export function LockScreen({ onUnlock, onForgot, onWipe }: { onUnlock: () => voi
         onComplete={submit}
         bioButton={hasBio ? tryBio : null}
       />
-      <button onClick={() => { if (window.confirm('Para redefinir o PIN, você vai sair da conta neste aparelho e entrar de novo com sua senha. Continuar?')) onForgot(); }}
+      <button onClick={async () => { if (await confirmDialog('Você vai sair da conta neste aparelho e entrar de novo com a sua senha.', { title: 'Redefinir o PIN?', confirmLabel: 'Continuar' })) onForgot(); }}
         style={{ marginTop: 22, background: 'none', border: 'none', color: 'var(--accent)', fontSize: 14, fontWeight: 700, minHeight: 44, padding: '0 12px', cursor: 'pointer', textDecoration: 'underline' }}>
         Esqueci o PIN
       </button>
