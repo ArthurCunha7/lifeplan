@@ -57,6 +57,8 @@ import {
 } from '../financeFormulas';
 import { alertDialog, confirmDialog } from '../dialog';
 import { printFinanceReport } from './financeReport';
+import { ResumoTab } from './ResumoTab';
+import { BalancoTab } from './BalancoTab';
 
 export interface FinanceAppProps {
   userId?: string | null;
@@ -83,9 +85,6 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
   const [familyClosings, setFamilyClosings] = useState<FamilyClosingRecord[]>([]);
   const [showFamilyAccounts, setShowFamilyAccounts] = useState<boolean>(false);
   const [familyBusy, setFamilyBusy] = useState<boolean>(false);
-
-  // Perfil selecionado na aba Resumo
-  const [resumoProfileIdx, setResumoProfileIdx] = useState<number>(0);
 
   // Carregar dados na nuvem (finance_data e family)
   useEffect(() => {
@@ -401,27 +400,6 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
     }
   };
 
-  // Cálculos de Resumo
-  const profileExpenses = useMemo(() => {
-    return getAllRowsByProfileDetailed(state, resumoProfileIdx);
-  }, [state, resumoProfileIdx]);
-
-  const profileTransactions = useMemo(() => {
-    return getAllTransactionsByProfile(state, resumoProfileIdx);
-  }, [state, resumoProfileIdx]);
-
-  const profileTotalGasto = useMemo(() => {
-    return profileExpenses.reduce((acc, row) => acc + (Number(row.value) || 0), 0);
-  }, [profileExpenses]);
-
-  const profileTotalPago = useMemo(() => {
-    return state.payments
-      .filter(p => p.profileIdx === resumoProfileIdx)
-      .reduce((acc, p) => acc + (Number(p.value) || 0), 0);
-  }, [state.payments, resumoProfileIdx]);
-
-  const profileSaldoPendente = profileTotalGasto - profileTotalPago;
-
   // Busca rápida em todas as transações
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -464,16 +442,6 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
 
     return results;
   }, [state, searchQuery]);
-
-  // Balanço Mensal
-  const totalEntradas = useMemo(() => cfComputeEntradasTotal(state), [state]);
-  const totalSaidasBalanco = useMemo(() => {
-    return state.balancoTables
-      .filter(t => t.type !== 'entradas' && t.includeInSaldo)
-      .reduce((acc, t) => acc + cfGetTableTotal(state, t), 0);
-  }, [state]);
-
-  const saldoMes = totalEntradas - totalSaidasBalanco;
 
   return (
     <div className={`lp-financas ${masked ? 'cf-mask' : ''}`}>
@@ -908,284 +876,24 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
           </div>
         )}
 
-        {/* ================= ABA 2: RESUMO POR PERFIL & FAMÍLIA ================= */}
         {tab === 'resumo' && (
-          <div>
-            {/* Seletor de Perfil no Topo do Resumo */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 8, fontWeight: 500 }}>
-                Selecione o perfil para ver o extrato individual:
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {activeProfiles.map(p => (
-                  <button
-                    key={p.idx}
-                    type="button"
-                    className={`profile-chip ${resumoProfileIdx === p.idx ? 'active' : ''}`}
-                    onClick={() => setResumoProfileIdx(p.idx)}
-                    style={{
-                      padding: '8px 18px',
-                      borderRadius: 20,
-                      border: '1px solid var(--border)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Cartões de Saldo do Perfil */}
-            <div className="grid grid-3" style={{ marginBottom: 20 }}>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total de Gastos</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--danger)', marginTop: 4 }}>
-                  {fmtMoney(profileTotalGasto, masked)}
-                </div>
-              </div>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total Já Pago</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--success)', marginTop: 4 }}>
-                  {fmtMoney(profileTotalPago, masked)}
-                </div>
-              </div>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Saldo Pendente</div>
-                <div
-                  style={{
-                    fontSize: '1.6rem',
-                    fontWeight: 700,
-                    color: profileSaldoPendente > 0 ? 'var(--accent)' : 'var(--text-muted)',
-                    marginTop: 4,
-                  }}
-                >
-                  {fmtMoney(profileSaldoPendente, masked)}
-                </div>
-              </div>
-            </div>
-
-            {/* Modo Família Card */}
-            {!family ? (
-              <FamilyChoiceCard
-                busy={familyBusy}
-                onCreateFamily={handleCreateFamily}
-                onJoinFamily={handleJoinFamily}
-              />
-            ) : (
-              <div style={{ marginBottom: 20 }}>
-                <FamilySummaryCard
-                  familyId={family.id}
-                  isLeader={family.owner_id === userId}
-                  familyInviteCode={family.invite_code}
-                  familyPaidPeriods={[]}
-                  masked={masked}
-                  onOpenFamilyAccounts={() => setShowFamilyAccounts(true)}
-                />
-              </div>
-            )}
-
-            {/* Tabela de Lançamentos do Perfil */}
-            <div className="card">
-              <h3 style={{ fontSize: '1.1rem', margin: '0 0 14px' }}>
-                Transações de {state.profiles[resumoProfileIdx]?.name || 'Perfil'}
-              </h3>
-
-              {profileTransactions.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)' }}>
-                  Nenhuma transação encontrada para este perfil.
-                </div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '8px 10px' }}>Data</th>
-                        <th style={{ padding: '8px 10px' }}>Origem</th>
-                        <th style={{ padding: '8px 10px' }}>Descrição</th>
-                        <th style={{ padding: '8px 10px', textAlign: 'right' }}>Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {profileTransactions.map(tx => {
-                        const isPayment = tx.txKind === 'payment';
-                        return (
-                          <tr key={tx.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                            <td style={{ padding: '8px 10px', fontWeight: 500 }}>{formatDateBR(tx.txDate)}</td>
-                            <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>
-                              {tx.txKind === 'expense' ? tx.faturaName || 'Cartão' : tx.txKind === 'pix' ? 'Pix' : 'Pagamento'}
-                            </td>
-                            <td style={{ padding: '8px 10px' }}>{tx.name}</td>
-                            <td
-                              style={{
-                                padding: '8px 10px',
-                                textAlign: 'right',
-                                fontWeight: 600,
-                                color: isPayment ? 'var(--success)' : 'var(--text)',
-                              }}
-                            >
-                              {isPayment ? '-' : ''}
-                              {fmtMoney(Number(tx.value) || 0, masked)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
+          <ResumoTab
+            state={state}
+            persist={persistState}
+            masked={masked}
+            profiles={activeProfiles}
+            userId={userId}
+            family={family}
+            familyMembers={familyMembers}
+            familyBusy={familyBusy}
+            onCreateFamily={handleCreateFamily}
+            onJoinFamily={handleJoinFamily}
+            onOpenFamilyAccounts={() => setShowFamilyAccounts(true)}
+          />
         )}
 
-        {/* ================= ABA 3: BALANÇO MENSAL ================= */}
         {tab === 'balanco' && (
-          <div>
-            {/* Resumo do Mês */}
-            <div className="grid grid-3" style={{ marginBottom: 20 }}>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total de Entradas</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--success)', marginTop: 4 }}>
-                  {fmtMoney(totalEntradas, masked)}
-                </div>
-              </div>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Total de Saídas Planejadas</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--danger)', marginTop: 4 }}>
-                  {fmtMoney(totalSaidasBalanco, masked)}
-                </div>
-              </div>
-              <div className="card" style={{ padding: 16 }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Saldo do Mês</div>
-                <div
-                  style={{
-                    fontSize: '1.6rem',
-                    fontWeight: 700,
-                    color: saldoMes >= 0 ? 'var(--accent)' : 'var(--danger)',
-                    marginTop: 4,
-                  }}
-                >
-                  {fmtMoney(saldoMes, masked)}
-                </div>
-              </div>
-            </div>
-
-            {/* Tabelas de Balanço Configuráveis */}
-            {state.balancoTables.map(table => {
-              const tableTotal = cfGetTableTotal(state, table);
-
-              return (
-                <div key={table.id} className="card" style={{ marginBottom: 20 }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderBottom: '1px solid var(--border)',
-                      paddingBottom: 10,
-                      marginBottom: 12,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <FinanceIcon name={catIconName(table.name)} size={20} />
-                      <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 600 }}>{table.name}</h3>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{fmtMoney(tableTotal, masked)}</span>
-                    </div>
-                  </div>
-
-                  {/* Linhas da Tabela */}
-                  {table.rows.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                      Nenhum item nesta tabela.
-                    </div>
-                  ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-                        <tbody>
-                          {table.rows.map((row: BalancoRowItem, rIdx: number) => (
-                            <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                              <td style={{ padding: '6px' }}>
-                                <input
-                                  type="text"
-                                  placeholder="Descrição..."
-                                  value={row.categoria || ''}
-                                  onChange={e => {
-                                    const nextRows = [...table.rows];
-                                    nextRows[rIdx] = { ...row, categoria: e.target.value };
-                                    persistState({
-                                      ...state,
-                                      balancoTables: state.balancoTables.map(t =>
-                                        t.id === table.id ? { ...t, rows: nextRows } : t
-                                      ),
-                                    });
-                                  }}
-                                  style={{ padding: '4px 8px', fontSize: '0.85rem', width: '100%' }}
-                                />
-                              </td>
-                              <td style={{ padding: '6px', width: 140 }}>
-                                <NumericInput
-                                  value={Number(row.valor) || 0}
-                                  onValueChange={v => {
-                                    const nextRows = [...table.rows];
-                                    nextRows[rIdx] = { ...row, valor: Number(v) || 0 };
-                                    persistState({
-                                      ...state,
-                                      balancoTables: state.balancoTables.map(t =>
-                                        t.id === table.id ? { ...t, rows: nextRows } : t
-                                      ),
-                                    });
-                                  }}
-                                  placeholder="0,00"
-                                  style={{ width: '100%', fontSize: '0.85rem' }}
-                                />
-                              </td>
-                              <td style={{ padding: '6px', width: 40, textAlign: 'right' }}>
-                                <button
-                                  type="button"
-                                  className="ghost small danger"
-                                  style={{ padding: '4px 6px' }}
-                                  onClick={() => {
-                                    const nextRows = table.rows.filter(r => r.id !== row.id);
-                                    persistState({
-                                      ...state,
-                                      balancoTables: state.balancoTables.map(t =>
-                                        t.id === table.id ? { ...t, rows: nextRows } : t
-                                      ),
-                                    });
-                                  }}
-                                >
-                                  ✕
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    className="ghost small"
-                    style={{ marginTop: 10 }}
-                    onClick={() => {
-                      const newRow: BalancoRowItem = { id: genId(), categoria: '', valor: 0 };
-                      persistState({
-                        ...state,
-                        balancoTables: state.balancoTables.map(t =>
-                          t.id === table.id ? { ...t, rows: [...t.rows, newRow] } : t
-                        ),
-                      });
-                    }}
-                  >
-                    + Adicionar Linha
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+          <BalancoTab state={state} persist={persistState} masked={masked} profiles={activeProfiles} />
         )}
 
         {/* ================= MODAL: BUSCA ================= */}

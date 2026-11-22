@@ -1119,3 +1119,83 @@
 /* Ponto de sincronização junto ao título, não no canto */
 .lp-financas .head-top { justify-content: flex-start; }
 .lp-financas .card input[aria-label^="Fechamento"], .lp-financas .card input[aria-label^="Vencimento"] { flex: 1 1 150px; width: auto !important; min-width: 0; max-width: 220px; }
+
+/* ── Balanço e Resumo (paridade com o Finanças antigo) ───────────────── */
+.lp-financas .bal-grow { flex: 1 1 140px; min-width: 0; }
+.lp-financas .balanco-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.lp-financas .balanco-title-row .balanco-section-title { margin: 0; }
+.lp-financas .balanco-icon-input { width: 44px; text-align: center; font-size: 18px; padding: 4px; background: transparent; border-color: transparent; }
+.lp-financas .balanco-name-input {
+  flex: 1 1 160px; min-width: 140px; background: transparent; border: none; border-bottom: 1px dashed var(--border);
+  border-radius: 0; font-size: 13px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--muted);
+}
+.lp-financas .balanco-name-input:focus { color: var(--text); border-bottom-color: var(--accent); outline: none; }
+.lp-financas .sign-btn { font-weight: 600; border-color: currentColor; }
+.lp-financas .sign-btn.sign-pos { color: var(--accent2); }
+.lp-financas .sign-btn.sign-neg { color: var(--warning); }
+.lp-financas .sign-btn.sign-off { color: var(--muted); }
+.lp-financas .balanco-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0 24px; }
+
+/* Visão do mês */
+.lp-financas .saldo-line { padding: 0 8px 0 0; cursor: default; }
+.lp-financas .saldo-line-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 10px 8px 10px 16px; min-height: 60px;
+  background: transparent; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.lp-financas .saldo-line-main:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.lp-financas .saldo-line-main .row-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.lp-financas .saldo-line-val { font-size: 15px; font-weight: 700; margin-left: auto; white-space: nowrap; }
+.lp-financas .saldo-line-main .row-chev { display: inline-flex; transition: transform .15s; }
+.lp-financas .saldo-line-main[aria-expanded="true"] .row-chev { transform: rotate(90deg); }
+.lp-financas .saldo-body { background: var(--surface2); border-bottom: 1px solid var(--border); }
+.lp-financas .saldo-sub-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 16px 8px 24px;
+  border-bottom: 1px solid var(--border2); font-size: 13px; width: 100%;
+}
+.lp-financas .saldo-sub-row input[type="text"] { min-height: 44px; }
+.lp-financas .saldo-toggle { background: transparent; border-left: none; border-right: none; border-top: none; color: inherit; font: inherit; text-align: left; cursor: pointer; min-height: 44px; transition: opacity .15s; }
+.lp-financas .saldo-toggle.off { opacity: .45; }
+.lp-financas .saldo-toggle .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.lp-financas .saldo-check { width: 28px; text-align: center; color: var(--accent2); font-weight: 700; }
+.lp-financas .saldo-toggle.off .saldo-check { color: var(--muted); }
+.lp-financas .saldo-sub-add { padding: 8px 16px 8px 24px; }
+.lp-financas .saldo-sub-note { padding: 8px 16px 8px 24px; font-size: 12px; color: var(--muted); font-style: italic; }
+.lp-financas .balanco-pix-info { color: var(--muted); font-style: italic; }
+.lp-financas .row-moves .btn { min-width: 44px; }
+
+/* Planejamento */
+.lp-financas .plan-hint { color: var(--muted); font-size: 13px; }
+.lp-financas .plan-prev { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.lp-financas .plan-head .btn { flex-shrink: 0; }
+
+/* Tabela personalizada */
+.lp-financas .col-editor { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.lp-financas .col-editor-item { display: flex; align-items: center; gap: 4px; flex: 1 1 140px; min-width: 120px; max-width: 240px; }
+.lp-financas .col-editor-item input {
+  flex: 1; min-width: 0; background: transparent; border: none; border-bottom: 1px dashed var(--border); border-radius: 0;
+  color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+}
+
+/* Resumo: cartões por perfil e gerenciamento */
+.lp-financas .profile-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lp-financas .profile-manager-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.lp-financas .profile-manager-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lp-financas .profile-manager-name { flex: 1 1 140px; min-width: 0; min-height: 44px; }
+.lp-financas .pm-note { color: var(--muted); font-size: 12px; }
+.lp-financas .pm-ok { color: var(--accent2); font-weight: 600; font-size: 12px; overflow-wrap: anywhere; display: inline-flex; align-items: center; gap: 6px; }
+.lp-financas .pm-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; min-height: 44px; }
+.lp-financas .pm-check input { width: 20px; height: 20px; }
+.lp-financas .pm-link { margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.lp-financas .pm-cats { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.lp-financas .pm-cats-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+.lp-financas .pm-cat-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.lp-financas .pm-cat { display: inline-flex; align-items: center; gap: 2px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0 4px 0 8px; }
+.lp-financas .pm-cat input { background: transparent; border: none; min-height: 36px; padding: 0; font-size: 13px; color: var(--text); }
+.lp-financas .pm-cat button { background: none; border: none; color: var(--danger); cursor: pointer; min-width: 36px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+
+@media (max-width: 767px) {
+  .lp-financas .saldo-line { flex-wrap: wrap; padding-right: 8px; }
+  .lp-financas .saldo-line-main { flex-wrap: wrap; row-gap: 4px; }
+  .lp-financas .saldo-line-main .row-name { flex: 1 1 110px; }
+  .lp-financas .row-moves { flex-basis: 100%; justify-content: flex-end; padding: 0 0 8px; }
+}
