@@ -71,6 +71,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
   const [masked, setMasked] = useState<boolean>(false);
   const [cloudStatus, setCloudStatus] = useState<string>('Carregando...');
   const [openFaturas, setOpenFaturas] = useState<Record<string, boolean>>({});
+  const [pixOpen, setPixOpen] = useState(false);
   const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
 
   // Modais
@@ -665,15 +666,19 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  borderBottom: '1px solid var(--border)',
-                  paddingBottom: 12,
-                  marginBottom: 12,
+                  borderBottom: pixOpen ? '1px solid var(--border)' : 'none',
+                  paddingBottom: pixOpen ? 12 : 0,
+                  marginBottom: pixOpen ? 12 : 0,
+                  cursor: 'pointer',
+                  gap: 12,
                 }}
+                onClick={() => setPixOpen(o => !o)}
               >
                 <div>
                   <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 600 }}>Gastos em Pix & Dinheiro</h3>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Despesas à vista do mês</div>
                 </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Pix</div>
                   <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--accent)' }}>
@@ -683,8 +688,20 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                     )}
                   </div>
                 </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  aria-expanded={pixOpen}
+                  aria-label={pixOpen ? 'Recolher gastos em Pix' : 'Abrir gastos em Pix'}
+                  title={pixOpen ? 'Recolher' : 'Abrir'}
+                  onClick={e => { e.stopPropagation(); setPixOpen(o => !o); }}
+                >
+                  <FinanceIcon name="chevron" size={18} />
+                </button>
+                </div>
               </div>
 
+              {pixOpen && (<>
               {state.pixRows.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                   Nenhum gasto em Pix registrado.
@@ -771,6 +788,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
               <button type="button" className="ghost small" style={{ marginTop: 12 }} onClick={handleAddPixRow}>
                 + Adicionar Pix
               </button>
+              </>)}
             </div>
 
             {/* Extrato de Pagamentos Realizados */}

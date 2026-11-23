@@ -323,6 +323,31 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
 
     return (
       <>
+        {validRows.length > 0 && (
+          <div className="plan-chart" role="img" aria-label="Gráfico de barras: previsto e gasto por categoria">
+            <div className="plan-chart-title">Orçamento do mês</div>
+            <div className="plan-chart-bars">
+              {validRows.map(r => {
+                const valor = num(r.valor);
+                const gasto = gastoOf(r);
+                const maxV = Math.max(1, ...validRows.map(x => Math.max(num(x.valor), gastoOf(x))));
+                return (
+                  <div className="plan-chart-col" key={r.id}>
+                    <div className="plan-chart-pair">
+                      <span className="plan-chart-bar prev" title={`Previsto: ${money(valor)}`} style={{ height: Math.max(2, Math.round((valor / maxV) * 110)) }} />
+                      <span className={`plan-chart-bar${gasto > valor ? ' over' : ''}`} title={`Gasto: ${money(gasto)}`} style={{ height: Math.max(2, Math.round((gasto / maxV) * 110)) }} />
+                    </div>
+                    <div className="plan-chart-cat">{r.categoria}</div>
+                    <div className="plan-chart-prof">{state.profiles[r.profileIdx as number]?.name || ''}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="plan-chart-legend">
+              <span><i className="prev" />Previsto</span><span><i />Gasto</span><span><i className="over" />Estourou</span>
+            </div>
+          </div>
+        )}
         {t.rows.length === 0 && <div className="empty">Nenhuma categoria ainda — adicione abaixo.</div>}
         {t.rows.map(row => {
           const valor = num(row.valor);

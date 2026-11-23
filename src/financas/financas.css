@@ -1230,3 +1230,22 @@
 .lp-financas .bal-chip-label { font-size: 12px; color: var(--muted); }
 .lp-financas .bal-chip-val { font-size: 14px; font-weight: 700; margin-top: 4px; overflow-wrap: anywhere; }
 @media (min-width: 768px) { .lp-financas .bal-chip-val { font-size: 17px; } }
+
+/* Ícone da tabela não pode esticar (o input ocupava a linha toda) */
+.lp-financas input.balanco-icon-input { flex: 0 0 44px; width: 44px; min-width: 0; padding: 4px; text-align: center; }
+
+/* Gráfico do orçamento (Previsto × Gasto) */
+.lp-financas .plan-chart { padding: 16px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.lp-financas .plan-chart-title { font-family: var(--font-display); font-size: 18px; margin-bottom: 12px; color: var(--text); }
+.lp-financas .plan-chart-bars { display: flex; gap: 18px; align-items: flex-end; min-width: min-content; }
+.lp-financas .plan-chart-col { display: flex; flex-direction: column; align-items: center; min-width: 64px; }
+.lp-financas .plan-chart-pair { display: flex; gap: 5px; align-items: flex-end; height: 110px; }
+.lp-financas .plan-chart-bar { width: 18px; background: var(--accent); border-radius: 4px 4px 0 0; }
+.lp-financas .plan-chart-bar.prev { opacity: .45; }
+.lp-financas .plan-chart-bar.over { background: var(--warning); }
+.lp-financas .plan-chart-cat { font-size: 12px; font-weight: 600; text-align: center; margin-top: 6px; max-width: 70px; overflow-wrap: break-word; }
+.lp-financas .plan-chart-prof { font-size: 12px; color: var(--muted); text-align: center; }
+.lp-financas .plan-chart-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 14px; }
+.lp-financas .plan-chart-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; background: var(--accent); }
+.lp-financas .plan-chart-legend i.prev { opacity: .45; }
+.lp-financas .plan-chart-legend i.over { background: var(--warning); }
