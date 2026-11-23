@@ -456,20 +456,20 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
               title={cloudStatus}
               style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: isCloudSyncing ? 'var(--warning)' : 'var(--success)', display: 'inline-block' }}
             />
-          </div>
-          <div className="header-actions" style={{ marginBottom: 10 }}>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMasked(prev => !prev)} aria-pressed={masked} title={masked ? 'Mostrar valores' : 'Ocultar valores'}>
-              <FinanceIcon name={masked ? 'eye' : 'eyeOff'} size={18} /> {masked ? 'Mostrar' : 'Ocultar'}
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowSearch(true)} title="Buscar em faturas, pagamentos e balanço">
-              <FinanceIcon name="search" size={18} /> Buscar
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={handleExportPdf} title="Baixar o extrato em PDF, com faturas, pagamentos e balanço">
-              <FinanceIcon name="fileText" size={18} /> Exportar PDF
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowProfilesModal(true)} title="Gerenciar perfis">
-              <FinanceIcon name="users" size={18} /> Perfis
-            </button>
+            <div className="header-actions">
+              <button type="button" className="icon-btn" onClick={() => setMasked(prev => !prev)} aria-pressed={masked} aria-label={masked ? 'Mostrar valores' : 'Ocultar valores'} title={masked ? 'Mostrar valores' : 'Ocultar valores'}>
+                <FinanceIcon name={masked ? 'eye' : 'eyeOff'} size={20} />
+              </button>
+              <button type="button" className="icon-btn" onClick={() => setShowSearch(true)} aria-label="Buscar" title="Buscar em faturas, pagamentos e balanço">
+                <FinanceIcon name="search" size={20} />
+              </button>
+              <button type="button" className="icon-btn" onClick={handleExportPdf} aria-label="Exportar PDF" title="Baixar o extrato em PDF, com faturas, pagamentos e balanço">
+                <FinanceIcon name="fileText" size={20} />
+              </button>
+              <button type="button" className="icon-btn" onClick={() => setShowProfilesModal(true)} aria-label="Perfis" title="Gerenciar perfis">
+                <FinanceIcon name="users" size={20} />
+              </button>
+            </div>
           </div>
           <nav id="nav" aria-label="Seções de Finanças">
             <button type="button" className={tab === 'faturas' ? 'active' : ''} aria-current={tab === 'faturas' ? 'page' : undefined} onClick={() => setTab('faturas')}>Faturas</button>

@@ -713,7 +713,7 @@ export function HomeDashboard({ userId, onNavigate, onOpenProfile }: HomeDashboa
   const rowBtn: CSSProperties = { display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, minHeight: 68, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', font: 'inherit', color: 'inherit' };
   const rowTitle: CSSProperties = { fontSize: 16, lineHeight: '20px', fontWeight: 600, color: 'var(--text)' };
   const rowMeta: CSSProperties = { fontSize: 14, lineHeight: '18px', color: 'var(--muted)' };
-  const eyebrow: CSSProperties = { margin: '0 0 8px 4px', fontSize: 15, lineHeight: '20px', fontWeight: 600, color: 'var(--text-2)' };
+  const eyebrow: CSSProperties = { margin: '0 0 8px 4px', fontSize: 12, lineHeight: '16px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent)' };
   const smallBtn: CSSProperties = { height: 44, padding: '0 14px', borderRadius: 12, border: 'none', background: 'var(--accent-soft)', color: 'var(--accent)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 };
 
   const careRow = (
@@ -754,26 +754,60 @@ export function HomeDashboard({ userId, onNavigate, onOpenProfile }: HomeDashboa
         </header>
 
         <section style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '0 4px' }}>
-          <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', color: 'var(--muted)' }}>{dateLabel} · <span className="lp-num">{timeStr}</span></p>
+          <p style={{ margin: 0, fontSize: 14, lineHeight: '20px', color: 'var(--muted)' }}>{dateLabel}</p>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 'clamp(28px, 7.5vw, 36px)', lineHeight: 1.15, letterSpacing: '-0.015em' }}>{greet}{firstName ? `, ${firstName}` : ''}.</h1>
           <p style={{ margin: '2px 0 0', fontSize: 16, lineHeight: '22px', color: 'var(--text-2)' }}>{pendingText}</p>
         </section>
 
-        <section aria-label="Hoje" className="lp-today">
-          <div className="lp-today__main">
-            <h2 className="lp-today__title">{primary.title}</h2>
-            <p className="lp-today__sub">{primary.sub}</p>
-            <Button large block onClick={primary.onClick}>{primary.cta}</Button>
+        {!weather.hidden && (weather.loading || weather.error || wxOk) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignSelf: 'flex-start', maxWidth: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--text-2)', fontSize: 14, lineHeight: '20px' }}>
+            {weather.loading ? <span>Buscando o clima…</span> : weather.error ? (
+              <>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="cloud" size={18} style={{ color: 'var(--accent)' }} />{weather.error}</span>
+                <span style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button onClick={weather.retry} style={{ minHeight: 44, padding: '0 14px', borderRadius: 12, border: 'none', background: 'var(--accent-soft)', color: 'var(--accent)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Tentar de novo</button>
+                  <button onClick={weather.hide} style={{ minHeight: 44, padding: '0 14px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--muted)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Ocultar</button>
+                </span>
+              </>
+            ) : (
+              <>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: 'var(--text)' }}>
+                  <Icon name={wxIcon} size={18} />{weather.city}, <span className="lp-num">{weather.temp}°</span>
+                </span>
+                {wxLines.map((l, i) => <span key={i}>{l}</span>)}
+              </>
+            )}
           </div>
-          <div className="lp-quick">
-            <button type="button" className="lp-quick__item" onClick={() => onNavigate('habitos')}>
-              <span className="lp-quick__label"><Icon name="activity" size={20} />Hábitos</span>
-              <span className="lp-quick__meta lp-num">{habitsToday ? `${habitsToday.done} de ${habitsToday.total} hoje` : 'Registrar o dia'}</span>
-            </button>
-            <button type="button" className="lp-quick__item" onClick={() => onNavigate('financas')}>
-              <span className="lp-quick__label"><Icon name="wallet" size={20} />Gasto</span>
-              <span className="lp-quick__meta">Lançar agora</span>
-            </button>
+        )}
+
+        <section>
+          <h2 style={eyebrow}>Sua consulta de hoje</h2>
+          <div style={{ ...card, padding: '4px 12px' }}>
+            {careRow('treino', {
+              icon: 'dumbbell', title: 'Treino', metas: [planPreview ? `${planPreview.typeLabel}, hoje` : 'Sem treino definido'],
+              onClick: () => onNavigate('treinos'),
+              action: (
+                <button onClick={toggleWorkoutDone} aria-pressed={workoutDoneToday}
+                  style={{ height: 44, padding: '0 14px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                    background: workoutDoneToday ? 'var(--accent)' : 'transparent', color: workoutDoneToday ? 'var(--on-accent)' : 'var(--accent)', border: '1.5px solid var(--accent)' }}>
+                  {workoutDoneToday && <Icon name="check" size={16} stroke={2.25} />}{workoutDoneToday ? 'Feito' : 'Marcar feito'}
+                </button>
+              ),
+            })}
+            {careRow('refeicao', {
+              icon: 'leaf', title: 'Próxima refeição',
+              metas: [nextMeal ? `${nextMeal.name}, ${nextMeal.time}${nextMeal.when === 'amanhã' ? ' (amanhã)' : ''}` : 'Sem plano alimentar'],
+              onClick: () => onNavigate('nutrition'),
+            })}
+            {careRow('estudos', {
+              icon: 'book', title: 'Estudos',
+              metas: [nextClass ? `${nextClass.subject}, ${nextClass.isToday ? 'hoje' : nextClass.day} às ${nextClass.time}` : 'Sem aula cadastrada', nextExam ? `Prova: ${nextExam.date}` : 'Sem prova próxima'],
+              onClick: () => onNavigate('estudos'),
+            })}
+            {careRow('habitos', {
+              icon: 'activity', title: 'Hábitos', metas: [habitsToday ? `${habitsToday.done} de ${habitsToday.total} hábitos feitos hoje` : 'Hábitos, corpo e dieta'],
+              onClick: () => onNavigate('habitos'), last: true,
+            })}
           </div>
         </section>
 
@@ -809,37 +843,6 @@ export function HomeDashboard({ userId, onNavigate, onOpenProfile }: HomeDashboa
                 {v === 1000 ? '+1 L' : `+${v}`}
               </button>
             ))}
-          </div>
-        </section>
-
-        <section>
-          <h2 style={eyebrow}>Sua consulta de hoje</h2>
-          <div style={{ ...card, padding: '4px 12px' }}>
-            {careRow('treino', {
-              icon: 'dumbbell', title: 'Treino', metas: [planPreview ? `${planPreview.typeLabel}, hoje` : 'Sem treino definido'],
-              onClick: () => onNavigate('treinos'),
-              action: (
-                <button onClick={toggleWorkoutDone} aria-pressed={workoutDoneToday}
-                  style={{ height: 44, padding: '0 14px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-                    background: workoutDoneToday ? 'var(--accent)' : 'transparent', color: workoutDoneToday ? 'var(--on-accent)' : 'var(--accent)', border: '1.5px solid var(--accent)' }}>
-                  {workoutDoneToday && <Icon name="check" size={16} stroke={2.25} />}{workoutDoneToday ? 'Feito' : 'Marcar feito'}
-                </button>
-              ),
-            })}
-            {careRow('refeicao', {
-              icon: 'leaf', title: 'Próxima refeição',
-              metas: [nextMeal ? `${nextMeal.name}, ${nextMeal.time}${nextMeal.when === 'amanhã' ? ' (amanhã)' : ''}` : 'Sem plano alimentar'],
-              onClick: () => onNavigate('nutrition'),
-            })}
-            {careRow('estudos', {
-              icon: 'book', title: 'Estudos',
-              metas: [nextClass ? `${nextClass.subject}, ${nextClass.isToday ? 'hoje' : nextClass.day} às ${nextClass.time}` : 'Sem aula cadastrada', nextExam ? `Prova: ${nextExam.date}` : 'Sem prova próxima'],
-              onClick: () => onNavigate('estudos'),
-            })}
-            {careRow('habitos', {
-              icon: 'activity', title: 'Hábitos', metas: [habitsToday ? `${habitsToday.done} de ${habitsToday.total} hábitos feitos hoje` : 'Hábitos, corpo e dieta'],
-              onClick: () => onNavigate('habitos'), last: true,
-            })}
           </div>
         </section>
 
@@ -907,27 +910,6 @@ export function HomeDashboard({ userId, onNavigate, onOpenProfile }: HomeDashboa
             </div>
           )}
         </section>
-
-        {!weather.hidden && (weather.loading || weather.error || wxOk) && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignSelf: 'flex-start', maxWidth: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--text-2)', fontSize: 14, lineHeight: '20px' }}>
-            {weather.loading ? <span>Buscando o clima…</span> : weather.error ? (
-              <>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="cloud" size={18} style={{ color: 'var(--accent)' }} />{weather.error}</span>
-                <span style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                  <button onClick={weather.retry} style={{ minHeight: 44, padding: '0 14px', borderRadius: 12, border: 'none', background: 'var(--accent-soft)', color: 'var(--accent)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Tentar de novo</button>
-                  <button onClick={weather.hide} style={{ minHeight: 44, padding: '0 14px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--muted)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Ocultar</button>
-                </span>
-              </>
-            ) : (
-              <>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: 'var(--text)' }}>
-                  <Icon name={wxIcon} size={18} />{weather.city}, <span className="lp-num">{weather.temp}°</span>
-                </span>
-                {wxLines.map((l, i) => <span key={i}>{l}</span>)}
-              </>
-            )}
-          </div>
-        )}
 
         {weekly && (
           <section aria-label="Resumo da semana" data-testid="weekly-summary">

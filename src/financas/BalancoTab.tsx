@@ -260,17 +260,6 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
         <h2 className="balanco-section-title">Visão do mês</h2>
       </div>
       <div className="card card--flush" style={{ overflow: 'hidden' }}>
-        <div className={`saldo-hero${neg ? ' neg' : ''}`}>
-          <div className="saldo-hero-label">Saldo do mês</div>
-          <div className="saldo-hero-val">
-            {neg ? '− ' : ''}
-            {money(Math.abs(saldoFinal))}
-          </div>
-          <div className="saldo-hero-sub">
-            {neg ? 'As saídas e faturas passam das entradas neste mês.' : 'Depois de entradas, saídas e faturas.'}
-          </div>
-        </div>
-
         {included.map((t, i) => {
           const open = !!expanded[t.id];
           const total = cfGetTableTotal(state, t);
@@ -706,6 +695,20 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
     </section>
   );
 
+  // Resumo no topo (estrutura da referência A)
+  const planTables = tables.filter(t => t.type === 'planejamento');
+  const faltaPlanejado = planTables.reduce(
+    (sum, t) =>
+      sum +
+      t.rows
+        .filter(r => r.categoria && r.profileIdx != null)
+        .reduce((s2, r) => s2 + Math.max(0, num(r.valor) - cfComputeGastoCategoria(state, r.profileIdx as number, r.categoria as string)), 0),
+    0
+  );
+  const totEntradas = included.filter(t => t.sign === 1).reduce((s, t) => s + cfGetTableTotal(state, t), 0);
+  const totFaturas = included.filter(t => t.type === 'faturas_auto').reduce((s, t) => s + cfGetTableTotal(state, t), 0);
+  const totSaidas = included.filter(t => t.sign === -1 && t.type !== 'faturas_auto').reduce((s, t) => s + cfGetTableTotal(state, t), 0);
+
   const nodes: React.ReactNode[] = [];
   let vIdx = 0;
   tables.forEach((t, i) => {
@@ -716,7 +719,28 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
 
   return (
     <div className="balanco-tab">
-      <div className="section-head"><h2 className="section-title">Balanço mensal</h2></div>
+      <div className="card bal-hero">
+        <div className="bal-hero-top">
+          <span>Saldo do mês</span>
+          <span className={`bal-badge${neg ? ' warn' : ''}`}>{neg ? 'Atenção' : 'No azul'}</span>
+        </div>
+        <div className={`bal-hero-val${neg ? ' neg' : ''}`}>
+          {neg ? '−' : ''}
+          {money(Math.abs(saldoFinal))}
+        </div>
+        <div className="bal-hero-sub">
+          {planTables.length > 0 && faltaPlanejado > 0
+            ? `Faltam ${money(faltaPlanejado)} do planejado para gastar este mês.`
+            : neg
+              ? 'As saídas e faturas passam das entradas neste mês.'
+              : 'Depois de entradas, saídas e faturas.'}
+        </div>
+      </div>
+      <div className="bal-chips">
+        <div className="bal-chip"><div className="bal-chip-label">Entradas</div><div className="bal-chip-val positive">{money(totEntradas)}</div></div>
+        <div className="bal-chip"><div className="bal-chip-label">Saídas</div><div className="bal-chip-val">{money(totSaidas)}</div></div>
+        <div className="bal-chip"><div className="bal-chip-label">Faturas</div><div className="bal-chip-val">{money(totFaturas)}</div></div>
+      </div>
       {nodes}
       <div className="balanco-actions">
         <button type="button" className="btn btn-ghost btn-sm" onClick={addCustomTable}>
