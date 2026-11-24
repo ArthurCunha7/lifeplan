@@ -40,7 +40,8 @@ export function cfComputeGastoCategoria(state: FinanceState, profileIdx: number,
 
 export function cfGetTableTotal(state: FinanceState, t: BalancoTable): number {
   if (t.type === 'entradas') return cfComputeEntradasTotal(state);
-  if (t.type === 'lancamentos') return 0;
+  // Orçamento prospectivo é só previsão do próximo mês: nunca entra em soma nenhuma.
+  if (t.type === 'lancamentos' || t.type === 'prospectivo') return 0;
   if (t.type === 'faturas_auto') {
     const faturasTotal = (state.faturas || []).reduce((s, f) =>
       s + (f.rows || []).reduce((s2, r) => s2 + (parseFloat(String(r.value ?? 0)) || 0), 0), 0);

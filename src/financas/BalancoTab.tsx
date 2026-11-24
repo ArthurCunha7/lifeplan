@@ -7,7 +7,7 @@ import type {
   BalancoTableItem,
   FinanceAppState,
 } from './financeTypes';
-import { genId, getProfileCategories } from './financeState';
+import { genId, getProfileCategories, sortFaturasByVencimento } from './financeState';
 import {
   FinanceIcon,
   NumericInput,
@@ -39,11 +39,30 @@ function profileEntradaSaldo(state: FinanceAppState, idx: number): number {
 }
 
 const isHiddenCard = (t: BalancoTableItem) => t.id === 'banco' || t.id === 'faturas' || t.type === 'entradas';
-const isInSaldo = (t: BalancoTableItem) => t.includeInSaldo && t.sign !== 0;
+const isInSaldo = (t: BalancoTableItem) => t.type !== 'prospectivo' && t.includeInSaldo && t.sign !== 0;
+
+/** Formato comum das tabelas: faixa de seção + linhas em lista + barra de total no fim. */
+function Band({ tone, label, action }: { tone: 'pos' | 'neg' | 'neutral'; label: string; action?: React.ReactNode }) {
+  return (
+    <div className={`bt-band ${tone}`}>
+      <span>{label}</span>
+      {action}
+    </div>
+  );
+}
+function TotalBar({ label, value, tone }: { label: string; value: string; tone?: 'pos' | 'neg' | 'warn' }) {
+  return (
+    <div className="bt-total">
+      <span>{label}</span>
+      <strong className={tone || ''}>{value}</strong>
+    </div>
+  );
+}
 
 export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [planEdit, setPlanEdit] = useState<Record<string, boolean>>({});
+  const [colEdit, setColEdit] = useState<Record<string, boolean>>({});
 
   const money = (v: number) => fmtMoney(v, masked);
   const tables = state.balancoTables;
@@ -184,7 +203,7 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
     return (
       <>
         {state.faturas.length === 0 && <div className="saldo-sub-note">Nenhuma fatura cadastrada ainda na aba Faturas.</div>}
-        {state.faturas.map(f => (
+        {sortFaturasByVencimento(state.faturas).map(f => (
           <div className="saldo-sub-row" key={f.id}>
             <span className="bal-grow">{f.name}</span>
             <span className="val-cell negative">{money(f.rows.reduce((s, r) => s + num(r.value), 0))}</span>
@@ -436,16 +455,15 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
           );
         })}
         {validRows.length > 0 && (
-          <div className="plan-closing">
-            <div>
+          <>
+            <TotalBar label="Previsto no mês" value={money(estimado)} />
+            <TotalBar label="Ainda falta gastar" value={money(restante)} tone="pos" />
+            {estourado > 0 && <TotalBar label="Passou do previsto" value={money(estourado)} tone="warn" />}
+            <div className="saldo-sub-note">
               {okCount} {okCount === 1 ? 'categoria fechada' : 'categorias fechadas'} no previsto.{' '}
               {overCount === 0 ? 'Nenhuma estourou.' : `${overCount} ${overCount === 1 ? 'estourou' : 'estouraram'}.`}
             </div>
-            <div className="plan-sub" style={{ marginTop: 4 }}>
-              Previsto {money(estimado)} · ainda falta gastar <strong className="positive">{money(restante)}</strong>
-              {estourado > 0 && <> · passou do previsto <strong className="negative">{money(estourado)}</strong></>}
-            </div>
-          </div>
+          </>
         )}
         <div className="add-row-bar">
           <button
@@ -460,46 +478,32 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
     );
   };
 
-  const renderFaturasAuto = (t: BalancoTableItem) => {
+  const renderFaturasAuto = (_t: BalancoTableItem) => {
     const pixSum = state.pixRows.reduce((s, p) => s + num(p.value), 0);
     const total = state.faturas.reduce((s, f) => s + f.rows.reduce((s2, r) => s2 + num(r.value), 0), 0);
     return (
       <>
-        <div className="card-header">
-          <div className="card-title"><FinanceIcon name="card" size={18} /> {t.name}</div>
+        <Band tone="neg" label="Faturas" />
+        <div className="bt-list">
+          {state.faturas.length === 0 && <div className="empty">Nenhuma fatura cadastrada ainda na aba Faturas.</div>}
+          {sortFaturasByVencimento(state.faturas).map(f => (
+            <div className="bt-row" key={f.id}>
+              <div className="bt-main">
+                <div className="bt-name">{f.name}</div>
+                <div className="bt-sub">Fecha {f.fechamento || '—'} · vence {f.vencimento || '—'}</div>
+              </div>
+              <span className="val-cell negative">{money(f.rows.reduce((s, r) => s + num(r.value), 0))}</span>
+            </div>
+          ))}
+          {pixSum > 0 && (
+            <div className="bt-row balanco-pix-info">
+              <div className="bt-main"><div className="bt-name">Pix</div><div className="bt-sub">Fora do total — já saiu da conta</div></div>
+              <span className="val-cell">{money(pixSum)}</span>
+            </div>
+          )}
         </div>
+        <TotalBar label="Total das faturas" value={money(total)} tone="warn" />
         <div className="saldo-sub-note">Atualizado automaticamente a partir da aba Faturas — edite os valores lá.</div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Fatura</th><th>Fechamento</th><th>Vencimento</th><th>Valor</th></tr>
-            </thead>
-            <tbody>
-              {state.faturas.length === 0 && (
-                <tr><td colSpan={4}><div className="empty">Nenhuma fatura cadastrada ainda na aba Faturas.</div></td></tr>
-              )}
-              {state.faturas.map(f => (
-                <tr key={f.id}>
-                  <td>{f.name}</td>
-                  <td>{f.fechamento || '—'}</td>
-                  <td>{f.vencimento || '—'}</td>
-                  <td className="val-cell negative">{money(f.rows.reduce((s, r) => s + num(r.value), 0))}</td>
-                </tr>
-              ))}
-              {pixSum > 0 && (
-                <tr className="balanco-pix-info">
-                  <td colSpan={3} style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Pix — fora do total (já saiu da conta)</td>
-                  <td className="val-cell" style={{ color: 'var(--muted)', fontStyle: 'italic' }}>{money(pixSum)}</td>
-                </tr>
-              )}
-            </tbody>
-            {state.faturas.length > 0 && (
-              <tfoot>
-                <tr><td colSpan={3}>Total</td><td className="val-cell negative">{money(total)}</td></tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
       </>
     );
   };
@@ -558,6 +562,7 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
     const patchCols = (fn: (c: BalancoColumnItem[]) => BalancoColumnItem[]) => patchTable(t.id, { columns: fn(cols) });
     return (
       <>
+        {colEdit[t.id] && (
         <div className="col-editor">
           {cols.map(c => (
             <div className="col-editor-item" key={c.id}>
@@ -619,59 +624,113 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
             <FinanceIcon name="plus" size={14} /> Coluna
           </button>
         </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                {cols.map(c => (<th key={c.id}>{c.name}</th>))}
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {t.rows.length === 0 && (
-                <tr><td colSpan={cols.length + 1}><div className="empty">Sem linhas. Adicione abaixo.</div></td></tr>
-              )}
-              {t.rows.map(row => (
-                <tr key={row.id} className="balanco-editable-row">
-                  {cols.map(c => (
-                    <td key={c.id}>
-                      {c.type === 'number' ? (
-                        <NumericInput ariaLabel={c.name} value={num(row.values?.[c.id])} onValueChange={v => patchValue(t.id, row.id, c.id, v)} style={{ width: '100%' }} />
-                      ) : (
-                        <input
-                          type="text"
-                          aria-label={c.name}
-                          placeholder={c.name}
-                          value={String(row.values?.[c.id] ?? '')}
-                          onChange={e => patchValue(t.id, row.id, c.id, e.target.value)}
-                          style={{ width: '100%' }}
-                        />
-                      )}
-                    </td>
-                  ))}
-                  <td>
-                    <button type="button" className="btn btn-danger btn-sm" aria-label="Remover linha" onClick={() => patchRows(t.id, rs => rs.filter(r => r.id !== row.id))}>
-                      <FinanceIcon name="trash" size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            {numCol && (
-              <tfoot>
-                <tr>
-                  <td colSpan={Math.max(1, cols.indexOf(numCol))} style={{ color: 'var(--muted)', fontSize: 12 }}>Total</td>
-                  <td className="val-cell positive">{money(total)}</td>
-                  {cols.length - cols.indexOf(numCol) > 0 && <td colSpan={cols.length - cols.indexOf(numCol)} />}
-                </tr>
-              </tfoot>
-            )}
-          </table>
+        )}
+        <Band tone={t.sign === 1 ? 'pos' : t.sign === -1 ? 'neg' : 'neutral'} label={t.sign === 1 ? 'Entradas' : t.sign === -1 ? 'Saídas' : 'Itens'} />
+        <div className="bt-list">
+          {t.rows.length === 0 && <div className="empty">Sem linhas. Adicione abaixo.</div>}
+          {t.rows.map(row => (
+            <div className="bt-row" key={row.id}>
+              <div className="bt-fields">
+                {cols.map(c =>
+                  c.type === 'number' ? (
+                    <NumericInput key={c.id} ariaLabel={c.name} value={num(row.values?.[c.id])} onValueChange={v => patchValue(t.id, row.id, c.id, v)} minPx={100} maxPx={180} style={{ fontWeight: 700 }} />
+                  ) : (
+                    <input key={c.id} type="text" className="bal-grow" aria-label={c.name} placeholder={c.name} value={String(row.values?.[c.id] ?? '')} onChange={e => patchValue(t.id, row.id, c.id, e.target.value)} />
+                  )
+                )}
+              </div>
+              <button type="button" className="btn btn-danger btn-sm" aria-label="Remover linha" onClick={() => patchRows(t.id, rs => rs.filter(r => r.id !== row.id))}>
+                <FinanceIcon name="trash" size={16} />
+              </button>
+            </div>
+          ))}
         </div>
+        {numCol && <TotalBar label="Total" value={money(total)} tone={t.sign === -1 ? 'warn' : 'pos'} />}
         <div className="add-row-bar">
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => addRow(t)}>
             <FinanceIcon name="plus" size={16} /> Adicionar linha
           </button>
+          <button type="button" className="btn btn-ghost btn-sm" aria-expanded={!!colEdit[t.id]} onClick={() => setColEdit(c => ({ ...c, [t.id]: !c[t.id] }))}>
+            Colunas
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  const renderProspectivo = (t: BalancoTableItem) => {
+    const nextMonth = (() => {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() + 1);
+      return d.toLocaleDateString('pt-BR', { month: 'long' });
+    })();
+    const kindOf = (r: BalancoRowItem) => (r.values?.tipo === 'entrada' ? 'entrada' : 'saida');
+    const ent = t.rows.filter(r => kindOf(r) === 'entrada');
+    const sai = t.rows.filter(r => kindOf(r) === 'saida');
+    const sum = (rs: BalancoRowItem[]) => rs.reduce((acc, r) => acc + num(r.values?.val), 0);
+    const totE = sum(ent);
+    const totS = sum(sai);
+    const sobra = totE - totS;
+    const neg = sobra < 0;
+    const addLine = (tipo: 'entrada' | 'saida') =>
+      patchRows(t.id, rs => [...rs, { id: genId(), values: { nome: '', tipo, val: 0 } }]);
+    const fillFromCurrent = () => {
+      const have = new Set(t.rows.map(r => `${kindOf(r)}|${String(r.values?.nome ?? '').toLowerCase()}`));
+      const add: BalancoRowItem[] = [];
+      tables
+        .filter(x => x.type === 'planejamento')
+        .forEach(pt =>
+          pt.rows
+            .filter(r => r.categoria && num(r.valor) > 0)
+            .forEach(r => {
+              const key = `saida|${String(r.categoria).toLowerCase()}`;
+              if (have.has(key)) return;
+              have.add(key);
+              add.push({ id: genId(), values: { nome: String(r.categoria), tipo: 'saida', val: num(r.valor) } });
+            })
+        );
+      if (add.length) patchRows(t.id, rs => [...rs, ...add]);
+    };
+    const renderRows = (rs: BalancoRowItem[]) =>
+      rs.map(row => (
+        <div className="bt-row" key={row.id}>
+          <div className="bt-fields">
+            <input type="text" className="bal-grow" aria-label="Nome" placeholder="Nome" value={String(row.values?.nome ?? '')} onChange={e => patchValue(t.id, row.id, 'nome', e.target.value)} />
+            <NumericInput ariaLabel="Valor previsto" value={num(row.values?.val)} onValueChange={v => patchValue(t.id, row.id, 'val', v)} minPx={100} maxPx={180} style={{ fontWeight: 700 }} />
+          </div>
+          <button type="button" className="btn btn-danger btn-sm" aria-label="Remover linha" onClick={() => patchRows(t.id, r => r.filter(x => x.id !== row.id))}>
+            <FinanceIcon name="trash" size={16} />
+          </button>
+        </div>
+      ));
+    return (
+      <>
+        <div className="bt-hero">
+          <div className="bal-hero-top">
+            <span>Sobra prevista em {nextMonth}</span>
+            <span className={`bal-badge${neg ? ' warn' : ''}`}>{neg ? 'Atenção' : 'No azul'}</span>
+          </div>
+          <div className={`bal-hero-val${neg ? ' neg' : ''}`}>{neg ? '−' : ''}{money(Math.abs(sobra))}</div>
+          <div className="bt-hero-chips">
+            <div className="bal-chip"><div className="bal-chip-label">Entradas previstas</div><div className="bal-chip-val positive">{money(totE)}</div></div>
+            <div className="bal-chip"><div className="bal-chip-label">Saídas previstas</div><div className="bal-chip-val">{money(totS)}</div></div>
+          </div>
+          <div className="plan-sub">Só previsão: não entra no saldo do mês nem em nenhuma soma.</div>
+        </div>
+        <Band tone="pos" label="Entradas" action={<button type="button" className="btn btn-ghost btn-sm" onClick={() => addLine('entrada')}>+ Entrada</button>} />
+        <div className="bt-list">
+          {ent.length === 0 && <div className="empty">Nenhuma entrada prevista.</div>}
+          {renderRows(ent)}
+        </div>
+        <Band tone="neg" label="Saídas" action={<button type="button" className="btn btn-ghost btn-sm" onClick={() => addLine('saida')}>+ Saída</button>} />
+        <div className="bt-list">
+          {sai.length === 0 && <div className="empty">Nenhuma saída prevista.</div>}
+          {renderRows(sai)}
+        </div>
+        <TotalBar label="Sobra prevista" value={`${neg ? '− ' : '+ '}${money(Math.abs(sobra))}`} tone={neg ? 'warn' : 'pos'} />
+        <div className="add-row-bar">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={fillFromCurrent}>Preencher com o mês atual</button>
         </div>
       </>
     );
@@ -701,15 +760,19 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
         />
         <button type="button" className="btn btn-ghost btn-sm" disabled={vIdx === 0} aria-label="Mover para cima" title="Mover para cima" onClick={() => moveTable(t.id, -1, x => !isHiddenCard(x))}>↑</button>
         <button type="button" className="btn btn-ghost btn-sm" disabled={vIdx === visibleCards.length - 1} aria-label="Mover para baixo" title="Mover para baixo" onClick={() => moveTable(t.id, 1, x => !isHiddenCard(x))}>↓</button>
-        <button type="button" className={`btn btn-ghost btn-sm sign-btn ${signClass(t.sign)}`} title="Altera como esta tabela entra no Saldo" onClick={() => cycleSign(t)}>
-          {signLabel(t.sign)}
-        </button>
+        {t.type !== 'prospectivo' && (
+          <button type="button" className={`btn btn-ghost btn-sm sign-btn ${signClass(t.sign)}`} title="Altera como esta tabela entra no Saldo" onClick={() => cycleSign(t)}>
+            {signLabel(t.sign)}
+          </button>
+        )}
         <button type="button" className="btn btn-danger btn-sm" aria-label={`Excluir ${t.name}`} onClick={() => void removeTable(t)}>
           <FinanceIcon name="trash" size={16} />
         </button>
       </div>
       <div className="card card--flush" style={{ overflow: 'hidden' }}>
-        {t.type === 'lancamentos'
+        {t.type === 'prospectivo'
+          ? renderProspectivo(t)
+          : t.type === 'lancamentos'
           ? renderLancamentos(t)
           : t.type === 'planejamento'
             ? renderPlanejamento(t)

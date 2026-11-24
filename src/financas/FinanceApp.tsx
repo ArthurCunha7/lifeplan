@@ -22,6 +22,7 @@ import {
   genId,
   getAllRowsByProfileDetailed,
   getAllTransactionsByProfile,
+  sortFaturasByVencimento,
 } from './financeState';
 import {
   fetchPersonalFinanceCloud,
@@ -31,16 +32,11 @@ import {
   joinFamilyByCode,
   fetchFamilyMembersOverview,
   fetchLeaderClosings,
-  uploadReceiptFile,
-  deleteReceiptFile,
-  createReceiptSignedUrl,
 } from './familySync';
 import {
   FinanceIcon,
   NumericInput,
   ProfileChips,
-  ReceiptControl,
-  ReceiptModal,
   fmtMoney,
   formatDateBR,
   todayLocalISO,
@@ -72,13 +68,13 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
   const [cloudStatus, setCloudStatus] = useState<string>('Carregando...');
   const [openFaturas, setOpenFaturas] = useState<Record<string, boolean>>({});
   const [pixOpen, setPixOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
   const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
 
   // Modais
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showProfilesModal, setShowProfilesModal] = useState<boolean>(false);
-  const [activeReceiptUrl, setActiveReceiptUrl] = useState<string | null>(null);
 
   // Modo Família
   const [family, setFamily] = useState<FamilyInfo | null>(null);
@@ -273,34 +269,6 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
     });
   };
 
-  // Recibo de Linha de Fatura
-  const handleUploadFaturaReceipt = async (faturaId: string, rowId: string, file: File) => {
-    if (!userId) {
-      void alertDialog('Faça login para salvar comprovantes na nuvem.');
-      return;
-    }
-    try {
-      setCloudStatus('Enviando comprovante...');
-      const path = await uploadReceiptFile(userId, rowId, file);
-      handleUpdateFaturaRow(faturaId, rowId, 'receiptPath', path);
-      setCloudStatus('Comprovante salvo');
-    } catch (e) {
-      void alertDialog('Erro ao enviar comprovante: ' + (e instanceof Error ? e.message : String(e)));
-      setCloudStatus('Erro no comprovante');
-    }
-  };
-
-  const handleDeleteFaturaReceipt = async (faturaId: string, rowId: string, path: string) => {
-    if (!(await confirmDialog('Este comprovante será removido do lançamento.', { title: 'Excluir comprovante?', confirmLabel: 'Excluir', danger: true }))) return;
-    try {
-      await deleteReceiptFile(path);
-      handleUpdateFaturaRow(faturaId, rowId, 'receiptPath', undefined);
-      if (activeReceiptUrl) setActiveReceiptUrl(null);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   // Ações de Pix
   const handleAddPixRow = () => {
     const newRow: PixRowItem = {
@@ -484,7 +452,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
         {tab === 'faturas' && (
           <div>
             {/* Lista de Faturas */}
-            {state.faturas.map(fatura => {
+            {sortFaturasByVencimento(state.faturas).map(fatura => {
               const totalFatura = fatura.rows.reduce((sum, r) => sum + (Number(r.value) || 0), 0);
               const isOpen = openFaturas[fatura.id] === true; // vem recolhida, como antes
 
@@ -545,7 +513,6 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                             <th style={{ padding: '8px 6px', width: 115 }}>Valor</th>
                             <th style={{ padding: '8px 6px', width: 140 }}>Categoria</th>
                             <th style={{ padding: '8px 6px', width: 180 }}>Perfil</th>
-                            <th style={{ padding: '8px 6px', width: 50, textAlign: 'center' }}>Doc</th>
                             <th style={{ padding: '8px 6px', width: 40 }}></th>
                           </tr>
                         </thead>
@@ -605,21 +572,6 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                                   profiles={activeProfiles}
                                   selectedIdx={row.profileIdx}
                                   onChange={pIdx => handleUpdateFaturaRow(fatura.id, row.id, 'profileIdx', pIdx)}
-                                />
-                              </td>
-                              <td style={{ padding: '6px', textAlign: 'center' }}>
-                                <ReceiptControl
-                                  receiptPath={row.receiptPath}
-                                  onUploadFile={file => handleUploadFaturaReceipt(fatura.id, row.id, file)}
-                                  onView={async path => {
-                                    try {
-                                      const url = await createReceiptSignedUrl(path);
-                                      setActiveReceiptUrl(url);
-                                    } catch (err) {
-                                      void alertDialog('Erro ao carregar recibo: ' + (err instanceof Error ? err.message : String(err)));
-                                    }
-                                  }}
-                                  onRemove={() => handleDeleteFaturaReceipt(fatura.id, row.id, row.receiptPath!)}
                                 />
                               </td>
                               <td style={{ padding: '6px', textAlign: 'right' }}>
@@ -792,104 +744,92 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
             </div>
 
             {/* Extrato de Pagamentos Realizados */}
-            <div className="card">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  borderBottom: '1px solid var(--border)',
-                  paddingBottom: 12,
-                  marginBottom: 12,
-                }}
+            <div className="card card--flush pay-card">
+              <button
+                type="button"
+                className="pay-head"
+                aria-expanded={payOpen}
+                aria-controls="pay-body"
+                onClick={() => setPayOpen(o => !o)}
               >
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 600 }}>Extrato de Pagamentos</h3>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Pagamentos parciais ou totais para abater faturas
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Pago</div>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--success)' }}>
-                    {fmtMoney(
-                      state.payments.reduce((sum, p) => sum + (Number(p.value) || 0), 0),
-                      masked
-                    )}
-                  </div>
-                </div>
-              </div>
+                <span className="pay-head-text">
+                  <span className="pay-title">Pagamentos</span>
+                  <span className="pay-sub">
+                    {state.payments.length === 0
+                      ? 'Nenhum pagamento registrado'
+                      : `${state.payments.length} ${state.payments.length === 1 ? 'pagamento' : 'pagamentos'} para abater faturas`}
+                  </span>
+                </span>
+                <span className="pay-head-total">
+                  <span className="pay-sub">Total pago</span>
+                  <span className="card-total">
+                    {fmtMoney(state.payments.reduce((sum, p) => sum + (Number(p.value) || 0), 0), masked)}
+                  </span>
+                </span>
+                <span className="pay-chev" aria-hidden="true"><FinanceIcon name="chevron" size={18} /></span>
+              </button>
 
-              {state.payments.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                  Nenhum pagamento registrado neste mês.
-                </div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '8px 6px', width: 110 }}>Data</th>
-                        <th style={{ padding: '8px 6px' }}>Descrição</th>
-                        <th style={{ padding: '8px 6px', width: 115 }}>Valor Pago</th>
-                        <th style={{ padding: '8px 6px', width: 180 }}>Perfil que Pagou</th>
-                        <th style={{ padding: '8px 6px', width: 40 }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {state.payments.map(pay => (
-                        <tr key={pay.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ padding: '6px' }}>
-                            <input
-                              type="date"
-                              value={pay.date}
-                              onChange={e => handleUpdatePayment(pay.id, 'date', e.target.value)}
-                              style={{ padding: '4px 6px', fontSize: '0.8rem', width: '100%' }}
-                            />
-                          </td>
-                          <td style={{ padding: '6px' }}>
-                            <input
-                              type="text"
-                              value={pay.desc}
-                              onChange={e => handleUpdatePayment(pay.id, 'desc', e.target.value)}
-                              style={{ padding: '4px 8px', fontSize: '0.85rem', width: '100%' }}
-                            />
-                          </td>
-                          <td style={{ padding: '6px' }}>
-                            <NumericInput
-                              value={Number(pay.value) || 0}
-                              onValueChange={v => handleUpdatePayment(pay.id, 'value', Number(v) || 0)}
-                              placeholder="0,00"
-                              style={{ width: '100%', fontSize: '0.85rem' }}
-                            />
-                          </td>
-                          <td style={{ padding: '6px' }}>
-                            <ProfileChips
-                              profiles={activeProfiles}
-                              selectedIdx={pay.profileIdx}
-                              onChange={pIdx => handleUpdatePayment(pay.id, 'profileIdx', pIdx)}
-                            />
-                          </td>
-                          <td style={{ padding: '6px', textAlign: 'right' }}>
-                            <button
-                              type="button"
-                              className="ghost small danger"
-                              style={{ padding: '4px 6px' }}
-                              onClick={() => handleDeletePayment(pay.id)}
-                            >
-                              ✕
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {payOpen && (
+                <div id="pay-body">
+                  {state.payments.length === 0 && <div className="empty">Nenhum pagamento registrado neste mês.</div>}
+                  {[...state.payments]
+                    .sort((x, y) => String(y.date).localeCompare(String(x.date)))
+                    .map(pay => (
+                      <div className="pay-item" key={pay.id}>
+                        <div className="pay-line">
+                          <input
+                            type="text"
+                            className="pay-desc"
+                            aria-label="Descrição do pagamento"
+                            placeholder="Descrição"
+                            value={pay.desc}
+                            onChange={e => handleUpdatePayment(pay.id, 'desc', e.target.value)}
+                          />
+                          <NumericInput
+                            ariaLabel="Valor pago"
+                            value={Number(pay.value) || 0}
+                            onValueChange={v => handleUpdatePayment(pay.id, 'value', Number(v) || 0)}
+                            placeholder="0,00"
+                            minPx={100}
+                            maxPx={170}
+                            style={{ fontWeight: 700 }}
+                          />
+                        </div>
+                        <div className="pay-line">
+                          <input
+                            type="date"
+                            aria-label="Data do pagamento"
+                            value={pay.date}
+                            onChange={e => handleUpdatePayment(pay.id, 'date', e.target.value)}
+                          />
+                          <select
+                            aria-label="Perfil que pagou"
+                            className="pay-profile"
+                            value={pay.profileIdx ?? ''}
+                            onChange={e => handleUpdatePayment(pay.id, 'profileIdx', e.target.value === '' ? null : Number(e.target.value))}
+                          >
+                            <option value="">Sem perfil</option>
+                            {activeProfiles.map(pr => (
+                              <option key={pr.idx} value={pr.idx}>{pr.name}</option>
+                            ))}
+                          </select>
+                          <button type="button" className="btn btn-danger btn-sm" aria-label="Remover pagamento" onClick={() => handleDeletePayment(pay.id)}>
+                            <FinanceIcon name="trash" size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  <div className="bt-total">
+                    <span>Total pago</span>
+                    <strong className="pos">{fmtMoney(state.payments.reduce((sum, p) => sum + (Number(p.value) || 0), 0), masked)}</strong>
+                  </div>
+                  <div className="add-row-bar" style={{ padding: 12 }}>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={handleAddPayment}>
+                      <FinanceIcon name="plus" size={16} /> Adicionar pagamento
+                    </button>
+                  </div>
                 </div>
               )}
-
-              <button type="button" className="ghost small" style={{ marginTop: 12 }} onClick={handleAddPayment}>
-                + Adicionar Pagamento
-              </button>
             </div>
           </div>
         )}
@@ -1035,14 +975,6 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
               )}
             </div>
           </div>
-        )}
-
-        {/* ================= MODAL: VISUALIZAR RECIBO ================= */}
-        {activeReceiptUrl && (
-          <ReceiptModal
-            signedUrl={activeReceiptUrl}
-            onClose={() => setActiveReceiptUrl(null)}
-          />
         )}
 
         {/* ================= MODAL: MODO FAMÍLIA CONTAS ================= */}

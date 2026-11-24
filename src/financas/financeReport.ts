@@ -82,6 +82,18 @@ export function buildFinanceReportHtml(state: FinanceAppState, today = new Date(
         h += `<tr><td>${esc(r.categoria)}</td><td>${esc(profileName(r.profileIdx))}</td><td>${fmtRaw(r.valor)}</td><td class="pdf-neg">${fmtRaw(gasto)}</td><td class="${sign(restante)}">${fmtRaw(restante)}</td></tr>`;
       });
       h += '</tbody></table>';
+    } else if (t.type === 'prospectivo') {
+      // Só previsão: listada no extrato, mas fora de qualquer soma.
+      if (!t.rows.length) { h += '<div class="pdf-empty">Nenhuma linha prevista.</div>'; return; }
+      h += '<table><thead><tr><th>Tipo</th><th>Descrição</th><th>Previsto</th></tr></thead><tbody>';
+      let sobra = 0;
+      t.rows.forEach(r => {
+        const entrada = r.values?.tipo === 'entrada';
+        const v = num(r.values?.val);
+        sobra += entrada ? v : -v;
+        h += `<tr><td>${entrada ? 'Entrada' : 'Saída'}</td><td>${esc(r.values?.nome || '—')}</td><td class="${entrada ? 'pdf-pos' : 'pdf-neg'}">${fmtRaw(v)}</td></tr>`;
+      });
+      h += `<tr class="pdf-total-row"><td colspan="2">Sobra prevista (não entra no saldo)</td><td>${fmtRaw(sobra)}</td></tr></tbody></table>`;
     } else if (t.type === 'custom' && t.columns?.length) {
       if (!t.rows.length) { h += '<div class="pdf-empty">Sem lançamentos.</div>'; return; }
       h += `<table><thead><tr>${t.columns.map(c => `<th>${esc(c.name)}</th>`).join('')}</tr></thead><tbody>`;

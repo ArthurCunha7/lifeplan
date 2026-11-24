@@ -40,6 +40,7 @@ export function getDefaultState(): FinanceAppState {
   return {
     _isFreshDefault: true,
     _migratedBancoV1: true,
+    _migratedProspectivoV1: true,
     profiles: [{ name: 'Perfil 1', linkedUserId: null }],
     activeProfiles: 1,
     profileCategories: {
@@ -97,6 +98,15 @@ export function getDefaultState(): FinanceAppState {
         sign: -1,
         includeInSaldo: true,
       },
+      {
+        id: 'prospectivo',
+        name: 'Orçamento prospectivo',
+        icon: '',
+        type: 'prospectivo',
+        rows: [],
+        sign: 0,
+        includeInSaldo: false,
+      },
     ],
   };
 }
@@ -104,6 +114,7 @@ export function getDefaultState(): FinanceAppState {
 interface RawLegacyState {
   _isFreshDefault?: boolean;
   _migratedBancoV1?: boolean;
+  _migratedProspectivoV1?: boolean;
   profiles?: Array<string | { name?: string; linkedUserId?: string | null }>;
   activeProfiles?: number;
   profileCategories?: Record<string, string[]>;
@@ -176,7 +187,7 @@ function normalizeSign(s: number | undefined, fallback: -1 | 0 | 1): -1 | 0 | 1 
 }
 
 function normalizeTableType(t?: string): BalancoTableType {
-  if (t === 'entradas' || t === 'lancamentos' || t === 'faturas_auto' || t === 'planejamento' || t === 'custom') {
+  if (t === 'entradas' || t === 'lancamentos' || t === 'faturas_auto' || t === 'planejamento' || t === 'custom' || t === 'prospectivo') {
     return t;
   }
   return 'custom';
@@ -366,7 +377,7 @@ export function migrateFinanceState(input: unknown): FinanceAppState {
       .map(t => {
         const isFaturas = t.id === 'faturas';
         const type: BalancoTableType = isFaturas ? 'faturas_auto' : normalizeTableType(t.type);
-        const sign = normalizeSign(t.sign, type === 'entradas' ? 1 : type === 'lancamentos' ? 0 : -1);
+        const sign = type === 'prospectivo' ? 0 : normalizeSign(t.sign, type === 'entradas' ? 1 : type === 'lancamentos' ? 0 : -1);
         const columns: BalancoColumnItem[] | undefined =
           isFaturas
             ? undefined
@@ -399,7 +410,7 @@ export function migrateFinanceState(input: unknown): FinanceAppState {
           icon: t.icon ?? '',
           type,
           sign,
-          includeInSaldo: t.includeInSaldo !== undefined ? Boolean(t.includeInSaldo) : sign !== 0,
+          includeInSaldo: type === 'prospectivo' ? false : t.includeInSaldo !== undefined ? Boolean(t.includeInSaldo) : sign !== 0,
           refTableId: t.refTableId,
           columns,
           rows,
@@ -427,8 +438,25 @@ export function migrateFinanceState(input: unknown): FinanceAppState {
     }
   }
 
+  let migratedProspectivoV1 = Boolean(raw._migratedProspectivoV1);
+  if (!migratedProspectivoV1) {
+    migratedProspectivoV1 = true;
+    if (!balancoTables.find(t => t.type === 'prospectivo')) {
+      balancoTables.push({
+        id: 'prospectivo',
+        name: 'Orçamento prospectivo',
+        icon: '',
+        type: 'prospectivo',
+        rows: [],
+        sign: 0,
+        includeInSaldo: false,
+      });
+    }
+  }
+
   return {
     _migratedBancoV1: migratedBancoV1,
+    _migratedProspectivoV1: migratedProspectivoV1,
     profiles,
     activeProfiles: profiles.length,
     profileCategories,
@@ -589,4 +617,24 @@ export function getAllTransactionsByProfile(state: FinanceAppState, pIdx: number
       value: p.value,
     }));
   return [...expenses, ...payments].sort((a, b) => (a.txDate || '').localeCompare(b.txDate || ''));
+}
+
+/** Dias até o próximo vencimento (o campo guarda o dia do mês, ex.: "4" ou "dia 4"). Sem dia válido: Infinity. */
+export function daysUntilVencimento(venc: string | undefined, today: Date = new Date()): number {
+  const m = String(venc ?? '').match(/\d{1,2}/);
+  const day = m ? parseInt(m[0], 10) : 0;
+  if (day < 1 || day > 31) return Infinity;
+  const base = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const inMonth = (y: number, mo: number) => new Date(y, mo, Math.min(day, new Date(y, mo + 1, 0).getDate()));
+  let due = inMonth(base.getFullYear(), base.getMonth());
+  if (due < base) due = inMonth(base.getFullYear(), base.getMonth() + 1);
+  return Math.round((due.getTime() - base.getTime()) / 86400000);
+}
+
+/** Faturas da mais próxima de vencer para a mais distante (só para exibição; a ordem salva não muda). */
+export function sortFaturasByVencimento<T extends { vencimento?: string }>(faturas: T[], today: Date = new Date()): T[] {
+  return faturas
+    .map((f, i) => ({ f, i, d: daysUntilVencimento(f.vencimento, today) }))
+    .sort((a, b) => (a.d === b.d ? a.i - b.i : a.d - b.d))
+    .map(x => x.f);
 }
