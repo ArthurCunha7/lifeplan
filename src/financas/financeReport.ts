@@ -82,6 +82,16 @@ export function buildFinanceReportHtml(state: FinanceAppState, today = new Date(
         h += `<tr><td>${esc(r.categoria)}</td><td>${esc(profileName(r.profileIdx))}</td><td>${fmtRaw(r.valor)}</td><td class="pdf-neg">${fmtRaw(gasto)}</td><td class="${sign(restante)}">${fmtRaw(restante)}</td></tr>`;
       });
       h += '</tbody></table>';
+    } else if (t.type === 'saidas') {
+      if (!t.rows.length) { h += '<div class="pdf-empty">Nenhuma saída lançada.</div>'; return; }
+      h += '<table><thead><tr><th>Descrição</th><th>Valor</th></tr></thead><tbody>';
+      let tot = 0;
+      t.rows.forEach(r => {
+        const v = num(r.values?.val);
+        tot += v;
+        h += `<tr><td>${esc(r.values?.nome || '—')}</td><td class="pdf-neg">${fmtRaw(v)}</td></tr>`;
+      });
+      h += `<tr class="pdf-total-row"><td>Total de saídas</td><td>${fmtRaw(tot)}</td></tr></tbody></table>`;
     } else if (t.type === 'prospectivo') {
       // Só previsão: listada no extrato, mas fora de qualquer soma.
       if (!t.rows.length) { h += '<div class="pdf-empty">Nenhuma linha prevista.</div>'; return; }

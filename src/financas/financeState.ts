@@ -41,6 +41,7 @@ export function getDefaultState(): FinanceAppState {
     _isFreshDefault: true,
     _migratedBancoV1: true,
     _migratedProspectivoV1: true,
+    _migratedSaidasV1: true,
     profiles: [{ name: 'Perfil 1', linkedUserId: null }],
     activeProfiles: 1,
     profileCategories: {
@@ -99,6 +100,15 @@ export function getDefaultState(): FinanceAppState {
         includeInSaldo: true,
       },
       {
+        id: 'saidas_fixa',
+        name: 'Saídas',
+        icon: '',
+        type: 'saidas',
+        rows: [],
+        sign: -1,
+        includeInSaldo: true,
+      },
+      {
         id: 'prospectivo',
         name: 'Orçamento prospectivo',
         icon: '',
@@ -115,6 +125,7 @@ interface RawLegacyState {
   _isFreshDefault?: boolean;
   _migratedBancoV1?: boolean;
   _migratedProspectivoV1?: boolean;
+  _migratedSaidasV1?: boolean;
   profiles?: Array<string | { name?: string; linkedUserId?: string | null }>;
   activeProfiles?: number;
   profileCategories?: Record<string, string[]>;
@@ -187,7 +198,7 @@ function normalizeSign(s: number | undefined, fallback: -1 | 0 | 1): -1 | 0 | 1 
 }
 
 function normalizeTableType(t?: string): BalancoTableType {
-  if (t === 'entradas' || t === 'lancamentos' || t === 'faturas_auto' || t === 'planejamento' || t === 'custom' || t === 'prospectivo') {
+  if (t === 'entradas' || t === 'lancamentos' || t === 'faturas_auto' || t === 'planejamento' || t === 'custom' || t === 'prospectivo' || t === 'saidas') {
     return t;
   }
   return 'custom';
@@ -454,8 +465,28 @@ export function migrateFinanceState(input: unknown): FinanceAppState {
     }
   }
 
+  let migratedSaidasV1 = Boolean(raw._migratedSaidasV1);
+  if (!migratedSaidasV1) {
+    migratedSaidasV1 = true;
+    if (!balancoTables.find(t => t.type === 'saidas')) {
+      const at = balancoTables.findIndex(t => t.type === 'prospectivo');
+      const novo: BalancoTableItem = {
+        id: 'saidas_fixa',
+        name: 'Saídas',
+        icon: '',
+        type: 'saidas',
+        rows: [],
+        sign: -1,
+        includeInSaldo: true,
+      };
+      if (at >= 0) balancoTables.splice(at, 0, novo);
+      else balancoTables.push(novo);
+    }
+  }
+
   return {
     _migratedBancoV1: migratedBancoV1,
+    _migratedSaidasV1: migratedSaidasV1,
     _migratedProspectivoV1: migratedProspectivoV1,
     profiles,
     activeProfiles: profiles.length,
@@ -637,4 +668,22 @@ export function sortFaturasByVencimento<T extends { vencimento?: string }>(fatur
     .map((f, i) => ({ f, i, d: daysUntilVencimento(f.vencimento, today) }))
     .sort((a, b) => (a.d === b.d ? a.i - b.i : a.d - b.d))
     .map(x => x.f);
+}
+
+/**
+ * Ordem de exibição das listas da aba Faturas: data mais recente no topo.
+ * No mesmo dia, o último lançado fica acima (a lista é salva na ordem de inclusão).
+ * Itens ainda sem data (recém-criados) ficam no topo, para você preencher.
+ * Só afeta a exibição: não altera a ordem salva.
+ */
+export function sortByDateDesc<T extends { date?: string }>(items: T[]): T[] {
+  return items
+    .map((item, i) => ({ item, i }))
+    .sort((a, b) => {
+      const da = a.item.date || '9999-99-99';
+      const db = b.item.date || '9999-99-99';
+      if (da !== db) return da < db ? 1 : -1;
+      return b.i - a.i;
+    })
+    .map(x => x.item);
 }

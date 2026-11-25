@@ -108,7 +108,7 @@ export interface BalancoRowItem {
   valor?: number;
 }
 
-export type BalancoTableType = 'entradas' | 'lancamentos' | 'faturas_auto' | 'planejamento' | 'custom' | 'prospectivo';
+export type BalancoTableType = 'entradas' | 'lancamentos' | 'faturas_auto' | 'planejamento' | 'custom' | 'prospectivo' | 'saidas';
 
 export interface BalancoTableItem {
   id: string;
@@ -126,6 +126,7 @@ export interface FinanceAppState extends FinanceState {
   _isFreshDefault?: boolean;
   _migratedBancoV1?: boolean;
   _migratedProspectivoV1?: boolean;
+  _migratedSaidasV1?: boolean;
   profiles: ProfileItem[];
   activeProfiles: number;
   profileCategories: Record<number, string[]>;

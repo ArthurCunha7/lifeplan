@@ -23,6 +23,7 @@ import {
   getAllRowsByProfileDetailed,
   getAllTransactionsByProfile,
   sortFaturasByVencimento,
+  sortByDateDesc,
 } from './financeState';
 import {
   fetchPersonalFinanceCloud,
@@ -303,10 +304,10 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
   const handleAddPayment = () => {
     const newPayment: PaymentItem = {
       id: genId(),
-      date: todayLocalISO(),
-      desc: 'Pagamento de fatura',
+      date: '',
+      desc: '',
       value: 0,
-      profileIdx: activeProfiles[0]?.idx ?? 0,
+      profileIdx: null,
     };
     persistState({
       ...state,
@@ -517,7 +518,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                           </tr>
                         </thead>
                         <tbody>
-                          {fatura.rows.map(row => (
+                          {sortByDateDesc(fatura.rows).map(row => (
                             <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
                               <td style={{ padding: '6px' }}>
                                 <input
@@ -672,7 +673,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                       </tr>
                     </thead>
                     <tbody>
-                      {state.pixRows.map(row => (
+                      {sortByDateDesc(state.pixRows).map(row => (
                         <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '6px' }}>
                             <input
@@ -772,8 +773,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
               {payOpen && (
                 <div id="pay-body">
                   {state.payments.length === 0 && <div className="empty">Nenhum pagamento registrado neste mês.</div>}
-                  {[...state.payments]
-                    .sort((x, y) => String(y.date).localeCompare(String(x.date)))
+                  {sortByDateDesc(state.payments)
                     .map(pay => (
                       <div className="pay-item" key={pay.id}>
                         <div className="pay-line">

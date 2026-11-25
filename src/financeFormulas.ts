@@ -49,6 +49,9 @@ export function cfGetTableTotal(state: FinanceState, t: BalancoTable): number {
     // total das faturas — não há nada a pagar depois.
     return faturasTotal;
   }
+  if (t.type === 'saidas') {
+    return (t.rows || []).reduce((s, r) => s + (parseFloat(String(r.values?.val ?? 0)) || 0), 0);
+  }
   if (t.type === 'planejamento') {
     // O que a linha do Planejamento reserva no saldo: só o que AINDA FALTA gastar em cada categoria.
     return (t.rows || []).filter(r => r.categoria && r.profileIdx != null)

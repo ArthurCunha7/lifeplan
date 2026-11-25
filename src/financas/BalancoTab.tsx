@@ -317,7 +317,7 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
                   )}
                   {t.id !== 'banco' && t.type === 'faturas_auto' && renderFaturasMirror()}
                   {t.id !== 'banco' && t.type === 'custom' && renderCustomInline(t)}
-                  {(t.type === 'planejamento' || t.type === 'lancamentos') && (
+                  {(t.type === 'planejamento' || t.type === 'lancamentos' || t.type === 'saidas') && (
                     <div className="saldo-sub-note">Veja e edite os detalhes no cartão “{t.name}” logo abaixo.</div>
                   )}
                 </div>
@@ -736,6 +736,45 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
     );
   };
 
+  const renderSaidas = (t: BalancoTableItem) => {
+    const total = t.rows.reduce((acc, r) => acc + num(r.values?.val), 0);
+    return (
+      <>
+        <div className="bt-hero">
+          <div className="bal-hero-top">
+            <span>Total de saídas</span>
+            <span className="bal-badge warn">{t.rows.length} {t.rows.length === 1 ? 'linha' : 'linhas'}</span>
+          </div>
+          <div className="bal-hero-val neg">− {money(total)}</div>
+          <div className="plan-sub">Entra no saldo do mês como valor negativo.</div>
+        </div>
+        <Band tone="neg" label="Saídas" action={<button type="button" className="btn btn-ghost btn-sm" onClick={() => addSaida(t)}>+ Saída</button>} />
+        <div className="bt-list">
+          {t.rows.length === 0 && <div className="empty">Nenhuma saída lançada.</div>}
+          {t.rows.map(row => (
+            <div className="bt-row" key={row.id}>
+              <div className="bt-fields">
+                <input type="text" className="bal-grow" aria-label="Nome" placeholder="Nome" value={String(row.values?.nome ?? '')} onChange={e => patchValue(t.id, row.id, 'nome', e.target.value)} />
+                <NumericInput ariaLabel="Valor da saída" value={num(row.values?.val)} onValueChange={v => patchValue(t.id, row.id, 'val', v)} minPx={100} maxPx={180} style={{ fontWeight: 700 }} />
+              </div>
+              <button type="button" className="btn btn-danger btn-sm" aria-label="Remover linha" onClick={() => patchRows(t.id, rs => rs.filter(x => x.id !== row.id))}>
+                <FinanceIcon name="trash" size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <TotalBar label="Total de saídas" value={`− ${money(total)}`} tone="warn" />
+        <div className="add-row-bar">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => addSaida(t)}>
+            <FinanceIcon name="plus" size={16} /> Adicionar saída
+          </button>
+        </div>
+      </>
+    );
+  };
+  const addSaida = (t: BalancoTableItem) =>
+    patchRows(t.id, rs => [...rs, { id: genId(), values: { nome: '', val: 0 } }]);
+
   const signLabel = (s: number) => (s === 1 ? '＋ Saldo' : s === -1 ? '− Saldo' : 'Fora do saldo');
   const signClass = (s: number) => (s === 1 ? 'sign-pos' : s === -1 ? 'sign-neg' : 'sign-off');
 
@@ -770,7 +809,9 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
         </button>
       </div>
       <div className="card card--flush" style={{ overflow: 'hidden' }}>
-        {t.type === 'prospectivo'
+        {t.type === 'saidas'
+          ? renderSaidas(t)
+          : t.type === 'prospectivo'
           ? renderProspectivo(t)
           : t.type === 'lancamentos'
           ? renderLancamentos(t)
