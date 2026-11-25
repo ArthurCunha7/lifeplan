@@ -38,12 +38,33 @@ export function cfComputeGastoCategoria(state: FinanceState, profileIdx: number,
   }, 0);
 }
 
+/** Débitos: gastos que outra pessoa da família lançou para este usuário (faturas marcadas como family). */
+export function cfGetDebitosGroups(state: FinanceState): Array<{ who: string; total: number; rows: Array<{ id: string; date: string; name: string; value: number; origem?: string }> }> {
+  const by = new Map<string, { who: string; total: number; rows: Array<{ id: string; date: string; name: string; value: number; origem?: string }> }>();
+  (state.faturas || []).filter(f => f.family).forEach(f => {
+    const who = f.who || 'Família';
+    const g = by.get(who) || { who, total: 0, rows: [] };
+    (f.rows || []).forEach(r => {
+      const v = parseFloat(String(r.value ?? 0)) || 0;
+      g.total += v;
+      g.rows.push({ id: String(r.id ?? ''), date: r.date || '', name: r.name || '', value: v, origem: (r as { faturaOrigem?: string }).faturaOrigem });
+    });
+    by.set(who, g);
+  });
+  return [...by.values()].filter(g => g.rows.length > 0);
+}
+
+export function cfGetDebitosTotal(state: FinanceState): number {
+  return cfGetDebitosGroups(state).reduce((s, g) => s + g.total, 0);
+}
+
 export function cfGetTableTotal(state: FinanceState, t: BalancoTable): number {
   if (t.type === 'entradas') return cfComputeEntradasTotal(state);
   // Orçamento prospectivo é só previsão do próximo mês: nunca entra em soma nenhuma.
   if (t.type === 'lancamentos' || t.type === 'prospectivo') return 0;
   if (t.type === 'faturas_auto') {
-    const faturasTotal = (state.faturas || []).reduce((s, f) =>
+    // Débitos lançados por outras pessoas têm linha própria no saldo: não entram aqui para não contar duas vezes.
+    const faturasTotal = (state.faturas || []).filter(f => !f.family).reduce((s, f) =>
       s + (f.rows || []).reduce((s2, r) => s2 + (parseFloat(String(r.value ?? 0)) || 0), 0), 0);
     // Pix já saiu da conta: conta no gasto do perfil (cfGetAllRowsByProfile), mas NÃO entra no
     // total das faturas — não há nada a pagar depois.

@@ -14,10 +14,11 @@ import {
   ProfileChips,
   catIconName,
   fmtMoney,
+  formatDateBR,
   getProfileColor,
   tableIconName,
 } from './FinanceIcons';
-import { cfComputeGastoCategoria, cfGetAllRowsByProfile, cfGetTableTotal } from '../financeFormulas';
+import { cfComputeGastoCategoria, cfGetAllRowsByProfile, cfGetDebitosGroups, cfGetDebitosTotal, cfGetTableTotal } from '../financeFormulas';
 import { confirmDialog } from '../dialog';
 
 const num = (v: unknown): number => parseFloat(String(v ?? 0)) || 0;
@@ -128,7 +129,9 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
 
   // ── Visão do mês ──
   const included = tables.filter(isInSaldo);
-  const saldoFinal = included.reduce((s, t) => s + cfGetTableTotal(state, t) * t.sign, 0);
+  const debitoGroups = cfGetDebitosGroups(state);
+  const debitosTotal = cfGetDebitosTotal(state);
+  const saldoFinal = included.reduce((s, t) => s + cfGetTableTotal(state, t) * t.sign, 0) - debitosTotal;
   const neg = saldoFinal < 0;
   const visibleCards = tables.filter(t => !isHiddenCard(t));
   const totalTables = tables.length;
@@ -202,8 +205,8 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
     const pixSum = state.pixRows.reduce((s, p) => s + num(p.value), 0);
     return (
       <>
-        {state.faturas.length === 0 && <div className="saldo-sub-note">Nenhuma fatura cadastrada ainda na aba Faturas.</div>}
-        {sortFaturasByVencimento(state.faturas).map(f => (
+        {state.faturas.filter(f => !f.family).length === 0 && <div className="saldo-sub-note">Nenhuma fatura cadastrada ainda na aba Faturas.</div>}
+        {sortFaturasByVencimento(state.faturas.filter(f => !f.family)).map(f => (
           <div className="saldo-sub-row" key={f.id}>
             <span className="bal-grow">{f.name}</span>
             <span className="val-cell negative">{money(f.rows.reduce((s, r) => s + num(r.value), 0))}</span>
@@ -325,7 +328,42 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
             </div>
           );
         })}
-        {included.length === 0 && <div className="empty">Nenhuma tabela entra no saldo. Use o botão “Saldo” de cada tabela.</div>}
+        {debitoGroups.length > 0 && (
+          <div key="__debitos">
+            <div className="saldo-line">
+              <button
+                type="button"
+                className="saldo-line-main"
+                aria-expanded={!!expanded.__debitos}
+                onClick={() => setExpanded(e => ({ ...e, __debitos: !e.__debitos }))}
+              >
+                <span className="row-ic"><FinanceIcon name="users" size={20} /></span>
+                <span className="row-name">Débitos</span>
+                <span className="row-chev" aria-hidden="true"><FinanceIcon name="chevron" size={16} /></span>
+                <span className="val-cell negative saldo-line-val">− {money(debitosTotal)}</span>
+              </button>
+            </div>
+            {expanded.__debitos && (
+              <div className="saldo-body">
+                {debitoGroups.map(g => (
+                  <div key={g.who}>
+                    <div className="saldo-sub-note"><strong>{g.who}</strong> lançou {money(g.total)} em débitos para você.</div>
+                    {g.rows
+                      .slice()
+                      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+                      .map(r => (
+                        <div className="saldo-sub-row" key={r.id}>
+                          <span>{[r.date ? formatDateBR(r.date) : '', r.name || r.origem || 'Débito'].filter(Boolean).join(' · ')}</span>
+                          <strong>{money(r.value)}</strong>
+                        </div>
+                      ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {included.length === 0 && debitoGroups.length === 0 && <div className="empty">Nenhuma tabela entra no saldo.</div>}
       </div>
     </section>
   );
@@ -778,10 +816,14 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
   const signLabel = (s: number) => (s === 1 ? '＋ Saldo' : s === -1 ? '− Saldo' : 'Fora do saldo');
   const signClass = (s: number) => (s === 1 ? 'sign-pos' : s === -1 ? 'sign-neg' : 'sign-off');
 
-  const tableCard = (t: BalancoTableItem, vIdx: number) => (
+  // Tabelas fixas (Saídas, Planejamento, Faturas, Entradas, Orçamento prospectivo...) têm sinal e ícone definidos.
+  // Só as tabelas criadas por você (tipo "custom") mantêm ícone e botão de sinal.
+  const tableCard = (t: BalancoTableItem, vIdx: number) => {
+    const fixed = t.type !== 'custom';
+    return (
     <section className="balanco-section" key={t.id}>
       <div className="balanco-title-row">
-        <input
+        {!fixed && <input
           type="text"
           className="balanco-icon-input"
           aria-label="Ícone (emoji)"
@@ -789,7 +831,7 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
           value={t.icon || ''}
           placeholder="•"
           onChange={e => patchTable(t.id, { icon: e.target.value })}
-        />
+        />}
         <input
           type="text"
           className="balanco-name-input"
@@ -799,7 +841,7 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
         />
         <button type="button" className="btn btn-ghost btn-sm" disabled={vIdx === 0} aria-label="Mover para cima" title="Mover para cima" onClick={() => moveTable(t.id, -1, x => !isHiddenCard(x))}>↑</button>
         <button type="button" className="btn btn-ghost btn-sm" disabled={vIdx === visibleCards.length - 1} aria-label="Mover para baixo" title="Mover para baixo" onClick={() => moveTable(t.id, 1, x => !isHiddenCard(x))}>↓</button>
-        {t.type !== 'prospectivo' && (
+        {!fixed && (
           <button type="button" className={`btn btn-ghost btn-sm sign-btn ${signClass(t.sign)}`} title="Altera como esta tabela entra no Saldo" onClick={() => cycleSign(t)}>
             {signLabel(t.sign)}
           </button>
@@ -822,7 +864,8 @@ export function BalancoTab({ state, persist, masked, profiles }: BalancoTabProps
               : renderCustom(t)}
       </div>
     </section>
-  );
+    );
+  };
 
   // Resumo no topo (estrutura da referência A)
   const planTables = tables.filter(t => t.type === 'planejamento');

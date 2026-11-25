@@ -8,7 +8,7 @@ import { resumoSemanal } from './weeklySummary';
 import { cruzarSaudeDinheiro, type CruzamentoSaudeDinheiro } from './crossInsights';
 import { supabase, fetchUserPlanData, extractPlanDays } from './supabaseClient';
 import { readScopedLocal, registerPlanDataField, requestPlanDataSave } from './planDataQueue';
-import { cfComputeGastoCategoria, cfGetTableTotal } from './financeFormulas';
+import { cfComputeGastoCategoria, cfGetDebitosTotal, cfGetTableTotal } from './financeFormulas';
 import { useTimetable, getNextClass } from './StudyAndSchedule';
 import { HOME_THEME } from './styles';
 import { Button } from './uiKit';
@@ -480,7 +480,7 @@ export function getSaldoPreview(userId: string | null): number | null {
       if (!t.includeInSaldo || !t.sign) return;
       saldoFinal += cfGetTableTotal(state, t) * t.sign;
     });
-    return saldoFinal;
+    return saldoFinal - cfGetDebitosTotal(state);
   } catch { return null; }
 }
 

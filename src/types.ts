@@ -151,6 +151,7 @@ export interface Fatura {
   fechamento?: string;
   vencimento?: string;
   family?: boolean;
+  who?: string;
   rows?: FinanceRow[];
 }
 

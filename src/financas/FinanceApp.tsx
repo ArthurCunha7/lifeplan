@@ -33,6 +33,9 @@ import {
   joinFamilyByCode,
   fetchFamilyMembersOverview,
   fetchLeaderClosings,
+  fetchMemberChargesAndClosings,
+  injectFamilyChargesIntoState,
+  syncFamilyChargesToCloud,
 } from './familySync';
 import {
   FinanceIcon,
@@ -83,6 +86,15 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
   const [familyClosings, setFamilyClosings] = useState<FamilyClosingRecord[]>([]);
   const [showFamilyAccounts, setShowFamilyAccounts] = useState<boolean>(false);
   const [familyBusy, setFamilyBusy] = useState<boolean>(false);
+  // Só sincroniza gastos com a família depois de carregar a nuvem, para nunca apagar nada por estado desatualizado.
+  const [cloudReady, setCloudReady] = useState<boolean>(false);
+
+  // Gastos que outras pessoas da família lançaram para mim: entram nas minhas faturas (somente leitura).
+  const refreshMemberCharges = useCallback(async () => {
+    if (!userId) return;
+    const { charges, closings } = await fetchMemberChargesAndClosings(userId);
+    setState(prev => injectFamilyChargesIntoState(prev, userId, charges, closings).nextState);
+  }, [userId]);
 
   // Carregar dados na nuvem (finance_data e family)
   useEffect(() => {
@@ -123,7 +135,9 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
             setFamilyMembers(mems.members);
             setFamilyClosings(closings.closings);
           }
+          await refreshMemberCharges();
         }
+        if (!cancelled && !cloudErr) setCloudReady(true);
 
         setCloudStatus('Sincronizado');
       } catch (err) {
@@ -139,7 +153,35 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, refreshMemberCharges]);
+
+  // Atualiza os gastos recebidos ao voltar para o app e de tempos em tempos.
+  useEffect(() => {
+    if (!userId || !family) return;
+    const onVisible = () => { if (document.visibilityState === 'visible') void refreshMemberCharges(); };
+    document.addEventListener('visibilitychange', onVisible);
+    const timer = window.setInterval(() => void refreshMemberCharges(), 45000);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(timer);
+    };
+  }, [userId, family, refreshMemberCharges]);
+
+  // Envia para a conta de cada usuário vinculado os gastos lançados para o perfil dele.
+  useEffect(() => {
+    if (!userId || !family || !cloudReady || familyMembers.length === 0) return;
+    const timer = window.setTimeout(() => {
+      syncFamilyChargesToCloud({
+        state,
+        familyId: family.id,
+        leaderId: userId,
+        leaderLabel: state.profiles[0]?.name || 'Eu',
+        familyMembers,
+      }).catch(err => console.error('Erro ao enviar gastos para a família:', err));
+    }, 800);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.faturas, state.pixRows, state.profiles, family, familyMembers, userId, cloudReady]);
 
   // Salvar alterações
   const persistState = useCallback(
@@ -456,6 +498,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
             {sortFaturasByVencimento(state.faturas).map(fatura => {
               const totalFatura = fatura.rows.reduce((sum, r) => sum + (Number(r.value) || 0), 0);
               const isOpen = openFaturas[fatura.id] === true; // vem recolhida, como antes
+              const ro = fatura.family === true; // gasto lançado por outra pessoa: só leitura
 
               return (
                 <div key={fatura.id} className="card card--flush" style={{ marginBottom: 20 }}>
@@ -466,6 +509,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                       aria-label="Nome da fatura"
                       style={{ fontSize: 14, fontWeight: 600 }}
                       value={fatura.name}
+                      readOnly={ro}
                       onChange={e => handleRenameFaturaInline(fatura.id, e.target.value)}
                     />
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -480,11 +524,12 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                       >
                         <FinanceIcon name="chevron" size={18} />
                       </button>
-                      <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDeleteFatura(fatura.id)}>Remover</button>
+                      {!ro && <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDeleteFatura(fatura.id)}>Remover</button>}
                     </div>
                   </div>
 
                   {/* Fechamento e vencimento ficam na própria fatura: o Balanço Mensal puxa daqui */}
+                  {!ro && (
                   <div style={{ display: 'flex', gap: 16, padding: '8px 14px', fontSize: 12, color: 'var(--muted)', flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
                     Fechamento:
                     <input type="text" placeholder="Fechamento (ex: dia 5)" aria-label="Fechamento da fatura" value={fatura.fechamento || ''}
@@ -495,9 +540,10 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
                       onChange={e => handleUpdateFaturaDate(fatura.id, 'vencimento', e.target.value)}
                       style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 7px', fontSize: 12, color: 'var(--text)', width: 150 }} />
                   </div>
+                  )}
 
                   {isOpen && (
-                  <div style={{ padding: 16 }}>
+                  <div style={{ padding: 16 }} {...(ro ? ({ inert: '' } as Record<string, string>) : {})}>
                   {/* Tabela de Compras */}
                   {fatura.rows.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
