@@ -1,5 +1,5 @@
 // src/financas/FinanceApp.tsx — Aplicação nativa React + TypeScript de Gestão Financeira Pessoal & Familiar
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import './financas.css';
 import {
   type FinanceAppState,
@@ -16,6 +16,8 @@ import {
 import {
   getDefaultState,
   loadLocalFinanceState,
+  hasPendingCloudSave,
+  setPendingCloudSave,
   saveLocalFinanceState,
   getActiveProfiles,
   getProfileCategories,
@@ -56,6 +58,7 @@ import {
   cfGetTableTotal,
 } from '../financeFormulas';
 import { alertDialog, confirmDialog } from '../dialog';
+import { supabase } from '../supabaseClient';
 import { printFinanceReport } from './financeReport';
 import { ResumoTab } from './ResumoTab';
 import { BalancoTab } from './BalancoTab';
@@ -67,7 +70,7 @@ export interface FinanceAppProps {
 
 export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: FinanceAppProps) {
   const [tab, setTab] = useState<FinanceTabId>('faturas');
-  const [state, setState] = useState<FinanceAppState>(() => loadLocalFinanceState() || getDefaultState());
+  const [state, setState] = useState<FinanceAppState>(() => loadLocalFinanceState(userId) || getDefaultState());
   const [masked, setMasked] = useState<boolean>(false);
   const [cloudStatus, setCloudStatus] = useState<string>('Carregando...');
   const [openFaturas, setOpenFaturas] = useState<Record<string, boolean>>({});
@@ -88,6 +91,54 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
   const [familyBusy, setFamilyBusy] = useState<boolean>(false);
   // Só sincroniza gastos com a família depois de carregar a nuvem, para nunca apagar nada por estado desatualizado.
   const [cloudReady, setCloudReady] = useState<boolean>(false);
+  // Nome do dono da conta (aparece para quem recebe os gastos que eu lanço).
+  const [accountName, setAccountName] = useState<string>('');
+  useEffect(() => {
+    if (!userId) return;
+    supabase.auth.getUser().then(({ data }) => {
+      const m = (data?.user?.user_metadata || {}) as Record<string, unknown>;
+      const nome = String(m.name || m.full_name || m.display_name || '').trim();
+      const email = String(data?.user?.email || '');
+      setAccountName(nome || email.split('@')[0] || '');
+    }).catch(() => {});
+  }, [userId]);
+
+  // Salvar alterações: o banco de dados é a fonte de verdade; o aparelho guarda só uma cópia de segurança.
+  // Os envios são feitos em fila (um por vez, sempre o mais recente) e repetidos até darem certo.
+  const latestRef = useRef<FinanceAppState | null>(null);
+  const savingRef = useRef(false);
+  const retryRef = useRef<number | null>(null);
+
+  const flushCloud = useCallback(async () => {
+    if (!userId || savingRef.current) return;
+    savingRef.current = true;
+    setIsCloudSyncing(true);
+    try {
+      while (latestRef.current) {
+        const snapshot = latestRef.current;
+        latestRef.current = null;
+        try {
+          await savePersonalFinanceCloud(userId, snapshot);
+        } catch (e) {
+          console.error(e);
+          if (!latestRef.current) latestRef.current = snapshot; // mantém para tentar de novo
+          setCloudStatus('Sem conexão: tentando salvar de novo...');
+          if (retryRef.current === null) {
+            retryRef.current = window.setTimeout(() => {
+              retryRef.current = null;
+              void flushCloud();
+            }, 5000);
+          }
+          return;
+        }
+      }
+      setPendingCloudSave(userId, false);
+      setCloudStatus('Sincronizado');
+    } finally {
+      savingRef.current = false;
+      setIsCloudSyncing(false);
+    }
+  }, [userId]);
 
   // Gastos que outras pessoas da família lançaram para mim: entram nas minhas faturas (somente leitura).
   const refreshMemberCharges = useCallback(async () => {
@@ -110,15 +161,32 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
       setIsCloudSyncing(true);
 
       try {
-        const { data: cloudState, error: cloudErr } = await fetchPersonalFinanceCloud(userId);
+        const { data: cloudState, isNewAccount, error: cloudErr } = await fetchPersonalFinanceCloud(userId);
         if (cancelled) return;
 
         if (cloudErr) {
           console.error(cloudErr);
           setCloudStatus('Erro ao carregar');
+        } else if (hasPendingCloudSave(userId)) {
+          // Havia alterações que não chegaram ao banco: elas valem mais que a versão antiga da nuvem.
+          const local = loadLocalFinanceState(userId);
+          if (local) {
+            latestRef.current = local;
+            setState(local);
+            void flushCloud();
+          } else if (cloudState) {
+            setState(cloudState);
+            saveLocalFinanceState(cloudState, userId);
+          }
         } else if (cloudState) {
           setState(cloudState);
           saveLocalFinanceState(cloudState, userId);
+        } else if (isNewAccount) {
+          // Conta nova: grava no banco o estado inicial para nada ficar só no aparelho.
+          const initial = loadLocalFinanceState(userId) || getDefaultState();
+          latestRef.current = initial;
+          saveLocalFinanceState(initial, userId);
+          void flushCloud();
         }
 
         // Carregar família
@@ -153,7 +221,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
     return () => {
       cancelled = true;
     };
-  }, [userId, refreshMemberCharges]);
+  }, [userId, refreshMemberCharges, flushCloud]);
 
   // Atualiza os gastos recebidos ao voltar para o app e de tempos em tempos.
   useEffect(() => {
@@ -169,41 +237,43 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
 
   // Envia para a conta de cada usuário vinculado os gastos lançados para o perfil dele.
   useEffect(() => {
-    if (!userId || !family || !cloudReady || familyMembers.length === 0) return;
+    if (!userId || !family || !cloudReady || !accountName || familyMembers.length === 0) return;
     const timer = window.setTimeout(() => {
       syncFamilyChargesToCloud({
         state,
         familyId: family.id,
         leaderId: userId,
-        leaderLabel: state.profiles[0]?.name || 'Eu',
+        leaderLabel: accountName || 'Família',
         familyMembers,
       }).catch(err => console.error('Erro ao enviar gastos para a família:', err));
     }, 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.faturas, state.pixRows, state.profiles, family, familyMembers, userId, cloudReady]);
+  }, [state.faturas, state.pixRows, state.profiles, family, familyMembers, userId, cloudReady, accountName]);
 
-  // Salvar alterações
   const persistState = useCallback(
     async (next: FinanceAppState) => {
       setState(next);
       saveLocalFinanceState(next, userId);
-
       if (!userId) return;
-
-      setIsCloudSyncing(true);
-      try {
-        await savePersonalFinanceCloud(userId, next);
-        setCloudStatus('Sincronizado');
-      } catch (e) {
-        console.error(e);
-        setCloudStatus('Erro ao salvar');
-      } finally {
-        setIsCloudSyncing(false);
-      }
+      setPendingCloudSave(userId, true);
+      latestRef.current = next;
+      await flushCloud();
     },
-    [userId]
+    [userId, flushCloud]
   );
+
+  // Volta a tentar quando a internet volta ou o app reaparece.
+  useEffect(() => {
+    if (!userId) return;
+    const retry = () => { if (latestRef.current) void flushCloud(); };
+    window.addEventListener('online', retry);
+    document.addEventListener('visibilitychange', retry);
+    return () => {
+      window.removeEventListener('online', retry);
+      document.removeEventListener('visibilitychange', retry);
+    };
+  }, [userId, flushCloud]);
 
   // Perfis ativos
   const activeProfiles = useMemo(() => getActiveProfiles(state), [state]);
@@ -1031,7 +1101,7 @@ export function FinanceApp({ userId = null, onOpenProfile: _onOpenProfile }: Fin
             state={state}
             familyId={family.id}
             leaderId={family.owner_id}
-            leaderLabel={state.profiles[0]?.name || 'Eu'}
+            leaderLabel={accountName || 'Família'}
             familyMembers={familyMembers}
             familyClosings={familyClosings}
             familyClosingsOk={true}

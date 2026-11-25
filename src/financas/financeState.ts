@@ -501,8 +501,10 @@ export function migrateFinanceState(input: unknown): FinanceAppState {
   };
 }
 
-export function loadLocalFinanceState(): FinanceAppState | null {
+/** Cópia local é só um cache: quando há usuário logado, só vale se for a cópia dele (aparelho compartilhado). */
+export function loadLocalFinanceState(userId?: string | null): FinanceAppState | null {
   try {
+    if (userId && localStorage.getItem('cf_state_uid') !== userId) return null;
     const raw = localStorage.getItem('cf_state');
     if (!raw) return null;
     return migrateFinanceState(JSON.parse(raw));
@@ -686,4 +688,16 @@ export function sortByDateDesc<T extends { date?: string }>(items: T[]): T[] {
       return b.i - a.i;
     })
     .map(x => x.item);
+}
+
+/** Marca de "há alterações que ainda não chegaram ao banco de dados". */
+const pendingKey = (userId: string) => `cf_pending_${userId}`;
+export function hasPendingCloudSave(userId: string): boolean {
+  try { return localStorage.getItem(pendingKey(userId)) === '1'; } catch { return false; }
+}
+export function setPendingCloudSave(userId: string, on: boolean): void {
+  try {
+    if (on) localStorage.setItem(pendingKey(userId), '1');
+    else localStorage.removeItem(pendingKey(userId));
+  } catch { /* armazenamento indisponível */ }
 }
